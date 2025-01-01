@@ -17,8 +17,9 @@ import paho.mqtt.client as mqtt
 mqtt_config = {}
 with open('mqtt', 'r') as f:
     for line in f:
-        key, value = line.strip().split('=')
-        mqtt_config[key] = value
+        if '=' in line:
+            key, value = line.strip().split('=', 1)  # Split only at the first '='
+            mqtt_config[key] = value
 
 # MQTT setup
 mqtt_client = mqtt.Client()
