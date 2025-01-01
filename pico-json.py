@@ -413,8 +413,8 @@ while True:
                     elif sensorData['type'] == 'battery':
                         output["battery"][name] = {
                             "capacity_nominal": sensorData.get('capacity.nominal'),
-                            "capacity_remaining": int(round(filtered_values.get('capacity_remaining', 5))),
-                            #"capacity_remaining": filtered_values.get('capacity_remaining'),
+                            #"capacity_remaining": int(round(filtered_values.get('capacity_remaining', 5))),
+                            "capacity_remaining": filtered_values.get('capacity_remaining'),
                             "state_of_charge": sensorData.get('stateOfCharge'),
                             "current": filtered_values.get('current'),
                             "voltage": filtered_values.get('voltage')
