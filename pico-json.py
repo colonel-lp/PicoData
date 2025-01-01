@@ -1,5 +1,3 @@
-
-
 #!/usr/bin/env python3
 
 import os
@@ -173,9 +171,7 @@ def get_pico_config(pico_ip):
     s.close()  # Close tcp connection
     return config
 
-# Corrected temperature calculation function
 def toTemperature(temp):
-    # Corrected temperature calculation from spymarine/device.py
     if temp > 32768:
         temp = temp - 65536
     temp2 = float("%.2f" % (temp / 10.0))
@@ -187,9 +183,9 @@ def createSensorList(config):
     fluid_type = ['Unknown', 'fresh water', 'diesel', 'blackwater']
     elementPos = 0
     for entry in config.keys():
-        id = config[entry][0][1]  # Set id
-        type = config[entry][1][1]  # Set type
-        elementSize = 1  # Default element size
+        id = config[entry][0][1]
+        type = config[entry][1][1]
+        elementSize = 1
         sensorList[id] = {}
         if (type == 0):
             type = 'null'
@@ -270,7 +266,6 @@ def readTank(sensorId, elementId):
     sensorListTmp[sensorId].update({'percentage': percentage})
 
 def readBatt(sensorId, elementId):
-    #stateOfCharge = float("%.2f" % (element[elementId][0] / 16000.0))
     stateOfCharge = (element[elementId][0] / 16000.0)
     sensorListTmp[sensorId].update({'stateOfCharge': stateOfCharge})
     capacity = sensorList[sensorId].get('capacity.nominal', 0)
