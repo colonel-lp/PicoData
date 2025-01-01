@@ -404,10 +404,7 @@ while True:
                         output["temperature"][name] = filtered_values["temperature"]
                     elif sensorData['type'] == 'tank':
                         output["tank"][name] = {
-                            #sensorData.get('capacity'),
-                            #filtered_values.get('currentLevel'),
-                            #filtered_values.get('percentage')
-                            capacity_nominal": sensorData.get('capacity'),
+                            "capacity_nominal": sensorData.get('capacity'),
                             "capacity_remaining": int(round(filtered_values.get('remainingCapacity', 0))),
                             "percentage": filtered_values.get('percentage')
                         }
