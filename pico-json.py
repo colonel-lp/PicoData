@@ -274,6 +274,7 @@ def readBatt(sensorId, elementId):
     sensorListTmp[sensorId].update({'stateOfCharge': stateOfCharge})
     sensorListTmp[sensorId].update({'capacity.remaining': element[elementId][1] * stateOfCharge / 100})
     sensorListTmp[sensorId].update({'voltage': element[elementId + 2][1] / float(1000)})
+    sensorListTmp[sensorId]['capacity.nominal'] = sensorListTmp[sensorId]['capacity.nominal'] / 43200
     current = element[elementId + 1][1]
     if (current > 25000):
         current = (65535 - current) / float(100)
@@ -402,15 +403,17 @@ while True:
                     elif sensorData['type'] == 'thermometer':
                         output["temperature"][name] = filtered_values["temperature"]
                     elif sensorData['type'] == 'tank':
-                        output["tank"][name] = [
-                            sensorData.get('capacity'),
-                            filtered_values.get('currentLevel'),
-                            filtered_values.get('percentage')
-                        ]
+                        output["tank"][name] = {
+                            #sensorData.get('capacity'),
+                            #filtered_values.get('currentLevel'),
+                            #filtered_values.get('percentage')
+                            capacity_nominal": sensorData.get('capacity'),
+                            "capacity_remaining": int(round(filtered_values.get('remainingCapacity', 0))),
+                            "percentage": filtered_values.get('percentage')
+                        }
                     elif sensorData['type'] == 'battery':
                         output["battery"][name] = {
                             "capacity_nominal": sensorData.get('capacity.nominal'),
-                            #"capacity_remaining": filtered_values.get('capacity_remaining'),
                             "capacity_remaining": int(round(filtered_values.get('capacity_remaining', 0))),
                             "state_of_charge": sensorData.get('stateOfCharge'),
                             "current": filtered_values.get('current'),
