@@ -405,7 +405,7 @@ while True:
                         output["tank"][name] = {
                             "capacity_nominal": sensorData.get('capacity'),
                             "capacity_remaining": int(round(filtered_values.get('remainingCapacity', 4))),
-                            "percentage": filtered_values.get('percentage')
+                            "percentage": int(round(filtered_values.get('percentage', 0)))
                         }
                     elif sensorData['type'] == 'battery':
                         output["battery"][name] = {
