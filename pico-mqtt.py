@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 import os
 import time
 import socket
@@ -18,7 +21,7 @@ mqtt_config = {}
 with open('mqtt', 'r') as f:
     for line in f:
         if '=' in line:
-            key, value = line.strip().split('=', 1)  # Split only at the first '='
+            key, value = line.strip().split('=', 1)
             mqtt_config[key] = value
 
 # Ensure required keys are present
@@ -31,7 +34,6 @@ for key in required_keys:
 mqtt_client = mqtt.Client()
 mqtt_client.username_pw_set(mqtt_config['username'], mqtt_config['password'])
 mqtt_client.connect(mqtt_config['server'], int(mqtt_config['port']), 60)
-
 
 responses = [''] * 200
 sensors = ['']
