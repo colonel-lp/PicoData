@@ -21,6 +21,12 @@ with open('mqtt', 'r') as f:
             key, value = line.strip().split('=', 1)  # Split only at the first '='
             mqtt_config[key] = value
 
+# Ensure required keys are present
+required_keys = ['server', 'port', 'prefix', 'username', 'password']
+for key in required_keys:
+    if key not in mqtt_config:
+        raise KeyError(f"Missing required MQTT configuration key: {key}")
+
 # MQTT setup
 mqtt_client = mqtt.Client()
 mqtt_client.username_pw_set(mqtt_config['username'], mqtt_config['password'])
