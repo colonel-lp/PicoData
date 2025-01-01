@@ -438,7 +438,7 @@ while True:
                         output["voltage"][name] = filtered_values["voltage"]
 
             # Send JSON to MQTT server
-            mqtt_topic = mqtt_config['prefix'] + "sensor/data"
+            mqtt_topic = mqtt_config['prefix']
             mqtt_client.publish(mqtt_topic, json.dumps(output))
 
             time.sleep(0.9)
