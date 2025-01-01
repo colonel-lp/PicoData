@@ -262,7 +262,7 @@ def readTemp(sensorId, elementId):
 
 def readTank(sensorId, elementId):
     currentLevel = element[elementId][0] / float(1000)
-    #capacity = sensorList[sensorId].get('capacity', 0)
+    capacity = sensorList[sensorId].get('capacity', 0)
     remainingCapacity = element[elementId][1] / float(10000)
     percentage = (remainingCapacity / capacity) * 100 if capacity else 0
     sensorListTmp[sensorId].update({'currentLevel': currentLevel})
