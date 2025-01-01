@@ -273,7 +273,7 @@ def readBatt(sensorId, elementId):
     stateOfCharge = float("%.2f" % (element[elementId][0] / 16000.0))
     sensorListTmp[sensorId].update({'stateOfCharge': stateOfCharge})
     capacity = sensorList[sensorId].get('capacity', 0)
-    capacity_remaining = capacity * stateOfCharge / 100
+    capacity_remaining = capacity * stateOfCharge
     sensorListTmp[sensorId].update({'capacity.remaining': capacity_remaining})
     sensorListTmp[sensorId].update({'voltage': element[elementId + 2][1] / float(1000)})
     sensorListTmp[sensorId]['capacity.nominal'] = sensorListTmp[sensorId]['capacity.nominal'] / 43200
