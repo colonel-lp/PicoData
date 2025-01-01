@@ -412,6 +412,7 @@ while True:
                         output["battery"][name] = {
                             "capacity_nominal": sensorData.get('capacity.nominal'),
                             "capacity_remaining": filtered_values.get('capacity_remaining'),
+                            "state_of_charge": sensorData.get('stateOfCharge'),
                             "current": filtered_values.get('current'),
                             "voltage": filtered_values.get('voltage')
                         }
