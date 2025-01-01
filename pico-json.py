@@ -264,7 +264,7 @@ def readTank(sensorId, elementId):
     currentLevel = element[elementId][0] / float(1000)
     capacity = sensorList[sensorId].get('capacity', 0)
     remainingCapacity = element[elementId][1] / float(10000)
-    percentage = (remainingCapacity / capacity) * 100 if capacity else 0
+    percentage = (remainingCapacity / capacity) * 100000 if capacity else 0
     sensorListTmp[sensorId].update({'currentLevel': currentLevel})
     sensorListTmp[sensorId].update({'remainingCapacity': remainingCapacity})
     sensorListTmp[sensorId].update({'percentage': percentage})
@@ -404,7 +404,7 @@ while True:
                     elif sensorData['type'] == 'tank':
                         output["tank"][name] = {
                             "capacity_nominal": sensorData.get('capacity'),
-                            "capacity_remaining": int(round(filtered_values.get('remainingCapacity', 0))),
+                            "capacity_remaining": int(round(filtered_values.get('remainingCapacity', 4))),
                             "percentage": filtered_values.get('percentage')
                         }
                     elif sensorData['type'] == 'battery':
