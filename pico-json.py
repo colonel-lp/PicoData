@@ -224,6 +224,8 @@ def createSensorList(config):
             type = 'inclinometer'
             sensorList[id].update({'inclinometer_type': config[entry][3][1]})
             elementSize = 1
+            if inclinometer_type = 1 : sensorList[id].update({'name' :'pitch'})
+            elif inclinometer_type = 2 : sensorList[id].update({'name' :'roll'})
 
         sensorList[id].update({'type': type, 'pos': elementPos})
         elementPos = elementPos + elementSize
@@ -390,9 +392,9 @@ while True:
                         output["barometer"] = filtered_values["pressure"]
                     elif sensorData['type'] == 'inclinometer':
                         if filtered_values["inclinometer_type"] == 1:
-                             output["inclinometer"]["pitch"] = filtered_values["degree"]
+                             output["inclinometer"][name] = filtered_values["degree"]
                         elif filtered_values["inclinometer_type"] == 2:
-                             output["inclinometer"]["roll"] = filtered_values["degree"]
+                             output["inclinometer"][name] = filtered_values["degree"]
                     elif sensorData['type'] == 'volt':
                         output["voltage"][name] = filtered_values["voltage"]
                     elif sensorData['type'] == 'current':
