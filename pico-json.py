@@ -225,7 +225,7 @@ def createSensorList(config):
             sensorList[id].update({'name': config[entry][3]})
             inclinometer_type = 'pitch' if elementPos % 2 == 0 else 'roll'
             sensorList[id].update({'inclinometer_type': inclinometer_type})
-            elementSize = 2  # Adjusted for pitch and roll
+            elementSize = 1  # Adjusted for pitch and roll
 
 
         sensorList[id].update({'type': type, 'pos': elementPos})
