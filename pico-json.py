@@ -307,7 +307,7 @@ def readCurrent(sensorId, elementId):
 
 def readIncline(sensorId, elementId):
     degree = element[elementId][1] / 10.0
-    sensorListTmp[sensorId].update({'inclinometer_type': inclinometer_type, 'degree': degree})
+    sensorListTmp[sensorId].update({'degree': degree})
     print(f"degree: {element[elementId][1]}")
     
 while True:
