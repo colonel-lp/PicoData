@@ -294,7 +294,7 @@ def readIncline(sensorId, elementId):
     degree = element[elementId][1] / 10.0
     sensorListTmp[sensorId].update({'degree': degree})
 
-def readUnknown(sensorId, elementId):
+#def readUnknown(sensorId, elementId):
     
     
     
