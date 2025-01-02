@@ -306,8 +306,9 @@ def readCurrent(sensorId, elementId):
 
 def readIncline(sensorId, elementId):
     inclinometer_type = 'pitch' if elementId % 2 == 0 else 'roll'
-    sensorListTmp[sensorId].update({inclinometer_type: element[elementId][1] / 10.0})
-
+    value = element[elementId][1] / 10.0
+    sensorListTmp[sensorId].update({inclinometer_type: value})
+    
 while True:
     updates = []
     sensorListTmp = copy.deepcopy(sensorList)
