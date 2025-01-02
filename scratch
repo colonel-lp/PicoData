@@ -1,0 +1,58 @@
+Here are some suggestions to improve your code:
+
+Use logging instead of print statements for debugging purposes to have better control over logging levels and output formats.
+Replace the use of bare except clauses with specific exceptions to avoid catching unexpected errors.
+Use list comprehensions and generator expressions where applicable to make the code more concise and readable.
+Use context managers (with statements) for handling files and sockets to ensure proper resource management.
+Optimize imports by removing unused ones.
+Use f-strings for string formatting for better readability and performance.
+Add type hints to function signatures to improve code readability and enable better static analysis.
+
+Here are some suggestions to improve your code:
+
+Use logging instead of print statements for debugging purposes to have better control over logging levels and output formats.
+Replace the use of bare except clauses with specific exceptions to avoid catching unexpected errors.
+Use list comprehensions and generator expressions where applicable to make the code more concise and readable.
+Use context managers (with statements) for handling files and sockets to ensure proper resource management.
+Optimize imports by removing unused ones.
+Use f-strings for string formatting for better readability and performance.
+Add type hints to function signatures to improve code readability and enable better static analysis.
+
+
+def open_tcp(pico_ip, max_retries=5, retry_delay=5):
+    serverport = 5001
+    s = None
+    retries = 0
+    while retries < max_retries and not s:
+        try:
+            s = socket.create_connection((pico_ip, serverport), timeout=10)
+            if s:
+                debug(f"Connected to {pico_ip}:{serverport}")
+                s.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                return s  # Return the socket directly, do not rely on `with`
+        except socket.timeout as e:
+            debug(f"Connection attempt failed: {e}")
+            s = None  # Ensure s is None if connection fails
+        except socket.error as e:
+            debug(f"Socket error: {e}")
+            s = None  # Ensure s is None if connection fails
+        retries += 1
+        if retries < max_retries:
+            debug(f"Retrying in {retry_delay} seconds...")
+            time.sleep(retry_delay)
+    debug(f"Max retries ({max_retries}) reached.")
+    return None
+
+while True:
+    updates = []
+    sensorListTmp = copy.deepcopy(sensorList)
+
+    try:
+        message, addr = client.recvfrom(2048)
+        debug("Received packet with length " + str(len(message)))
+    except socket.timeout:
+        debug("Socket timeout, continuing to listen...")
+        continue
+    except Exception as e:
+        debug(f"Unexpected error: {e}")
+        continue
