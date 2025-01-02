@@ -227,7 +227,7 @@ def createSensorList(config):
             elementSize = 1
             if inclinometer_type == 1 : sensorList[id].update({'name' :'pitch'})
             elif inclinometer_type == 2 : sensorList[id].update({'name' :'roll'})
-
+            
         sensorList[id].update({'type': type, 'pos': elementPos})
         elementPos = elementPos + elementSize
     return sensorList
@@ -384,8 +384,7 @@ while True:
                     "currentLevel": sensorData.get('currentLevel'),
                     "remainingCapacity": sensorData.get('remainingCapacity'),
                     "percentage": sensorData.get('percentage'),
-                    "pitch": sensorData.get('pitch'),
-                    "roll": sensorData.get('roll')
+                    "degree": sensorData.get('degree')
                 }
                 filtered_values = {key: value for key, value in values.items() if value is not None}
                 if name and filtered_values and '[' not in name:
