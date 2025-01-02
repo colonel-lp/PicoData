@@ -309,8 +309,8 @@ def readCurrent(sensorId, elementId):
     sensorListTmp[sensorId].update({'current': -abs(current)})
 
 def readIncline(sensorId, elementId):
-    pitch = element[elementId][1] / 10.0
-    roll = element[elementId + 1][1] / 10.0
+    roll = element[elementId][1] / 10.0
+    pitch = element[elementId + 1][1] / 10.0
     sensorListTmp[sensorId].update({'pitch': pitch, 'roll': roll})
     print(f"Pitch: {pitch}, Roll: {roll}")
     
