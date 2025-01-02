@@ -220,62 +220,83 @@ def createSensorList (config):
             sensorList[id].update({'name': config[entry][3]})
             sensorList[id].update({'capacity.nominal': config[entry][5][1]*36*12})  # In Joule
             elementSize = 5
-        if (type == 14):
-            type = 'XX'
+        if (type == 13):
+            type = 'inclinometer'
+            inclinometer_type = config[entry][3][1]
+            sensorList[id].update({'inclinometer_type': inclinometer_type})
+            if inclinometer_type == 1 : sensorList[id].update({'name' :'pitch'})
+            elif inclinometer_type == 2 : sensorList[id].update({'name' :'roll'})
+            elementSize = 1
+        else:
+            type = 'unknown'
+            sensorList[id].update({'name': config[entry][3]})
             elementSize = 1
 
         sensorList[id].update({'type': type, 'pos': elementPos})
         elementPos = elementPos + elementSize
     return sensorList
 
-def readBaro (sensorId, elementId):
-    if elementId in element:
-        sensorListTmp[sensorId].update({'pressure': element[elementId][1] + 65536})
+def readBaro(sensorId, elementId):
+    sensorListTmp[sensorId].update({'pressure': (element[elementId][1] + 65536) / 100})
 
-def readTemp (sensorId, elementId):
-    if elementId in element:
-        sensorListTmp[sensorId].update({'temperature': toTemperature(element[elementId][1])})
+def readTemp(sensorId, elementId):
+    sensorListTmp[sensorId].update({'temperature': toTemperature(element[elementId][1])})
 
-def readTank (sensorId, elementId):
-    if elementId in element:
-        sensorListTmp[sensorId].update({'currentLevel': element[elementId][0] / float(1000)})
-        sensorListTmp[sensorId].update({'currentVolume': element[elementId][1] / float(10000)})
+def readTank(sensorId, elementId):
+    currentLevel = element[elementId][0] / float(1000)
+    capacity = sensorList[sensorId].get('capacity', 0)
+    remainingCapacity = element[elementId][1] / float(10)
+    percentage = (remainingCapacity / capacity) * 100 if capacity else 0
+    sensorListTmp[sensorId].update({'currentLevel': currentLevel})
+    sensorListTmp[sensorId].update({'remainingCapacity': remainingCapacity})
+    sensorListTmp[sensorId].update({'percentage': percentage})
 
 def readBatt(sensorId, elementId):
-    if elementId in element:
-        stateOfCharge = float("%.2f" % (element[elementId][0] / 16000.0))
-        sensorListTmp[sensorId].update({'stateOfCharge': stateOfCharge })
-        sensorListTmp[sensorId].update({'capacity.remaining': element[elementId][1] * stateOfCharge })
-        sensorListTmp[sensorId].update({'voltage': element[elementId + 2 ][1] / float(1000)})
-        current = element[elementId + 1][1]
-        if (current > 25000):
-            current = (65535 - current) / float(100)
-        else:
-            current = current / float(100) * -1
-        sensorListTmp[sensorId].update({'current': current})
-        stateOfCharge = float("%.2f" % (element[elementId][0] / 16000.0))
-        if (element[elementId][0] != 65535):
-            timeRemaining = round(sensorList[sensorId]['capacity.nominal'] / 12 / ((current * stateOfCharge) + 0.001) )
-            if (timeRemaining < 0):
-                timeRemaining = 60*60 * 24 * 7    # One week
-            sensorListTmp[sensorId].update({'capacity.timeRemaining': timeRemaining})
+    stateOfCharge = (element[elementId][0] / 16000.0)
+    sensorListTmp[sensorId].update({'stateOfCharge': stateOfCharge})
+    capacity = sensorList[sensorId].get('capacity.nominal', 0)
+    capacity_remaining = (capacity * stateOfCharge / 43200)
+    sensorListTmp[sensorId].update({'capacity.remaining': capacity_remaining})
+    sensorListTmp[sensorId].update({'voltage': element[elementId + 2][1] / float(1000)})
+    sensorListTmp[sensorId]['capacity.nominal'] = sensorListTmp[sensorId]['capacity.nominal'] / 43200
+    current = element[elementId + 1][1]
+    if (current > 25000):
+        current = (65535 - current) / float(100)
+    else:
+        current = current / float(100) * -1
+    sensorListTmp[sensorId].update({'current': -abs(current)})
+    if (element[elementId][0] != 65535):
+        timeRemaining = round(sensorList[sensorId]['capacity.nominal'] / 12 / ((current * stateOfCharge) + 0.001))
+        if (timeRemaining < 0):
+            timeRemaining = 60 * 60 * 24 * 7  # One week
+        sensorListTmp[sensorId].update({'capacity.timeRemaining': timeRemaining})
 
-def readVolt (sensorId, elementId):
-    if elementId in element:
-        sensorListTmp[sensorId].update({'voltage': element[elementId][1] / float(1000)})
+def readBattNameVoltage(sensorId, elementId):
+    voltage = element[elementId + 2][1] / float(1000)
+    name = sensorList[sensorId].get('name')
+    sensorListTmp[sensorId].update({'name': name, 'voltage': voltage, 'type': 'battery'})
 
-def readOhm (sensorId, elementId):
-    if elementId in element:
-        sensorListTmp[sensorId].update({'ohm': element[elementId][1] })
+def readVolt(sensorId, elementId):
+    sensorListTmp[sensorId].update({'voltage': element[elementId][1] / float(1000)})
 
-def readCurrent (sensorId, elementId):
-    if elementId in element:
-        current = element[elementId][1]
-        if (current > 25000):
-            current = (65535 - current) / float(100)
-        else:
-            current = current / float(100) * -1
-        sensorListTmp[sensorId].update({'current': current})
+def readOhm(sensorId, elementId):
+    sensorListTmp[sensorId].update({'ohm': element[elementId][1]})
+
+def readCurrent(sensorId, elementId):
+    current = element[elementId][1]
+    if (current > 25000):
+        current = (65535 - current) / float(100)
+    else:
+        current = current / float(100) * -1
+    sensorListTmp[sensorId].update({'current': -abs(current)})
+
+def readIncline(sensorId, elementId):
+    degree = element[elementId][1] / 10.0
+    sensorListTmp[sensorId].update({'degree': degree})
+
+def readUnknown(sensorId, elementId):
+    
+    
 
 debug("Start UDP listener")
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -328,6 +349,10 @@ for item in sensorList:
         readCurrent(item, elId)
     if (itemType == 'tank'):
         readTank(item, elId)
+    if itemType == 'inclinometer':
+        readIncline(item, elId)
+    if itemType == 'unknown':
+        readUnknown(item, elId)
 
 print(json.dumps(sensorListTmp))
 sys.stdout.flush()
