@@ -226,7 +226,7 @@ def createSensorList(config):
             inclinometer_type = config[entry][2][1]
             sensorList[id].update({'inclinometer_type': inclinometer_type})
             elementSize = 1
-
+            debug(f"Inclinometer ID: {id}, Name: {config[entry][3]}, Type: {inclinometer_type}")
 
         sensorList[id].update({'type': type, 'pos': elementPos})
         elementPos = elementPos + elementSize
