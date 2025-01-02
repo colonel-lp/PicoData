@@ -251,10 +251,13 @@ def createSensorList (config):
       sensorList[id].update ({'name': config[entry][3]})
       sensorList[id].update ({'capacity.nominal': config[entry][5][1]*36*12}) # In Joule
       elementSize = 5
-    if (type == 14):
-      type = 'XX'
-      elementSize = 1
-
+    if (type == 13):
+        type = 'inclinometer'
+        inclinometer_type = config[entry][3][1]
+        sensorList[id].update({'inclinometer_type': inclinometer_type})
+        if inclinometer_type == 1 : sensorList[id].update({'name' :'pitch'})
+        elif inclinometer_type == 2 : sensorList[id].update({'name' :'roll'})
+        elementSize = 1
     sensorList[id].update ({'type': type, 'pos': elementPos})
     elementPos = elementPos + elementSize
   return sensorList
@@ -330,6 +333,9 @@ def readCurrent (sensorId, elementId):
       current = current / float(100) * -1
     sensorListTmp[sensorId].update({'current': current})
 
+def readIncline(sensorId, elementId):
+    degree = element[elementId][1] / 10.0
+    sensorListTmp[sensorId].update({'degree': degree})
 
 while True:
     updates = []
@@ -379,6 +385,8 @@ while True:
             readCurrent(item, elId)
         if (itemType == 'tank'):
             readTank(item, elId)
+        if itemType == 'inclinometer':
+            readIncline(item, elId)
 
     print (json.dumps(sensorListTmp))
 
