@@ -223,10 +223,11 @@ def createSensorList(config):
         if (type == 13):
             type = 'inclinometer'
             sensorList[id].update({'name': config[entry][3]})
-            inclinometer_type = 'pitch' if 'pitch' in config[entry][3].lower() else 'roll'
+            inclinometer_type = config[entry][2][1]
             sensorList[id].update({'inclinometer_type': inclinometer_type})
             elementSize = 1
 
+        
         sensorList[id].update({'type': type, 'pos': elementPos})
         elementPos = elementPos + elementSize
     return sensorList
@@ -308,10 +309,15 @@ def readCurrent(sensorId, elementId):
     sensorListTmp[sensorId].update({'current': -abs(current)})
 
 def readIncline(sensorId, elementId):
-    roll = element[elementId][1] / 10.0
-    pitch = element[elementId + 1][1] / 10.0
-    sensorListTmp[sensorId].update({'pitch': pitch, 'roll': roll})
-    print(f"Pitch: {pitch}, Roll: {roll}")
+    inclinometer_type = sensorList[sensorId]['inclinometer_type']
+    if inclinometer_type == 1:  # Pitch
+        pitch = element[elementId][1] / 10.0
+        sensorListTmp[sensorId].update({'pitch': pitch})
+        print(f"Pitch: {pitch}")
+    elif inclinometer_type == 2:  # Roll
+        roll = element[elementId][1] / 10.0
+        sensorListTmp[sensorId].update({'roll': roll})
+        print(f"Roll: {roll}")
     
 while True:
     updates = []
