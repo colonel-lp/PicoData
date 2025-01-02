@@ -227,10 +227,6 @@ def createSensorList (config):
             if inclinometer_type == 1 : sensorList[id].update({'name' :'pitch'})
             elif inclinometer_type == 2 : sensorList[id].update({'name' :'roll'})
             elementSize = 1
-        else:
-            type = 'unknown'
-            sensorList[id].update({'name': config[entry][3]})
-            elementSize = 1
 
         sensorList[id].update({'type': type, 'pos': elementPos})
         elementPos = elementPos + elementSize
@@ -292,11 +288,7 @@ def readCurrent(sensorId, elementId):
 
 def readIncline(sensorId, elementId):
     degree = element[elementId][1] / 10.0
-    sensorListTmp[sensorId].update({'degree': degree})
-
-#def readUnknown(sensorId, elementId):
-    
-    
+    sensorListTmp[sensorId].update({'degree': degree})    
     
 
 debug("Start UDP listener")
@@ -352,8 +344,7 @@ for item in sensorList:
         readTank(item, elId)
     if itemType == 'inclinometer':
         readIncline(item, elId)
-    if itemType == 'unknown':
-        readUnknown(item, elId)
+
 
 print(json.dumps(sensorListTmp))
 sys.stdout.flush()
