@@ -221,8 +221,12 @@ def createSensorList(config):
             sensorList[id].update({'capacity.nominal': config[entry][5][1] * 36 * 12})  # In Joule
             elementSize = 5
         if (type == 13):
-            type = 'inclinometer'  # Corrected to use 'inclinometer'
-            elementSize = 1
+            type = 'inclinometer'
+            sensorList[id].update({'name': config[entry][3]})
+            inclinometer_type = 'pitch' if elementPos % 2 == 0 else 'roll'
+            sensorList[id].update({'inclinometer_type': inclinometer_type})
+            elementSize = 2  # Adjusted for pitch and roll
+
 
         sensorList[id].update({'type': type, 'pos': elementPos})
         elementPos = elementPos + elementSize
@@ -305,9 +309,11 @@ def readCurrent(sensorId, elementId):
     sensorListTmp[sensorId].update({'current': -abs(current)})
 
 def readIncline(sensorId, elementId):
-    inclinometer_type = 'pitch' if elementId % 2 == 0 else 'roll'
-    sensorListTmp[sensorId].update({inclinometer_type: element[elementId][1] / 10.0})
-
+    pitch = element[elementId][1] / 10.0
+    roll = element[elementId + 1][1] / 10.0
+    sensorListTmp[sensorId].update({'pitch': pitch, 'roll': roll})
+    print(f"Pitch: {pitch}, Roll: {roll}")
+    
 while True:
     updates = []
     sensorListTmp = copy.deepcopy(sensorList)
