@@ -220,9 +220,11 @@ def createSensorList(config):
             sensorList[id].update({'name': config[entry][3]})
             sensorList[id].update({'capacity.nominal': config[entry][5][1] * 36 * 12})  # In Joule
             elementSize = 5
-        if (type == 13):
-            type = 'inclinometer'  # Corrected to use 'inclinometer'
-            elementSize = 1
+         if (type == 9):
+            type = 'battery'
+            sensorList[id].update({'name': config[entry][3]})
+            sensorList[id].update({'capacity.nominal': config[entry][5][1] * 36 * 12})  # In Joule
+            elementSize = 5
 
         sensorList[id].update({'type': type, 'pos': elementPos})
         elementPos = elementPos + elementSize
@@ -305,9 +307,9 @@ def readCurrent(sensorId, elementId):
     sensorListTmp[sensorId].update({'current': -abs(current)})
 
 def readIncline(sensorId, elementId):
-    inclinometer_type = 'pitch' if elementId % 2 == 0 else 'roll'
-    value = element[elementId][1] / 10.0
-    sensorListTmp[sensorId].update({inclinometer_type: value})
+    pitch = element[elementId][1] / 10.0
+    roll = element[elementId + 1][1] / 10.0
+    sensorListTmp[sensorId].update({'pitch': pitch, 'roll': roll})
     
 while True:
     updates = []
@@ -390,9 +392,9 @@ while True:
                         output["barometer"] = filtered_values["pressure"]
                     elif sensorData['type'] == 'inclinometer':
                         if "pitch" in filtered_values:
-                            output["inclinometer"]["pitch"] = filtered_values["pitch"]
+                        output["inclinometer"]["pitch"] = filtered_values["pitch"]
                         if "roll" in filtered_values:
-                            output["inclinometer"]["roll"] = filtered_values["roll"]
+                        output["inclinometer"]["roll"] = filtered_values["roll"]
                     elif sensorData['type'] == 'volt':
                         output["voltage"][name] = filtered_values["voltage"]
                     elif sensorData['type'] == 'current':
