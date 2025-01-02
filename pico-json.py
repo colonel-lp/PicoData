@@ -394,10 +394,10 @@ while True:
                         output["barometer"] = filtered_values["pressure"]
                     elif sensorData['type'] == 'inclinometer':
                         if "degree" in filtered_values:
-                        if filtered_values["inclinometer_type"] == 1:
-                            output["inclinometer"]["pitch"] = filtered_values["degree"]
-                        elif filtered_values["inclinometer_type"] == 2:
-                            output["inclinometer"]["roll"] = filtered_values["degree"]
+                            if filtered_values["inclinometer_type"] == 1:
+                                output["inclinometer"]["pitch"] = filtered_values["degree"]
+                            elif filtered_values["inclinometer_type"] == 2:
+                                output["inclinometer"]["roll"] = filtered_values["degree"]
                     elif sensorData['type'] == 'volt':
                         output["voltage"][name] = filtered_values["voltage"]
                     elif sensorData['type'] == 'current':
