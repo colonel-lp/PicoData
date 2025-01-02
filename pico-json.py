@@ -220,11 +220,10 @@ def createSensorList(config):
             sensorList[id].update({'name': config[entry][3]})
             sensorList[id].update({'capacity.nominal': config[entry][5][1] * 36 * 12})  # In Joule
             elementSize = 5
-         if (type == 9):
-            type = 'battery'
+         if (type == 13):
+            type = 'inclinometer'
             sensorList[id].update({'name': config[entry][3]})
-            sensorList[id].update({'capacity.nominal': config[entry][5][1] * 36 * 12})  # In Joule
-            elementSize = 5
+            elementSize = 2  # Adjusted for pitch and roll
 
         sensorList[id].update({'type': type, 'pos': elementPos})
         elementPos = elementPos + elementSize
@@ -391,9 +390,9 @@ while True:
                     if sensorData['type'] == 'barometer':
                         output["barometer"] = filtered_values["pressure"]
                     elif sensorData['type'] == 'inclinometer':
-                        if "pitch" in filtered_values:
+                    if "pitch" in filtered_values:
                         output["inclinometer"]["pitch"] = filtered_values["pitch"]
-                        if "roll" in filtered_values:
+                    if "roll" in filtered_values:
                         output["inclinometer"]["roll"] = filtered_values["roll"]
                     elif sensorData['type'] == 'volt':
                         output["voltage"][name] = filtered_values["voltage"]
