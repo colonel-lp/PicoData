@@ -222,7 +222,8 @@ def createSensorList(config):
             elementSize = 5
         if (type == 13):
             type = 'inclinometer'
-            sensorList[id].update({'inclinometer_type': config[entry][3][1]})
+            inclinometer_type = config[entry][3][1]
+            sensorList[id].update({inclinometer_type': inclinometer_type})
             elementSize = 1
             if inclinometer_type == 1 : sensorList[id].update({'name' :'pitch'})
             elif inclinometer_type == 2 : sensorList[id].update({'name' :'roll'})
