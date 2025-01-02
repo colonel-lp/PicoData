@@ -243,8 +243,12 @@ def createSensorList(config):
             sensorList[id].update({'name': config[entry][3]})
             sensorList[id].update({'capacity.nominal': config[entry][5][1] * 36 * 12})  # In Joule
             elementSize = 5
-        if (type == 13):
-            type = 'inclinometer'  # Corrected to use 'inclinometer'
+         if (type == 13):
+            type = 'inclinometer'
+            inclinometer_type = config[entry][3][1]
+            sensorList[id].update({'inclinometer_type': inclinometer_type})
+            if inclinometer_type == 1 : sensorList[id].update({'name' :'pitch'})
+            elif inclinometer_type == 2 : sensorList[id].update({'name' :'roll'})
             elementSize = 1
 
         sensorList[id].update({'type': type, 'pos': elementPos})
@@ -328,8 +332,8 @@ def readCurrent(sensorId, elementId):
     sensorListTmp[sensorId].update({'current': -abs(current)})
 
 def readIncline(sensorId, elementId):
-    inclinometer_type = 'pitch' if elementId % 2 == 0 else 'roll'
-    sensorListTmp[sensorId].update({inclinometer_type: element[elementId][1] / 10.0})
+    degree = element[elementId][1] / 10.0
+    sensorListTmp[sensorId].update({'degree': degree})
 
 while True:
     updates = []
@@ -403,18 +407,18 @@ while True:
                     "currentLevel": sensorData.get('currentLevel'),
                     "remainingCapacity": sensorData.get('remainingCapacity'),
                     "percentage": sensorData.get('percentage'),
-                    "pitch": sensorData.get('pitch'),
-                    "roll": sensorData.get('roll')
+                    "degree": sensorData.get('degree'),
+                    "inclinometer_type": sensorData.get('inclinometer_type')
                 }
                 filtered_values = {key: value for key, value in values.items() if value is not None}
                 if name and filtered_values and '[' not in name:
                     if sensorData['type'] == 'barometer':
                         output["barometer"] = filtered_values["pressure"]
                     elif sensorData['type'] == 'inclinometer':
-                        if "pitch" in filtered_values:
-                            output["inclinometer"]["pitch"] = filtered_values["pitch"]
-                        if "roll" in filtered_values:
-                            output["inclinometer"]["roll"] = filtered_values["roll"]
+                        if filtered_values["inclinometer_type"] == 1:
+                             output["inclinometer"][name] = filtered_values["degree"]
+                        elif filtered_values["inclinometer_type"] == 2:
+                             output["inclinometer"][name] = filtered_values["degree"]
                     elif sensorData['type'] == 'volt':
                         output["voltage"][name] = filtered_values["voltage"]
                     elif sensorData['type'] == 'current':
