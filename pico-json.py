@@ -384,7 +384,8 @@ while True:
                     "currentLevel": sensorData.get('currentLevel'),
                     "remainingCapacity": sensorData.get('remainingCapacity'),
                     "percentage": sensorData.get('percentage'),
-                    "degree": sensorData.get('degree')
+                    "degree": sensorData.get('degree'),
+                    "inclinometer_type": sensorData.get('inclinometer_type')
                 }
                 filtered_values = {key: value for key, value in values.items() if value is not None}
                 if name and filtered_values and '[' not in name:
