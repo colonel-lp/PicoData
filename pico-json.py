@@ -224,7 +224,6 @@ def createSensorList(config):
             type = 'inclinometer'
             sensorList[id].update({'inclinometer_type': config[entry][3][1]})
             elementSize = 1
-            print(f"Name: {config[entry][3][2]}")
 
         sensorList[id].update({'type': type, 'pos': elementPos})
         elementPos = elementPos + elementSize
@@ -308,8 +307,8 @@ def readCurrent(sensorId, elementId):
 
 def readIncline(sensorId, elementId):
     degree = element[elementId][1] / 10.0
-    inclinometer_type = element[elementId][3] if len(element[elementId]) > 3 else None
     sensorListTmp[sensorId].update({'inclinometer_type': inclinometer_type, 'degree': degree})
+    print(f"degree: {element[elementId][1]}")
     
 while True:
     updates = []
