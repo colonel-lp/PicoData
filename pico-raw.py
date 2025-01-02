@@ -297,6 +297,7 @@ def readIncline(sensorId, elementId):
 def readUnknown(sensorId, elementId):
     
     
+    
 
 debug("Start UDP listener")
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
