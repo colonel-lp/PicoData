@@ -296,7 +296,7 @@ def readBatt(sensorId, elementId):
     stateOfCharge = (element[elementId][0] / 160.0)
     sensorListTmp[sensorId].update({'stateOfCharge': stateOfCharge})
     capacity = sensorList[sensorId].get('capacity.nominal', 0)
-    capacity_remaining = (capacity * stateOfCharge / 43200)
+    capacity_remaining = (capacity * stateOfCharge / 4320000)
     sensorListTmp[sensorId].update({'capacity.remaining': capacity_remaining})
     sensorListTmp[sensorId].update({'voltage': element[elementId + 2][1] / float(1000)})
     sensorListTmp[sensorId]['capacity.nominal'] = sensorListTmp[sensorId]['capacity.nominal'] / 43200
@@ -307,7 +307,7 @@ def readBatt(sensorId, elementId):
         current = current / float(100) * -1
     sensorListTmp[sensorId].update({'current': -abs(current)})
     if (element[elementId][0] != 65535):
-        timeRemaining = round(sensorList[sensorId]['capacity.nominal'] / 12 / ((current * stateOfCharge) + 0.001))
+        timeRemaining = round(sensorList[sensorId]['capacity.nominal'] / 12 / ((current * stateOfCharge / 100) + 0.001))
         if (timeRemaining < 0):
             timeRemaining = 60 * 60 * 24 * 7  # One week
         sensorListTmp[sensorId].update({'capacity.timeRemaining': timeRemaining})
