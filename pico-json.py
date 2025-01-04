@@ -271,7 +271,7 @@ def readTank(sensorId, elementId):
 
 def readBatt(sensorId, elementId):
     stateOfCharge = (element[elementId][0] / 16000.0)
-    sensorListTmp[sensorId].update({'stateOfCharge': stateOfCharge})
+    sensorListTmp[sensorId].update({'stateOfCharge': stateOfCharge * 100})
     capacity = sensorList[sensorId].get('capacity.nominal', 0)
     capacity_remaining = (capacity * stateOfCharge / 43200)
     sensorListTmp[sensorId].update({'capacity.remaining': capacity_remaining})
