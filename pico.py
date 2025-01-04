@@ -303,7 +303,7 @@ def readTank (sensorId, elementId):
 
 def readBatt(sensorId, elementId):
     stateOfCharge = float("%.2f" % (element[elementId][0] / 16000.0))
-    sensorListTmp[sensorId].update({'stateOfCharge': stateOfCharge })
+    sensorListTmp[sensorId].update({'stateOfCharge': stateOfCharge * 100})
     sensorListTmp[sensorId].update({'capacity.remaining': element[elementId][1] * stateOfCharge })
     sensorListTmp[sensorId].update({'voltage': element[elementId + 2 ][1] / float(1000)})
     current = element[elementId + 1][1]
