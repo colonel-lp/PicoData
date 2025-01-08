@@ -287,9 +287,12 @@ def readCurrent(sensorId, elementId):
     sensorListTmp[sensorId].update({'current': -abs(current)})
 
 def readIncline(sensorId, elementId):
-    degree = element[elementId][1] / 10.0
-    sensorListTmp[sensorId].update({'degree': degree})    
-    
+    degree = element[elementId][1]
+    if (degree > 600):
+        degree = (65535 - degree) / 10
+    else:
+        degree = degree / 10
+    sensorListTmp[sensorId].update({'degree': degree})
 
 debug("Start UDP listener")
 client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
