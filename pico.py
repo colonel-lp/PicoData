@@ -336,7 +336,7 @@ def readCurrent (sensorId, elementId):
 def readIncline(sensorId, elementId):
     degree = element[elementId][1]
     if (degree > 600):
-        degree = (65535 - degree) / 10
+        degree = (65535 - degree) / -10
     else:
         degree = degree / 10
     sensorListTmp[sensorId].update({'degree': degree})
