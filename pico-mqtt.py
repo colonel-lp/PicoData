@@ -304,8 +304,8 @@ def readBatt(sensorId, elementId):
     if (current > 25000):
         current = (65535 - current) / float(100)
     else:
-        current = current / float(100) * -1
-    sensorListTmp[sensorId].update({'current': -abs(current)})
+        current = current / float(-100)
+    sensorListTmp[sensorId].update({'current': (current)})
     if (element[elementId][0] != 65535):
         timeRemaining = round(sensorList[sensorId]['capacity.nominal'] / 12 / ((current * stateOfCharge / 100) + 0.001))
         if (timeRemaining < 0):
@@ -328,15 +328,15 @@ def readCurrent(sensorId, elementId):
     if (current > 25000):
         current = (65535 - current) / float(100)
     else:
-        current = current / float(100) * -1
-    sensorListTmp[sensorId].update({'current': -abs(current)})
+        current = current / float(-100)
+    sensorListTmp[sensorId].update({'current': (current)})
 
 def readIncline(sensorId, elementId):
     degree = element[elementId][1]
     if (degree > 600):
-        degree = (65535 - degree) / 10
+        degree = (65535 - degree) / float(10)
     else:
-        degree = degree / -10
+        degree = degree / float(10)
     sensorListTmp[sensorId].update({'degree': degree})
 
 while True:
