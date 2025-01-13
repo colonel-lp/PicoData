@@ -326,7 +326,7 @@ def readOhm(sensorId, elementId):
 def readCurrent(sensorId, elementId):
     current = element[elementId][1]
     if (current > 25000):
-        current = (65535 - current) / float(100)
+        current = (65535 - current) / float(-100)
     else:
         current = current / float(100)
     sensorListTmp[sensorId].update({'current': (current)})
