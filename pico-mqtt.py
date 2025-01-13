@@ -304,7 +304,7 @@ def readBatt(sensorId, elementId):
     if (current > 25000):
         current = (65535 - current) / float(100)
     else:
-        current = current / float(-100)
+        current = current / float(100)
     sensorListTmp[sensorId].update({'current': (current)})
     if (element[elementId][0] != 65535):
         timeRemaining = round(sensorList[sensorId]['capacity.nominal'] / 12 / ((current * stateOfCharge / 100) + 0.001))
