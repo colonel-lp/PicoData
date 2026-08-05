@@ -4,7 +4,8 @@ Set up your MQTT server credentials in the mqtt file.
 
 Currently running on a Pi connected to the same network running mosquito as the mqtt server and nodeRed to collect and serve a webpage on the network with the data from the Simarine Pico and from an Electrodacus BMS.
 
-Node Red configuration is also in my GitHub.
+Node Red configuration is here: 
+https://github.com/colonel-lp/node-red-ella
 
 Core code is from https://github.com/htool/pico2signalk/
 
