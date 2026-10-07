@@ -1,0 +1,15 @@
+# Proposed Android process
+
+- **Agree the baseline:** use `PicoData/python/pico-mqtt.py` and `node-red-ella/flows.json` to list required readings, calculations and dashboard behaviour; confirm target devices/Android versions, layout, history and background needs.
+- **Capture reference data:** record Pico configuration and live packets plus ElectroDacus MQTT JSON. Map sensor IDs, exact names, units, topic slashes, missing values and Node-RED conversions to expected display values.
+- **Reconcile the implementations:** take connectivity ideas from `node.js/lib/` and live decoding from `node.js/index.js` (copied from `pico2signalk`), excluding SignalK output. Restore your pitch/roll and tank/battery changes; resolve current signs, Celsius/Kelvin, pressure and SOC scaling against the baseline.
+- **Choose the MQTT route early:** assess an embedded Android broker for direct ElectroDacus publishing, including firmware settings, a stable reachable Wi-Fi address, authentication and screen-off/reconnect reliability. Keep the Pi Mosquitto client route available.
+- **Define separate components:** Pico discovery/TCP configuration/UDP reception; packet and sensor decoders; ElectroDacus JSON decoder; optional broker host/external MQTT client; shared readings with source, units and freshness; dashboard/settings UI.
+- **Prove connectivity first, when implementation is requested:** create small Android connection prototypes, validate Pico packet framing and sensor positions, then receive SBMS MQTT through the selected route. Check current Android LAN permissions and lifecycle rules before choosing libraries.
+- **Build the display in stages:** first show live readings and independent connection/stale-data status; then add the agreed gauges, grouped values and graphs, preserving existing conversions and rounding.
+- **Test against the running setup:** compare replayed and live values with Python/Node-RED; exercise negative readings, pitch/roll, tank/battery calculations, invalid packets, Pico reboot, Wi-Fi/IP changes, MQTT loss and screen-off/app restart.
+- **Document each agreed build:** keep source, pending changes, protocol/data mappings, user guide, changelog and validation under `android/`. Distinguish compilation from actual Pico/SBMS device testing.
+
+An embedded broker is a feasibility candidate, not yet a selected library or proven Android implementation. ElectroDacus must publish to that broker's address; an MQTT subscriber cannot receive a publisher directly without a broker.
+
+Reference guidance: [Android foreground-service types](https://developer.android.com/develop/background-work/services/fgs/service-types), [background-start restrictions](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start), [local-network permissions](https://developer.android.com/privacy-and-security/local-network-permission), and [Moquette broker project](https://github.com/moquette-io/moquette). Moquette's Android embedding notes are old; verify current compatibility rather than following their old SDK workaround.
