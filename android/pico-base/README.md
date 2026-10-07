@@ -2,7 +2,7 @@
 
 Standalone Node.js starting point for the Android Pico reader. It uses the updated `../../node.js/` acquisition code, with the owner's `../../python/pico-mqtt.py` sensor mappings, calculations and Ella JSON format carried over. There is no MQTT connection, publishing or SignalK runtime dependency.
 
-**Status:** automated tests pass. The owner's real Pico has not yet been tested with this base. Do not describe it as hardware-verified or start the Android port until the live checks below have supplied evidence.
+**Status:** 16 automated tests pass. On 2026-10-07 the owner reported a successful real Pi/Pico capture: all 108 TCP replies and 1,096 UDP packets passed length/CRC checks; all 1,096 decoded outputs matched the original Python, with zero differences. Visual comparison and real restart/Wi-Fi recovery checks remain pending. See [build validation](../BUILD-VALIDATION.md) for evidence and remaining checks.
 
 ## Run on the Pi
 
@@ -32,7 +32,7 @@ node bin/verify-capture.js pico-capture.jsonl --compare-python
 
 The summary reports counts for configuration, TCP replies, live packets, length/checksum matches and Python output matches. Exit status 0 and `"ok":true` mean those checks passed for the recorded samples. Python comparison extracts the functions and output block via AST from the bundled `test/reference/pico-mqtt.py`; it does not import its MQTT/network setup or run the old service. That file is an unchanged snapshot of `python/pico-mqtt.py`, Git blob `eb99d3dfc57c7c9d6ca721754015a296fb086741`. Refresh it deliberately if the agreed Python baseline changes. Both comparison tests and capture verification work without a sibling `python/` folder.
 
-Receive framing assumes the big-endian length at header offsets 11–12 follows the layout used by upstream requests. The checker also tests incoming CRCs using the upstream outgoing CRC rule. Neither assumption has been confirmed on the owner's Pico yet. Raw TCP records are retained even when a read fails so an incompatible reply can be examined. Incoming CRCs are reported by the checker, not yet enforced by the live receiver.
+Receive framing assumes the big-endian length at header offsets 11–12 follows the layout used by upstream requests. The checker also tests incoming CRCs using the upstream outgoing CRC rule. Both rules passed all recorded TCP replies and UDP packets in the owner's reported 2026-10-07 capture; compatibility with other firmware remains untested. Raw TCP records are retained even when a read fails so an incompatible reply can be examined. Incoming CRCs are reported by the checker, not yet enforced by the live receiver.
 
 If the summary fails, supply the capture and terminal diagnostics for investigation. Do not alter the protocol layout or calculations to make synthetic tests pass. If the capture contains unavailable battery SOC or the upstream-confirmed 65535 voltage sentinel, the checker can report expected differences from the old Python output; review these explicitly.
 

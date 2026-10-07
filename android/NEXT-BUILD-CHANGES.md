@@ -9,8 +9,9 @@
 - [x] Compare normal readings with the original Python functions and test simulated connection failures/recovery.
 - [x] Provide recording, verification and replay commands for a live Pi test.
 - [x] Support installation directly in `~/PicoData/node.js`, including a bundled Python comparison reference so deleted original folders are not needed.
-- [ ] Confirm discovery, configuration and required sensor readings on the owner's actual Pico.
-- [ ] Confirm real receive frame lengths/checksums; investigate any differences before the Android port.
+- [x] Receive configurations and live readings from the owner's actual Pico; 1,096 captured outputs match the original Python, with zero differences (owner-reported verification).
+- [x] Confirm real receive frame lengths/checksums for the reported capture: 108 TCP responses and 1,096 UDP packets all pass.
+- [ ] Confirm automatic discovery mode and record Pico firmware/device identity and Pi Node.js version.
 - [ ] Confirm live readings against the existing Node-RED/Pico display and exercise Wi-Fi loss/Pico restart.
 
 ## Later Android work

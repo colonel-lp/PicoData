@@ -23,18 +23,31 @@ This is a standalone Node.js reference implementation in `android/pico-base/`, n
 - Capture verification rejects empty evidence and bad CRCs.
 - An isolated copy containing only the base's files in `PicoData/node.js` verifies a synthetic capture against Python successfully, without the original `android/` or `python/` folders. The bundled Python reference has the same Git blob hash as the original baseline (`eb99d3dfc57c7c9d6ca721754015a296fb086741`).
 
-Synthetic packets are explicitly synthetic; none were captured from the owner's hardware. Loopback tests do not establish Wi-Fi broadcast delivery, firmware compatibility, changed-IP recovery on the real LAN or Android behaviour.
+The automated tests use synthetic packets. Loopback tests do not establish Wi-Fi broadcast delivery, firmware compatibility, changed-IP recovery on the real LAN or Android behaviour.
+
+## Owner-reported real Pico capture — 2026-10-07
+
+The owner ran the base from `~/PicoData/node.js` on the Pi and supplied this terminal result for `node bin/verify-capture.js pico-capture.jsonl --compare-python`:
+
+```json
+{"configurations":2,"packets":1096,"tcpResponses":108,"tcpLengthMatches":108,"tcpCrcMatches":108,"udpLengthMatches":1096,"udpCrcMatches":1096,"pythonMatches":1096,"pythonDifferences":0,"ok":true}
+```
+
+All 108 complete TCP responses and 1,096 live UDP packets passed length and CRC checks. All 1,096 decoded output objects matched the original Python calculations/formatting, with zero differences. The same capture passed without Python comparison in 1.432 seconds; Python comparison completed after a longer silent wait because the current verifier launches Python once per packet.
+
+This is owner-reported hardware evidence; the raw capture has not been supplied to the agent for independent inspection. Two configurations alone do not establish recovery after a reboot or Wi-Fi interruption. Device/firmware identity, Pi runtime version, discovery mode and visual comparison remain unrecorded.
 
 ## Pending real Pi checks
 
 - [ ] Record the Pico firmware/device identity and Pi Node.js version.
-- [ ] Discover the Pico on the common LAN and retrieve all configuration entries.
-- [ ] Pass `verify-capture.js ... --compare-python`, or explain every protocol/invalid-value difference using the real capture.
+- [x] Retrieve configuration and live packets from the owner's Pico (owner-reported capture result).
+- [ ] Confirm automatic discovery mode on the common LAN.
+- [x] Pass `verify-capture.js ... --compare-python`: 1,096 matches, zero differences.
 - [ ] Verify all expected names/values against the current dashboard and Pico display, especially charge/discharge current signs, tank percentage, battery capacity and both inclinometer axes.
 - [ ] Test Pico power-cycle, Wi-Fi interruption and automatic discovery after an address change.
 - [ ] Check UDP binding while the existing Python reader runs; restore the original service after any temporary test stop.
 - [ ] Confirm Ctrl+C exits and a second start binds/connects normally.
 
-Incoming framing/CRC interpretation is derived from upstream request layouts and remains a hardware-validation item. The recorder includes raw TCP data to diagnose failures. The live receiver currently bounds-checks fields but does not enforce receive CRCs before those are confirmed against actual packets.
+Incoming framing/CRC interpretation was derived from upstream request layouts and passed every recorded response/packet in the owner's reported capture. This validates that capture, not every firmware or failure condition. The recorder includes raw TCP data to diagnose failures. The live receiver currently bounds-checks fields but does not enforce receive CRCs.
 
 No real Pico, SBMS0, Pi or Android hardware test has been performed by the agent. No APK, MQTT transport, broker or SignalK integration has been built in this step.
