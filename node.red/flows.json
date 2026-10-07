@@ -1,0 +1,4412 @@
+[
+    {
+        "id": "2d519f9110a6099a",
+        "type": "tab",
+        "label": "SBMS0",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "a4483ff9452125ea",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "192.168.1.48",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "3",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "342ae5e1.a2feca",
+        "type": "ui_tab",
+        "name": "Ella",
+        "icon": "tv",
+        "order": 2,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "9cf1e8b8202e424f",
+        "type": "ui_group",
+        "name": "battery V",
+        "tab": "342ae5e1.a2feca",
+        "order": 5,
+        "disp": false,
+        "width": "24",
+        "collapse": false,
+        "className": "font10"
+    },
+    {
+        "id": "dbf247658fd28145",
+        "type": "ui_group",
+        "name": "temps",
+        "tab": "342ae5e1.a2feca",
+        "order": 6,
+        "disp": false,
+        "width": "4",
+        "collapse": false,
+        "className": "font10 level"
+    },
+    {
+        "id": "ef26f360d17ffbe2",
+        "type": "ui_group",
+        "name": "draw",
+        "tab": "342ae5e1.a2feca",
+        "order": 2,
+        "disp": false,
+        "width": "5",
+        "collapse": false,
+        "className": "font10"
+    },
+    {
+        "id": "c4b7ed610a9d4ce8",
+        "type": "ui_group",
+        "name": "SBMS -Loads",
+        "tab": "342ae5e1.a2feca",
+        "order": 3,
+        "disp": false,
+        "width": "16",
+        "collapse": false,
+        "className": "font10 guage led",
+        "info": "<style>\n{\n    font-size:12;\n}"
+    },
+    {
+        "id": "a266c46f642e3692",
+        "type": "ui_group",
+        "name": "LPG Water Inc",
+        "tab": "342ae5e1.a2feca",
+        "order": 4,
+        "disp": false,
+        "width": "8",
+        "collapse": false,
+        "className": "font10 "
+    },
+    {
+        "id": "5b6eade5be302dd2",
+        "type": "ui_group",
+        "name": "graphs",
+        "tab": "342ae5e1.a2feca",
+        "order": 7,
+        "disp": false,
+        "width": "33",
+        "collapse": false,
+        "className": "font10"
+    },
+    {
+        "id": "15ec5d23b47d7187",
+        "type": "ui_base",
+        "theme": {
+            "name": "theme-light",
+            "lightTheme": {
+                "default": "#0094CE",
+                "baseColor": "#0094CE",
+                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+                "edited": true,
+                "reset": false
+            },
+            "darkTheme": {
+                "default": "#097479",
+                "baseColor": "#097479",
+                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+                "edited": false
+            },
+            "customTheme": {
+                "name": "Untitled Theme 1",
+                "default": "#4B7930",
+                "baseColor": "#4B7930",
+                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif"
+            },
+            "themeState": {
+                "base-color": {
+                    "default": "#0094CE",
+                    "value": "#0094CE",
+                    "edited": false
+                },
+                "page-titlebar-backgroundColor": {
+                    "value": "#0094CE",
+                    "edited": false
+                },
+                "page-backgroundColor": {
+                    "value": "#fafafa",
+                    "edited": false
+                },
+                "page-sidebar-backgroundColor": {
+                    "value": "#ffffff",
+                    "edited": false
+                },
+                "group-textColor": {
+                    "value": "#1bbfff",
+                    "edited": false
+                },
+                "group-borderColor": {
+                    "value": "#ffffff",
+                    "edited": false
+                },
+                "group-backgroundColor": {
+                    "value": "#ffffff",
+                    "edited": false
+                },
+                "widget-textColor": {
+                    "value": "#111111",
+                    "edited": false
+                },
+                "widget-backgroundColor": {
+                    "value": "#0094ce",
+                    "edited": false
+                },
+                "widget-borderColor": {
+                    "value": "#ffffff",
+                    "edited": false
+                },
+                "base-font": {
+                    "value": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif"
+                }
+            },
+            "angularTheme": {
+                "primary": "indigo",
+                "accents": "blue",
+                "warn": "red",
+                "background": "grey",
+                "palette": "light"
+            }
+        },
+        "site": {
+            "name": "Node-RED Dashboard",
+            "hideToolbar": "true",
+            "allowSwipe": "false",
+            "lockMenu": "false",
+            "allowTempTheme": "true",
+            "dateFormat": "DD/MM/YYYY",
+            "sizes": {
+                "sx": 48,
+                "sy": 48,
+                "gx": 6,
+                "gy": 6,
+                "cx": 6,
+                "cy": 6,
+                "px": 0,
+                "py": 0
+            }
+        }
+    },
+    {
+        "id": "f52692dff117bbbe",
+        "type": "mqtt-broker",
+        "name": "MQTTBroker",
+        "broker": "localhost",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "compatmode": false,
+        "protocolVersion": 4,
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "355c6165c04046a5",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "192.168.1.37",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "9cd84f9e06fae9bc",
+        "type": "ui_base",
+        "theme": {
+            "name": "theme-dark",
+            "lightTheme": {
+                "default": "#0094CE",
+                "baseColor": "#0094CE",
+                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+                "edited": true,
+                "reset": false
+            },
+            "darkTheme": {
+                "default": "#097479",
+                "baseColor": "#097479",
+                "baseFont": "Verdana,Verdana,Geneva,sans-serif",
+                "edited": true,
+                "reset": false
+            },
+            "customTheme": {
+                "name": "Untitled Theme 1",
+                "default": "#4B7930",
+                "baseColor": "#4B7930",
+                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif"
+            },
+            "themeState": {
+                "base-color": {
+                    "default": "#097479",
+                    "value": "#097479",
+                    "edited": false
+                },
+                "page-titlebar-backgroundColor": {
+                    "value": "#097479",
+                    "edited": false
+                },
+                "page-backgroundColor": {
+                    "value": "#111111",
+                    "edited": false
+                },
+                "page-sidebar-backgroundColor": {
+                    "value": "#333333",
+                    "edited": false
+                },
+                "group-textColor": {
+                    "value": "#0eb8c0",
+                    "edited": false
+                },
+                "group-borderColor": {
+                    "value": "#555555",
+                    "edited": false
+                },
+                "group-backgroundColor": {
+                    "value": "#333333",
+                    "edited": false
+                },
+                "widget-textColor": {
+                    "value": "#eeeeee",
+                    "edited": false
+                },
+                "widget-backgroundColor": {
+                    "value": "#097479",
+                    "edited": false
+                },
+                "widget-borderColor": {
+                    "value": "#333333",
+                    "edited": false
+                },
+                "base-font": {
+                    "value": "Verdana,Verdana,Geneva,sans-serif"
+                }
+            },
+            "angularTheme": {
+                "primary": "indigo",
+                "accents": "blue",
+                "warn": "red",
+                "background": "grey",
+                "palette": "light"
+            }
+        },
+        "site": {
+            "name": "Node-RED Dashboard",
+            "hideToolbar": "true",
+            "allowSwipe": "true",
+            "lockMenu": "false",
+            "allowTempTheme": "true",
+            "dateFormat": "DD/MM/YYYY",
+            "sizes": {
+                "sx": 24,
+                "sy": 24,
+                "gx": 1,
+                "gy": 1,
+                "cx": 6,
+                "cy": 12,
+                "px": 3,
+                "py": 3
+            }
+        }
+    },
+    {
+        "id": "a05e991a1b08d5e3",
+        "type": "ui_tab",
+        "name": "Electrodacus",
+        "icon": "tv",
+        "order": 1,
+        "disabled": false,
+        "hidden": false
+    },
+    {
+        "id": "300a3123dbf7e579",
+        "type": "ui_group",
+        "name": "Delta",
+        "tab": "a05e991a1b08d5e3",
+        "order": 7,
+        "disp": false,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "c051dcee7b125585",
+        "type": "ui_group",
+        "name": "CellBars",
+        "tab": "a05e991a1b08d5e3",
+        "order": 4,
+        "disp": false,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "35ef824ac58a17ba",
+        "type": "ui_group",
+        "name": "Daily Highs andLows",
+        "tab": "a05e991a1b08d5e3",
+        "order": 8,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "0b5f7cc1cc00d868",
+        "type": "ui_group",
+        "name": "LED's",
+        "tab": "a05e991a1b08d5e3",
+        "order": 5,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "79ffb8ba2979ebc3",
+        "type": "ui_group",
+        "name": "AlternatorStatus",
+        "tab": "a05e991a1b08d5e3",
+        "order": 9,
+        "disp": true,
+        "width": "6",
+        "collapse": false
+    },
+    {
+        "id": "38e7a3ce705c8c24",
+        "type": "ui_group",
+        "name": "Group 10",
+        "tab": "a05e991a1b08d5e3",
+        "order": 10,
+        "disp": true,
+        "width": 6
+    },
+    {
+        "id": "c8a59089519eaac6",
+        "type": "ui_group",
+        "name": "Group 11",
+        "tab": "a05e991a1b08d5e3",
+        "order": 11,
+        "disp": true,
+        "width": 6
+    },
+    {
+        "id": "ae887e64feb5f727",
+        "type": "ui_group",
+        "name": "Group 12",
+        "tab": "a05e991a1b08d5e3",
+        "order": 12,
+        "disp": true,
+        "width": 6
+    },
+    {
+        "id": "9be090440269527d",
+        "type": "ui_spacer",
+        "z": "2d519f9110a6099a",
+        "name": "spacer",
+        "group": "ef26f360d17ffbe2",
+        "order": 7,
+        "width": "5",
+        "height": "1"
+    },
+    {
+        "id": "83cd2c9be30ce933",
+        "type": "ui_spacer",
+        "z": "2d519f9110a6099a",
+        "name": "spacer",
+        "group": "ef26f360d17ffbe2",
+        "order": 10,
+        "width": "5",
+        "height": "1"
+    },
+    {
+        "id": "51cda82bd66fb9c0",
+        "type": "ui_spacer",
+        "z": "2d519f9110a6099a",
+        "name": "spacer",
+        "group": "ef26f360d17ffbe2",
+        "order": 13,
+        "width": "5",
+        "height": "1"
+    },
+    {
+        "id": "8c3fd119e9e53b5b",
+        "type": "ui_spacer",
+        "z": "2d519f9110a6099a",
+        "name": "spacer",
+        "group": "",
+        "order": 1,
+        "width": "4",
+        "height": "1"
+    },
+    {
+        "id": "0a5649b2ce7ec403",
+        "type": "ui_spacer",
+        "z": "2d519f9110a6099a",
+        "name": "spacer",
+        "group": "",
+        "order": 3,
+        "width": "8",
+        "height": "1"
+    },
+    {
+        "id": "98102fa750cce8d8",
+        "type": "ui_spacer",
+        "z": "2d519f9110a6099a",
+        "name": "spacer",
+        "group": "",
+        "order": 2,
+        "width": "4",
+        "height": "1"
+    },
+    {
+        "id": "22f6dca16f3b4a73",
+        "type": "ui_spacer",
+        "z": "2d519f9110a6099a",
+        "name": "spacer",
+        "group": "dbf247658fd28145",
+        "order": 5,
+        "width": "4",
+        "height": "1"
+    },
+    {
+        "id": "0e95ac15b4289dd5",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "soc",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.soc",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 280,
+        "wires": [
+            [
+                "e85525c8cc677352"
+            ]
+        ]
+    },
+    {
+        "id": "9bfdf50ecffed5f9",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "mv0",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.cellsMV[0]",
+                "tot": "msg",
+                "dc": true
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 120,
+        "wires": [
+            [
+                "db6fdd80c98f6020"
+            ]
+        ]
+    },
+    {
+        "id": "a1182699f0439673",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "mv1",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.cellsMV[1]",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 160,
+        "wires": [
+            [
+                "adfb17cd037072e0"
+            ]
+        ]
+    },
+    {
+        "id": "24399e84085e2fa0",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "mv6",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.cellsMV[6]",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 200,
+        "wires": [
+            [
+                "3da6be935cce227a"
+            ]
+        ]
+    },
+    {
+        "id": "157b1114c74050e2",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "mv7",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.cellsMV[7]",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 240,
+        "wires": [
+            [
+                "466d34acfcbadb8c"
+            ]
+        ]
+    },
+    {
+        "id": "183d83ff5fa8fcae",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "cfet",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.flags.CFET",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 400,
+        "wires": [
+            [
+                "0f7fc8496522b584"
+            ]
+        ]
+    },
+    {
+        "id": "d19b9c20673b7598",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "dfet",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.flags.DFET",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 440,
+        "wires": [
+            [
+                "d83078db04a8a9b1"
+            ]
+        ]
+    },
+    {
+        "id": "3fbd2966e88a7bca",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "eoc",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.flags.EOC",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 480,
+        "wires": [
+            [
+                "191be4adbe022187"
+            ]
+        ]
+    },
+    {
+        "id": "1446796667854919",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "lvc",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.flags.LVC",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 520,
+        "wires": [
+            [
+                "e7f21a749a109171"
+            ]
+        ]
+    },
+    {
+        "id": "579704794db8297f",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "temp ext",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.tempExt",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 300,
+        "y": 320,
+        "wires": [
+            [
+                "c1309b46db794d8b"
+            ]
+        ]
+    },
+    {
+        "id": "412dbfccd73908d0",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "current bat",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.currentMA.battery",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 310,
+        "y": 720,
+        "wires": [
+            [
+                "ccf681376c80ebc4",
+                "16267b1d44bf2bd9"
+            ]
+        ]
+    },
+    {
+        "id": "c07f070df4941957",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "pv1",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.currentMA.pv1",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 760,
+        "wires": [
+            [
+                "2863af26d13c18cd",
+                "16267b1d44bf2bd9"
+            ]
+        ]
+    },
+    {
+        "id": "848e41a82d9ee978",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "V1",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 800,
+        "y": 120,
+        "wires": [
+            [
+                "92b4b1b8a750db1e",
+                "3c015ea0a4f2d918"
+            ]
+        ]
+    },
+    {
+        "id": "816316eb32504967",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "V2",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 800,
+        "y": 160,
+        "wires": [
+            [
+                "92b4b1b8a750db1e",
+                "3c015ea0a4f2d918"
+            ]
+        ]
+    },
+    {
+        "id": "aad427784b0d3f2a",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "V7",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 800,
+        "y": 200,
+        "wires": [
+            [
+                "92b4b1b8a750db1e",
+                "3c015ea0a4f2d918"
+            ]
+        ]
+    },
+    {
+        "id": "b642e1399273fb7d",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "V8",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 800,
+        "y": 240,
+        "wires": [
+            [
+                "92b4b1b8a750db1e",
+                "3c015ea0a4f2d918"
+            ]
+        ]
+    },
+    {
+        "id": "0d6dfe899cba53c9",
+        "type": "mqtt in",
+        "z": "2d519f9110a6099a",
+        "name": "SBMS0",
+        "topic": "/Ella/sbms",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "a4483ff9452125ea",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 90,
+        "y": 460,
+        "wires": [
+            [
+                "f40a3ef2d5c59e0f",
+                "ae995190a7e0f7b3"
+            ]
+        ]
+    },
+    {
+        "id": "f40a3ef2d5c59e0f",
+        "type": "debug",
+        "z": "2d519f9110a6099a",
+        "name": "debug 1",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 100,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "16267b1d44bf2bd9",
+        "type": "join",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "mode": "custom",
+        "build": "array",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "useparts": false,
+        "accumulate": false,
+        "timeout": "",
+        "count": "2",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "num",
+        "reduceFixup": "",
+        "x": 630,
+        "y": 500,
+        "wires": [
+            [
+                "0b3a60782a9a1810"
+            ]
+        ]
+    },
+    {
+        "id": "9e6dc421f95cf7da",
+        "type": "smooth",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "name": "",
+        "property": "payload",
+        "action": "mean",
+        "count": "10",
+        "round": "3",
+        "mult": "multi",
+        "reduce": true,
+        "x": 640,
+        "y": 120,
+        "wires": [
+            [
+                "848e41a82d9ee978"
+            ]
+        ]
+    },
+    {
+        "id": "7202e018ccd11bbb",
+        "type": "smooth",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "name": "",
+        "property": "payload",
+        "action": "mean",
+        "count": "10",
+        "round": "3",
+        "mult": "multi",
+        "reduce": true,
+        "x": 640,
+        "y": 160,
+        "wires": [
+            [
+                "816316eb32504967"
+            ]
+        ]
+    },
+    {
+        "id": "3bac8ba84ea26cad",
+        "type": "smooth",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "name": "",
+        "property": "payload",
+        "action": "mean",
+        "count": "10",
+        "round": "3",
+        "mult": "multi",
+        "reduce": true,
+        "x": 640,
+        "y": 200,
+        "wires": [
+            [
+                "aad427784b0d3f2a"
+            ]
+        ]
+    },
+    {
+        "id": "c82a9caf8a949ba2",
+        "type": "smooth",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "name": "",
+        "property": "payload",
+        "action": "mean",
+        "count": "10",
+        "round": "3",
+        "mult": "multi",
+        "reduce": true,
+        "x": 640,
+        "y": 240,
+        "wires": [
+            [
+                "b642e1399273fb7d"
+            ]
+        ]
+    },
+    {
+        "id": "0cf867e0b7a120eb",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "delta",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.flags.delta",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 80,
+        "wires": [
+            [
+                "f6e936d41c5ed0e1"
+            ]
+        ]
+    },
+    {
+        "id": "a0dcd5bd87baec1c",
+        "type": "join",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "mode": "custom",
+        "build": "array",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "useparts": false,
+        "accumulate": false,
+        "timeout": "",
+        "count": "4",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 650,
+        "y": 320,
+        "wires": [
+            [
+                "0b6350f3a0f1bf2d"
+            ]
+        ]
+    },
+    {
+        "id": "cef045335fbb271e",
+        "type": "mqtt in",
+        "z": "2d519f9110a6099a",
+        "name": "Pico",
+        "topic": "/Ella/Pico/",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "a4483ff9452125ea",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 90,
+        "y": 1100,
+        "wires": [
+            [
+                "dcf5895b9abd4499",
+                "16386168699769ba"
+            ]
+        ]
+    },
+    {
+        "id": "dcf5895b9abd4499",
+        "type": "debug",
+        "z": "2d519f9110a6099a",
+        "name": "debug 2",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 100,
+        "y": 1060,
+        "wires": []
+    },
+    {
+        "id": "1038aca9dfadc172",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "Starter Charger",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.current[\"Starter Charger\"]",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 320,
+        "y": 1180,
+        "wires": [
+            [
+                "8d2bf9e50c214723",
+                "25f3a15823b9091c"
+            ]
+        ]
+    },
+    {
+        "id": "33ef2dd3f9b5b968",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "Lights & Fans",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.current[\"Lights & Fans\"]",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 320,
+        "y": 1020,
+        "wires": [
+            [
+                "8d2bf9e50c214723",
+                "7384d1539a798256"
+            ]
+        ]
+    },
+    {
+        "id": "1586a16038f18fb0",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "WiFi.Stereo.LPG.Pico",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.current[\"WiFi.Stereo.LPG.Pico\"]",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 340,
+        "y": 1060,
+        "wires": [
+            [
+                "8d2bf9e50c214723",
+                "356662022d5882d4"
+            ]
+        ]
+    },
+    {
+        "id": "9bce7db9c816ce47",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "12V Front & Rear",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.current[\"12V Front & Rear\"]",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 330,
+        "y": 1100,
+        "wires": [
+            [
+                "8d2bf9e50c214723",
+                "f2374b2e4ee71357"
+            ]
+        ]
+    },
+    {
+        "id": "da6f5f1f72031446",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "12V Sides",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.current[\"12V Sides\"]",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 300,
+        "y": 1140,
+        "wires": [
+            [
+                "8d2bf9e50c214723",
+                "b6c73975acae7af5"
+            ]
+        ]
+    },
+    {
+        "id": "6ee9fe4f100fa9be",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "Total",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.current.Total",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 1260,
+        "wires": [
+            [
+                "be486b47557863e7",
+                "6e6d146e076b4a0a"
+            ]
+        ]
+    },
+    {
+        "id": "35c115f9c366e42f",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "Alarm & Relays",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.current[\"Alarm & Relays\"]",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 320,
+        "y": 1220,
+        "wires": [
+            [
+                "8d2bf9e50c214723",
+                "ed0e7f7844e2e0fd"
+            ]
+        ]
+    },
+    {
+        "id": "53150d4eca6b76ad",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "Diesel Heater",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.current[\"Diesel heater\"]",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 320,
+        "y": 980,
+        "wires": [
+            [
+                "8d2bf9e50c214723",
+                "daba1d2dac11beef"
+            ]
+        ]
+    },
+    {
+        "id": "b4af8001761184dd",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "Fridge",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.current.Fridge",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 940,
+        "wires": [
+            [
+                "8d2bf9e50c214723",
+                "48366782fc22c0d5"
+            ]
+        ]
+    },
+    {
+        "id": "8d2bf9e50c214723",
+        "type": "join",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "mode": "custom",
+        "build": "array",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "useparts": false,
+        "accumulate": false,
+        "timeout": "",
+        "count": "8",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 530,
+        "y": 900,
+        "wires": [
+            [
+                "ed3cb38dca841fda"
+            ]
+        ]
+    },
+    {
+        "id": "e9c559e29688c5a5",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "SOC",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.battery[\"Ella  \"].state_of_charge",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 1300,
+        "wires": [
+            [
+                "6a1d2ab383db0f8f"
+            ]
+        ]
+    },
+    {
+        "id": "f1c141227ff5159a",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "Battery Mid T",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.temperature[\"Battery - Mid\"]",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 320,
+        "y": 1540,
+        "wires": [
+            [
+                "0d0178c694109fc0"
+            ]
+        ]
+    },
+    {
+        "id": "3f7420ddc94aae1f",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "V [Pico]",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.battery[\"Ella  \"].voltage",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 300,
+        "y": 1380,
+        "wires": [
+            [
+                "f53462e019f33c9b"
+            ]
+        ]
+    },
+    {
+        "id": "5066ce0ec37e5b43",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "Temp Inside",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.temperature.Inside",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 310,
+        "y": 1460,
+        "wires": [
+            [
+                "440199ecf154fdd4"
+            ]
+        ]
+    },
+    {
+        "id": "aaa830a644233d42",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "Temp Alternator",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.temperature.Alternator",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 320,
+        "y": 1500,
+        "wires": [
+            [
+                "9f5250800ffce441"
+            ]
+        ]
+    },
+    {
+        "id": "9529d9ac21c35af9",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "Fridge Compr",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.temperature[\"Fridge C\"]",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 320,
+        "y": 1580,
+        "wires": [
+            [
+                "b9bb3444341c8a4a"
+            ]
+        ]
+    },
+    {
+        "id": "21705273ddeeefb3",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "Temp Outside",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.temperature.Outside",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 320,
+        "y": 1620,
+        "wires": [
+            [
+                "eac32fabab5178e5"
+            ]
+        ]
+    },
+    {
+        "id": "498a62f43e41acb1",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "T Fridge Internal",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.temperature[\"Fridge - Internal\"]",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 320,
+        "y": 1660,
+        "wires": [
+            [
+                "f8b8bc319b3857ef"
+            ]
+        ]
+    },
+    {
+        "id": "a50e0e123397ae69",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "R 2",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.temperature[\"SENSOR 2\"]",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 1700,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "de504b8f4fe8ace5",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "R 3",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.temperature[\"SENSOR 3\"]",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 1740,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "7a27c824089e3b39",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "R 4",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.temperature[\"SENSOR 4\"]",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 1780,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "9965130c37ca3c3a",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "Barometer",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.barometer",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 310,
+        "y": 1820,
+        "wires": [
+            [
+                "50d7d58c06ddb8de"
+            ]
+        ]
+    },
+    {
+        "id": "7c7786a99da04a5f",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "Pitch",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.inclinometer.pitch",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 1860,
+        "wires": [
+            [
+                "71b67fea1236efea"
+            ]
+        ]
+    },
+    {
+        "id": "5724cc1be612a757",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "Roll",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.inclinometer.roll",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 1900,
+        "wires": [
+            [
+                "1e6745d8bcf742e7"
+            ]
+        ]
+    },
+    {
+        "id": "fde722e1f39b8623",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "V Starter",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.battery.Starter.voltage",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 300,
+        "y": 1420,
+        "wires": [
+            [
+                "a9c3c19ab487d1dc"
+            ]
+        ]
+    },
+    {
+        "id": "874c15745b1b816a",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "LPG Tank %",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.tank.LPG.percentage",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 310,
+        "y": 1940,
+        "wires": [
+            [
+                "c9b4b83ecd326759"
+            ]
+        ]
+    },
+    {
+        "id": "2745343deac198f8",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "SOC Ah",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.battery[\"Ella  \"].capacity_remaining",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 300,
+        "y": 1340,
+        "wires": [
+            [
+                "2ba32d8dede38104"
+            ]
+        ]
+    },
+    {
+        "id": "83d9c30b508c7b26",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "ovlk",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.flags.OVLK",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 560,
+        "wires": [
+            [
+                "5980b0f8078164d0"
+            ]
+        ]
+    },
+    {
+        "id": "2601b625d96f7c02",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "uvlk",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.flags.UVLK",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 600,
+        "wires": [
+            [
+                "69ed24ab3f2ed2db"
+            ]
+        ]
+    },
+    {
+        "id": "6e57acd9501487f2",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "ext load",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.currentMA.extLoad",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 300,
+        "y": 800,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ae995190a7e0f7b3",
+        "type": "delay",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "0",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 100,
+        "y": 520,
+        "wires": [
+            [
+                "a1182699f0439673",
+                "0cf867e0b7a120eb",
+                "9bfdf50ecffed5f9",
+                "24399e84085e2fa0",
+                "157b1114c74050e2",
+                "0e95ac15b4289dd5",
+                "579704794db8297f",
+                "57f33cbc46dfd0b0",
+                "183d83ff5fa8fcae",
+                "d19b9c20673b7598",
+                "3fbd2966e88a7bca",
+                "1446796667854919",
+                "83d9c30b508c7b26",
+                "2601b625d96f7c02",
+                "cc880164603ad128",
+                "d31ecc33f2cf6b69",
+                "412dbfccd73908d0",
+                "c07f070df4941957",
+                "6e57acd9501487f2"
+            ]
+        ]
+    },
+    {
+        "id": "1368a2851c3c7b3b",
+        "type": "join",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "mode": "custom",
+        "build": "array",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "useparts": false,
+        "accumulate": false,
+        "timeout": "",
+        "count": "3",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 530,
+        "y": 840,
+        "wires": [
+            [
+                "994fc105d23d4020",
+                "c3994c0c6949a1be"
+            ]
+        ]
+    },
+    {
+        "id": "cc880164603ad128",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "celf",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.flags.CELF",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 640,
+        "wires": [
+            [
+                "f3f5a059221328d8"
+            ]
+        ]
+    },
+    {
+        "id": "d31ecc33f2cf6b69",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "iot",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.flags.IOT",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 290,
+        "y": 680,
+        "wires": [
+            [
+                "a8fbf0b38de68291"
+            ]
+        ]
+    },
+    {
+        "id": "57f33cbc46dfd0b0",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "temp int",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.tempInt",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 300,
+        "y": 360,
+        "wires": [
+            [
+                "637bcb6fab3db935"
+            ]
+        ]
+    },
+    {
+        "id": "c3994c0c6949a1be",
+        "type": "debug",
+        "z": "2d519f9110a6099a",
+        "name": "debug 4",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 900,
+        "y": 680,
+        "wires": []
+    },
+    {
+        "id": "3a796dda7e46e911",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "9cf1e8b8202e424f",
+        "order": 4,
+        "width": "4",
+        "height": "1",
+        "name": "C [1]",
+        "label": "[1]",
+        "format": "{{msg.payload}} V",
+        "layout": "row-spread",
+        "className": "labels-2",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "x": 610,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "f3b1a3850d3f3ba9",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "9cf1e8b8202e424f",
+        "order": 7,
+        "width": "4",
+        "height": "1",
+        "name": "C [2]",
+        "label": "[2]",
+        "format": "{{msg.payload}} V",
+        "layout": "row-spread",
+        "className": "labels-2",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "x": 730,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "5a06a675e22d6e22",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "9cf1e8b8202e424f",
+        "order": 5,
+        "width": "4",
+        "height": "1",
+        "name": "C [7]",
+        "label": "[7]",
+        "format": "{{msg.payload}} V",
+        "layout": "row-spread",
+        "className": "labels-2",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "x": 850,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "15fdd0d69373db50",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "9cf1e8b8202e424f",
+        "order": 8,
+        "width": "4",
+        "height": "1",
+        "name": "C [8]",
+        "label": "[8]",
+        "format": "{{msg.payload}} V",
+        "layout": "row-spread",
+        "className": "labels-2",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "x": 970,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "f6e936d41c5ed0e1",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "9cf1e8b8202e424f",
+        "order": 3,
+        "width": "4",
+        "height": "2",
+        "name": "delta",
+        "label": "Δ",
+        "format": "{{msg.payload}} mV",
+        "layout": "row-center",
+        "className": "highlighted font14",
+        "style": false,
+        "font": "",
+        "fontSize": "12",
+        "color": "#000000",
+        "x": 490,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "25b69847fc2075e1",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "9cf1e8b8202e424f",
+        "order": 1,
+        "width": "4",
+        "height": "2",
+        "name": "BMS",
+        "label": "",
+        "format": "{{msg.payload}} V",
+        "layout": "col-center",
+        "className": "highlighted font14",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "x": 890,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "f53462e019f33c9b",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "9cf1e8b8202e424f",
+        "order": 6,
+        "width": "4",
+        "height": "1",
+        "name": "V [Pico]",
+        "label": "V [P]",
+        "format": "{{msg.payload}} V",
+        "layout": "row-spread",
+        "className": "borders  labels-2",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "x": 660,
+        "y": 1380,
+        "wires": []
+    },
+    {
+        "id": "c1309b46db794d8b",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "dbf247658fd28145",
+        "order": 11,
+        "width": "4",
+        "height": "1",
+        "name": "SBMS ex T",
+        "label": "Bat [L]",
+        "format": "{{msg.payload}} °C",
+        "layout": "row-spread",
+        "className": "highlighted",
+        "style": false,
+        "font": "",
+        "fontSize": "12",
+        "color": "#000000",
+        "x": 510,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "0d0178c694109fc0",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "dbf247658fd28145",
+        "order": 12,
+        "width": "4",
+        "height": "1",
+        "name": "Battery T M",
+        "label": "Bat [M]",
+        "format": "{{msg.payload}} °C",
+        "layout": "row-spread",
+        "className": "highlighted",
+        "style": false,
+        "font": "",
+        "fontSize": "12",
+        "color": "#000000",
+        "x": 650,
+        "y": 1540,
+        "wires": []
+    },
+    {
+        "id": "861ba810283a0be6",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "9cf1e8b8202e424f",
+        "order": 2,
+        "width": "4",
+        "height": "2",
+        "name": "SOC Ah",
+        "label": "",
+        "format": "{{msg.payload}} Ah",
+        "layout": "col-center",
+        "className": "highlighted font14",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "x": 660,
+        "y": 1340,
+        "wires": []
+    },
+    {
+        "id": "a9c3c19ab487d1dc",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "9cf1e8b8202e424f",
+        "order": 9,
+        "width": "4",
+        "height": "1",
+        "name": "V [Starter]",
+        "label": "V [S]",
+        "format": "{{msg.payload}} V",
+        "layout": "row-spread",
+        "className": "borders labels-2",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "x": 660,
+        "y": 1420,
+        "wires": []
+    },
+    {
+        "id": "440199ecf154fdd4",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "dbf247658fd28145",
+        "order": 2,
+        "width": "4",
+        "height": "1",
+        "name": "",
+        "label": "Inside",
+        "format": "{{msg.payload}} °C",
+        "layout": "row-spread",
+        "className": "labels",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 670,
+        "y": 1460,
+        "wires": []
+    },
+    {
+        "id": "eac32fabab5178e5",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "dbf247658fd28145",
+        "order": 3,
+        "width": "4",
+        "height": "1",
+        "name": "",
+        "label": "Outside",
+        "format": "{{msg.payload}}°C",
+        "layout": "row-spread",
+        "className": "labels",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 660,
+        "y": 1620,
+        "wires": []
+    },
+    {
+        "id": "9f5250800ffce441",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "dbf247658fd28145",
+        "order": 4,
+        "width": "4",
+        "height": "1",
+        "name": "",
+        "label": "Alt.r",
+        "format": "{{msg.payload}} °C",
+        "layout": "row-spread",
+        "className": "labels",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 670,
+        "y": 1500,
+        "wires": []
+    },
+    {
+        "id": "daabe914556cc218",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "dbf247658fd28145",
+        "order": 6,
+        "width": "4",
+        "height": "1",
+        "name": "",
+        "label": "FridgeC",
+        "format": "{{msg.payload}} °C",
+        "layout": "row-spread",
+        "className": "labels",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 660,
+        "y": 1580,
+        "wires": []
+    },
+    {
+        "id": "f8b8bc319b3857ef",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "dbf247658fd28145",
+        "order": 7,
+        "width": "4",
+        "height": "1",
+        "name": "",
+        "label": "Fridge",
+        "format": "{{msg.payload}} °C",
+        "layout": "row-spread",
+        "className": "labels",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 670,
+        "y": 1660,
+        "wires": []
+    },
+    {
+        "id": "48366782fc22c0d5",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "ef26f360d17ffbe2",
+        "order": 2,
+        "width": "5",
+        "height": "1",
+        "name": "",
+        "label": "Fridge",
+        "format": "{{msg.payload}} A",
+        "layout": "row-spread",
+        "className": "labels",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 670,
+        "y": 940,
+        "wires": []
+    },
+    {
+        "id": "daba1d2dac11beef",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "ef26f360d17ffbe2",
+        "order": 3,
+        "width": "5",
+        "height": "1",
+        "name": "",
+        "label": "Diesel Htr",
+        "format": "{{msg.payload}} A",
+        "layout": "row-spread",
+        "className": "labels",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 660,
+        "y": 980,
+        "wires": []
+    },
+    {
+        "id": "7384d1539a798256",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "ef26f360d17ffbe2",
+        "order": 4,
+        "width": "5",
+        "height": "1",
+        "name": "",
+        "label": "Lights&Fans",
+        "format": "{{msg.payload}} A",
+        "layout": "row-spread",
+        "className": "labels",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 650,
+        "y": 1020,
+        "wires": []
+    },
+    {
+        "id": "356662022d5882d4",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "ef26f360d17ffbe2",
+        "order": 6,
+        "width": "5",
+        "height": "1",
+        "name": "",
+        "label": "Wifi.St.Ls.Si",
+        "format": "{{msg.payload}} A",
+        "layout": "row-spread",
+        "className": "labels",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 650,
+        "y": 1060,
+        "wires": []
+    },
+    {
+        "id": "f2374b2e4ee71357",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "ef26f360d17ffbe2",
+        "order": 8,
+        "width": "5",
+        "height": "1",
+        "name": "",
+        "label": "Socket FR",
+        "format": "{{msg.payload}} A",
+        "layout": "row-spread",
+        "className": "labels",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 650,
+        "y": 1100,
+        "wires": []
+    },
+    {
+        "id": "b6c73975acae7af5",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "ef26f360d17ffbe2",
+        "order": 9,
+        "width": "5",
+        "height": "1",
+        "name": "",
+        "label": "Socket S",
+        "format": "{{msg.payload}} A",
+        "layout": "row-spread",
+        "className": "labels",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 660,
+        "y": 1140,
+        "wires": []
+    },
+    {
+        "id": "25f3a15823b9091c",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "ef26f360d17ffbe2",
+        "order": 11,
+        "width": "5",
+        "height": "1",
+        "name": "",
+        "label": "Starter Chg",
+        "format": "{{msg.payload}} A",
+        "layout": "row-spread",
+        "className": "labels",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 650,
+        "y": 1180,
+        "wires": []
+    },
+    {
+        "id": "ed0e7f7844e2e0fd",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "ef26f360d17ffbe2",
+        "order": 12,
+        "width": "5",
+        "height": "1",
+        "name": "",
+        "label": "Alarm & Rly",
+        "format": "{{msg.payload}} A",
+        "layout": "row-spread",
+        "className": "labels",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 650,
+        "y": 1220,
+        "wires": []
+    },
+    {
+        "id": "0c5e35d9993f31fc",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "dbf247658fd28145",
+        "order": 1,
+        "width": "4",
+        "height": "1",
+        "name": "",
+        "label": "Temps:",
+        "format": "{{msg.payload}}",
+        "layout": "row-center",
+        "className": "titles12",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 660,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "86e3d9c7f8ab6c23",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "ef26f360d17ffbe2",
+        "order": 1,
+        "width": "5",
+        "height": "1",
+        "name": "",
+        "label": "Current Draw",
+        "format": "{{msg.payload}}",
+        "layout": "row-center",
+        "className": "titles12",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 810,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "4782ac514ecf6a50",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "ef26f360d17ffbe2",
+        "order": 14,
+        "width": "5",
+        "height": "1",
+        "name": "",
+        "label": "Inverter",
+        "format": "{{msg.payload}} A",
+        "layout": "row-spread",
+        "className": "labels",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 820,
+        "y": 840,
+        "wires": []
+    },
+    {
+        "id": "637bcb6fab3db935",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "dbf247658fd28145",
+        "order": 13,
+        "width": "4",
+        "height": "1",
+        "name": "SBMS int T",
+        "label": "SBMS",
+        "format": "{{msg.payload}} °C",
+        "layout": "row-spread",
+        "className": "highlighted",
+        "style": false,
+        "font": "",
+        "fontSize": "12",
+        "color": "#000000",
+        "x": 510,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "cb54ed39cd82b802",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "c4b7ed610a9d4ce8",
+        "order": 2,
+        "width": "16",
+        "height": "1",
+        "name": "",
+        "label": "Ella Monitoring",
+        "format": "",
+        "layout": "row-center",
+        "className": "titles12",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 480,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "992d4a814ac595fe",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "dbf247658fd28145",
+        "order": 9,
+        "width": 0,
+        "height": 0,
+        "name": "Water",
+        "label": "Water",
+        "format": "{{msg.payload}} °C",
+        "layout": "row-spread",
+        "className": "labels",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 650,
+        "y": 2020,
+        "wires": []
+    },
+    {
+        "id": "066d2c9b233af31e",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "dbf247658fd28145",
+        "order": 9,
+        "width": 0,
+        "height": 0,
+        "name": "R3",
+        "label": "R3",
+        "format": "{{msg.payload}} °C",
+        "layout": "row-spread",
+        "className": "labels",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 650,
+        "y": 2060,
+        "wires": []
+    },
+    {
+        "id": "83bc049238e6d222",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "group": "dbf247658fd28145",
+        "order": 9,
+        "width": 0,
+        "height": 0,
+        "name": "R4",
+        "label": "R4",
+        "format": "{{msg.payload}} °C",
+        "layout": "row-spread",
+        "className": "labels",
+        "style": false,
+        "font": "",
+        "fontSize": 16,
+        "color": "#000000",
+        "x": 650,
+        "y": 2100,
+        "wires": []
+    },
+    {
+        "id": "ef0de180b0f971bf",
+        "type": "ui_gauge",
+        "z": "2d519f9110a6099a",
+        "name": "Battery [BMS]",
+        "group": "c4b7ed610a9d4ce8",
+        "order": 13,
+        "width": 4,
+        "height": 4,
+        "gtype": "gage",
+        "title": "Battery [BMS]",
+        "label": "A",
+        "format": "{{value}}",
+        "min": "-10",
+        "max": "10",
+        "colors": [
+            "#d21919",
+            "#e6e600",
+            "#06cb1d"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": true,
+        "className": "guage",
+        "x": 640,
+        "y": 720,
+        "wires": []
+    },
+    {
+        "id": "2f658456fe4add17",
+        "type": "ui_gauge",
+        "z": "2d519f9110a6099a",
+        "name": "PV1",
+        "group": "c4b7ed610a9d4ce8",
+        "order": 12,
+        "width": 4,
+        "height": 4,
+        "gtype": "gage",
+        "title": "PV1 [BMS]",
+        "label": "A",
+        "format": "{{value}}",
+        "min": "0",
+        "max": "20",
+        "colors": [
+            "#0bcb1d",
+            "#0bcb1d",
+            "#0bcb1d"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "guage",
+        "x": 670,
+        "y": 760,
+        "wires": []
+    },
+    {
+        "id": "fe6f629c9aad8cf0",
+        "type": "ui_gauge",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "group": "c4b7ed610a9d4ce8",
+        "order": 11,
+        "width": 4,
+        "height": 4,
+        "gtype": "gage",
+        "title": "Load Σ [BMS]",
+        "label": "A",
+        "format": "{{value}}",
+        "min": "0",
+        "max": "10",
+        "colors": [
+            "#ca3838",
+            "#ca3838",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "guage",
+        "x": 1040,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "e85525c8cc677352",
+        "type": "ui_gauge",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "group": "c4b7ed610a9d4ce8",
+        "order": 14,
+        "width": 4,
+        "height": 4,
+        "gtype": "donut",
+        "title": "SOC [BMS]",
+        "label": "%",
+        "format": "{{value}}",
+        "min": "0",
+        "max": "100",
+        "colors": [
+            "#ca3838",
+            "#e6e600",
+            "#00b500"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "guage",
+        "x": 510,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "dc70f7c8e1ab3c9d",
+        "type": "ui_gauge",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "group": "c4b7ed610a9d4ce8",
+        "order": 15,
+        "width": 4,
+        "height": 4,
+        "gtype": "gage",
+        "title": "Load Σ [Pico]",
+        "label": "A",
+        "format": "{{value}}",
+        "min": "0",
+        "max": "10",
+        "colors": [
+            "#ca3838",
+            "#ca3838",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "guage",
+        "x": 990,
+        "y": 900,
+        "wires": []
+    },
+    {
+        "id": "ca5e2611e332df4d",
+        "type": "ui_gauge",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "group": "c4b7ed610a9d4ce8",
+        "order": 17,
+        "width": 4,
+        "height": 4,
+        "gtype": "gage",
+        "title": "Battery [Pico]",
+        "label": "A",
+        "format": "{{value}}",
+        "min": "-10",
+        "max": "10",
+        "colors": [
+            "#ca3838",
+            "#e6e600",
+            "#00b500"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": true,
+        "className": "guage",
+        "x": 640,
+        "y": 1260,
+        "wires": []
+    },
+    {
+        "id": "270e1c729185da08",
+        "type": "ui_gauge",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "group": "c4b7ed610a9d4ce8",
+        "order": 18,
+        "width": 4,
+        "height": 4,
+        "gtype": "donut",
+        "title": "SOC [Pico]",
+        "label": "%",
+        "format": "{{value}}",
+        "min": "0",
+        "max": "100",
+        "colors": [
+            "#ca3838",
+            "#e6e600",
+            "#00b500"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "guage",
+        "x": 650,
+        "y": 1300,
+        "wires": []
+    },
+    {
+        "id": "7f0475f9ee25f552",
+        "type": "ui_gauge",
+        "z": "2d519f9110a6099a",
+        "name": "PV2",
+        "group": "c4b7ed610a9d4ce8",
+        "order": 16,
+        "width": 4,
+        "height": 4,
+        "gtype": "gage",
+        "title": "PV2 [BMS]",
+        "label": "A",
+        "format": "{{value}}",
+        "min": "0",
+        "max": "20",
+        "colors": [
+            "#0bcb1d",
+            "#0bcb1d",
+            "#0bcb1d"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "guage2",
+        "x": 850,
+        "y": 760,
+        "wires": []
+    },
+    {
+        "id": "c9b4b83ecd326759",
+        "type": "ui_gauge",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "group": "a266c46f642e3692",
+        "order": 2,
+        "width": "4",
+        "height": "4",
+        "gtype": "gage",
+        "title": "LPG (%)",
+        "label": "%",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "100",
+        "colors": [
+            "#ca8816",
+            "#cb8817",
+            "#cb8817"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "guage2",
+        "x": 660,
+        "y": 1940,
+        "wires": []
+    },
+    {
+        "id": "b59f51894fae2ebf",
+        "type": "ui_gauge",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "group": "a266c46f642e3692",
+        "order": 3,
+        "width": "4",
+        "height": "4",
+        "gtype": "gage",
+        "title": "WATER (l)",
+        "label": "",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "100",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "guage2",
+        "x": 660,
+        "y": 1980,
+        "wires": []
+    },
+    {
+        "id": "71b67fea1236efea",
+        "type": "ui_gauge",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "group": "a266c46f642e3692",
+        "order": 4,
+        "width": "4",
+        "height": "4",
+        "gtype": "gage",
+        "title": "Pitch",
+        "label": "°",
+        "format": "{{value}}",
+        "min": "-5",
+        "max": "5",
+        "colors": [
+            "#be64c8",
+            "#be64c8",
+            "#be64c8"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": true,
+        "className": "guage2",
+        "x": 670,
+        "y": 1860,
+        "wires": []
+    },
+    {
+        "id": "1e6745d8bcf742e7",
+        "type": "ui_gauge",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "group": "a266c46f642e3692",
+        "order": 5,
+        "width": "4",
+        "height": "4",
+        "gtype": "gage",
+        "title": "Roll",
+        "label": "°",
+        "format": "{{value}}",
+        "min": "-5",
+        "max": "5",
+        "colors": [
+            "#be64c8",
+            "#be64c8",
+            "#be64c8"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": true,
+        "className": "guage2",
+        "x": 670,
+        "y": 1900,
+        "wires": []
+    },
+    {
+        "id": "55ba675ccb8f70d9",
+        "type": "ui_gauge",
+        "z": "2d519f9110a6099a",
+        "name": "Barometer",
+        "group": "a266c46f642e3692",
+        "order": 1,
+        "width": "8",
+        "height": "3",
+        "gtype": "gage",
+        "title": "Barometer",
+        "label": "mBar",
+        "format": "{{value}}",
+        "min": "900",
+        "max": "1100",
+        "colors": [
+            "#27343a",
+            "#5a83af",
+            "#0285e8"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "guage2",
+        "x": 650,
+        "y": 1820,
+        "wires": []
+    },
+    {
+        "id": "92b4b1b8a750db1e",
+        "type": "ui_chart",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "name": "VoltageBars",
+        "group": "5b6eade5be302dd2",
+        "order": 1,
+        "width": "16",
+        "height": "6",
+        "label": "Cells(V)",
+        "chartType": "horizontalBar",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "3.1",
+        "ymax": "3.65",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 1010,
+        "y": 140,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "3c015ea0a4f2d918",
+        "type": "ui_chart",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "name": "VoltageTrends",
+        "group": "5b6eade5be302dd2",
+        "order": 5,
+        "width": "15",
+        "height": "6",
+        "label": "Cells(V)",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "3",
+        "ymax": "3.6",
+        "removeOlder": "30",
+        "removeOlderPoints": "",
+        "removeOlderUnit": "60",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 1020,
+        "y": 200,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "8ca3c8a52ac64f68",
+        "type": "ui_template",
+        "z": "2d519f9110a6099a",
+        "group": "c4b7ed610a9d4ce8",
+        "name": "CSS",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "format": "<style>\n    .nr-dashboard-theme {\n        min-width: 1080px;\n        max-width: 1080px;\n        padding: 0px auto;\n        margin: 0px auto;\n        background-color: black !important;\n    }\n    .nr-dashboard-cardcontainer {\n        /* groups background */\n        background-color: black !important;\n    }\n    .led .nr-dashboard-template {\n        /* led background */\n        background-color: black !important;\n    }\n    .level {\n        /* level background */\n        background-color: black !important;\n    }\n    .level .nr-dashboard-template {\n        /* level background */\n        background-color: black !important;\n        border-style: solid;\n        border-width: 1px;\n        border-color: #636669;\n     }\n\n\n    .guage {\n        background-color: #263238 !important;\n    }\n    .guage .nr-dashboard-gauge-title {\n        /* guage title font */\n        color: #d7ded9 !important;\n    }\n    .guage .nr-dashboard-gauge text {\n        /* guage value text color */\n        fill: white !important;\n    }\n\n\n    .guage2 {\n        background-color: black !important;\n    }\n    .guage2 .nr-dashboard-gauge-title {\n        /* guage title font */\n        color: white !important;\n    }\n    .guage2 .nr-dashboard-gauge text {\n        /* guage value text color */\n        fill: white !important;\n    }\n\n\n    .highlighted {\n        /* highlight important values */\n        background-color: #aacfe3 !important;\n        color: black !important;\n        }\n    .highlighted .nr-dashboard-gauge text {\n        /* text color */\n        fill: black !important;\n    }\n\n    .nr-dashboard-ui_led {\n    }\n    .nr-dashboard-ui_level {\n    }\n    .nr-dashboard-theme .label {\n    }\n\n    \n    .borders {\n        border-style: solid;\n        border-width: 1px;\n        border-color: #636669;\n    }\n    .font10 {\n        font-size: 10px;\n    }\n    .font14 {\n         font-size: 16px;\n    }\n    .labels {\n        /* label background */\n        background-color: #101826 !important;\n    }\n    .labels .label {\n        /* sets labels font color,\n        needs .label to apply */\n        color: #5d7eba !important;\n    }\n    .labels .value {\n        /* ui text value color */\n        color: white  !important;\n    }\n    .labels-2 {\n    /* label background */\n    background-color: #101826 !important;\n    }\n    .labels-2 .label {\n        /* sets labels font color */\n        color: #818999 !important;    }\n    .labels-2 .value {\n        /* sets labels font color */\n        color: #818999 !important;\n    }\n    .titles12 {\n        /* yellow titles */\n        font-size: 12px;\n        color: yellow !important;\n    }\n    [class*='led_'] {\n        /* led borders */\n        border-style: solid;\n        border-width: 0px;\n        border-color: #6e6363;\n    }\n</style>\n",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "global",
+        "className": "",
+        "x": 130,
+        "y": 40,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "db6fdd80c98f6020",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "div",
+        "constant": "1000",
+        "round": false,
+        "truncate": false,
+        "decimals": "0",
+        "decimals2": 0,
+        "x": 490,
+        "y": 120,
+        "wires": [
+            [
+                "9e6dc421f95cf7da",
+                "3a796dda7e46e911",
+                "a0dcd5bd87baec1c"
+            ]
+        ]
+    },
+    {
+        "id": "adfb17cd037072e0",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "div",
+        "constant": "1000",
+        "round": false,
+        "truncate": false,
+        "decimals": "0",
+        "decimals2": 0,
+        "x": 490,
+        "y": 160,
+        "wires": [
+            [
+                "f3b1a3850d3f3ba9",
+                "7202e018ccd11bbb",
+                "a0dcd5bd87baec1c"
+            ]
+        ]
+    },
+    {
+        "id": "3da6be935cce227a",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "div",
+        "constant": "1000",
+        "round": false,
+        "truncate": false,
+        "decimals": "0",
+        "decimals2": 0,
+        "x": 490,
+        "y": 200,
+        "wires": [
+            [
+                "5a06a675e22d6e22",
+                "3bac8ba84ea26cad",
+                "a0dcd5bd87baec1c"
+            ]
+        ]
+    },
+    {
+        "id": "466d34acfcbadb8c",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "div",
+        "constant": "1000",
+        "round": false,
+        "truncate": false,
+        "decimals": "0",
+        "decimals2": 0,
+        "x": 490,
+        "y": 240,
+        "wires": [
+            [
+                "15fdd0d69373db50",
+                "c82a9caf8a949ba2",
+                "a0dcd5bd87baec1c"
+            ]
+        ]
+    },
+    {
+        "id": "ccf681376c80ebc4",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "div",
+        "constant": "1000",
+        "round": true,
+        "truncate": false,
+        "decimals": "1",
+        "decimals2": 0,
+        "x": 490,
+        "y": 720,
+        "wires": [
+            [
+                "ef0de180b0f971bf"
+            ]
+        ]
+    },
+    {
+        "id": "2863af26d13c18cd",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "div",
+        "constant": "1000",
+        "round": true,
+        "truncate": false,
+        "decimals": "2",
+        "decimals2": 0,
+        "x": 490,
+        "y": 760,
+        "wires": [
+            [
+                "2f658456fe4add17",
+                "1368a2851c3c7b3b"
+            ]
+        ]
+    },
+    {
+        "id": "0b3a60782a9a1810",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "sub",
+        "constant": "",
+        "round": false,
+        "truncate": false,
+        "decimals": 0,
+        "decimals2": 0,
+        "x": 760,
+        "y": 500,
+        "wires": [
+            [
+                "b5f1d1e9ac6a06ee"
+            ]
+        ]
+    },
+    {
+        "id": "b5f1d1e9ac6a06ee",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "div",
+        "constant": "1000",
+        "round": true,
+        "truncate": false,
+        "decimals": "1",
+        "decimals2": 0,
+        "x": 890,
+        "y": 500,
+        "wires": [
+            [
+                "fe6f629c9aad8cf0"
+            ]
+        ]
+    },
+    {
+        "id": "0b6350f3a0f1bf2d",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "sum",
+        "constant": "",
+        "round": true,
+        "truncate": false,
+        "decimals": "2",
+        "decimals2": 0,
+        "x": 770,
+        "y": 320,
+        "wires": [
+            [
+                "25b69847fc2075e1"
+            ]
+        ]
+    },
+    {
+        "id": "ed3cb38dca841fda",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "sum",
+        "constant": "",
+        "round": false,
+        "truncate": false,
+        "decimals": "0",
+        "decimals2": 0,
+        "x": 670,
+        "y": 900,
+        "wires": [
+            [
+                "1368a2851c3c7b3b",
+                "d86ab31d464df947"
+            ]
+        ]
+    },
+    {
+        "id": "6a1d2ab383db0f8f",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "round",
+        "constant": "",
+        "round": false,
+        "truncate": false,
+        "decimals": 0,
+        "decimals2": 0,
+        "x": 460,
+        "y": 1300,
+        "wires": [
+            [
+                "270e1c729185da08"
+            ]
+        ]
+    },
+    {
+        "id": "2ba32d8dede38104",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "round",
+        "constant": "",
+        "round": false,
+        "truncate": false,
+        "decimals": 0,
+        "decimals2": 0,
+        "x": 460,
+        "y": 1340,
+        "wires": [
+            [
+                "861ba810283a0be6"
+            ]
+        ]
+    },
+    {
+        "id": "b9bb3444341c8a4a",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "round",
+        "constant": "",
+        "round": false,
+        "truncate": false,
+        "decimals": 0,
+        "decimals2": 0,
+        "x": 500,
+        "y": 1580,
+        "wires": [
+            [
+                "daabe914556cc218"
+            ]
+        ]
+    },
+    {
+        "id": "50d7d58c06ddb8de",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "round",
+        "constant": "",
+        "round": false,
+        "truncate": false,
+        "decimals": 0,
+        "decimals2": 0,
+        "x": 480,
+        "y": 1820,
+        "wires": [
+            [
+                "55ba675ccb8f70d9"
+            ]
+        ]
+    },
+    {
+        "id": "994fc105d23d4020",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "sum",
+        "constant": "",
+        "round": true,
+        "truncate": false,
+        "decimals": "2",
+        "decimals2": 0,
+        "x": 650,
+        "y": 840,
+        "wires": [
+            [
+                "4782ac514ecf6a50"
+            ]
+        ]
+    },
+    {
+        "id": "d86ab31d464df947",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "div",
+        "constant": "-1",
+        "round": true,
+        "truncate": false,
+        "decimals": "1",
+        "decimals2": 0,
+        "x": 810,
+        "y": 900,
+        "wires": [
+            [
+                "dc70f7c8e1ab3c9d"
+            ]
+        ]
+    },
+    {
+        "id": "be486b47557863e7",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "div",
+        "constant": "1",
+        "round": true,
+        "truncate": false,
+        "decimals": "1",
+        "decimals2": 0,
+        "x": 470,
+        "y": 1260,
+        "wires": [
+            [
+                "ca5e2611e332df4d"
+            ]
+        ]
+    },
+    {
+        "id": "6e6d146e076b4a0a",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "div",
+        "constant": "-1",
+        "round": false,
+        "truncate": false,
+        "decimals": "0",
+        "decimals2": 0,
+        "x": 390,
+        "y": 840,
+        "wires": [
+            [
+                "1368a2851c3c7b3b"
+            ]
+        ]
+    },
+    {
+        "id": "0f7fc8496522b584",
+        "type": "ui_led",
+        "z": "2d519f9110a6099a",
+        "order": 3,
+        "group": "c4b7ed610a9d4ce8",
+        "width": "4",
+        "height": "1",
+        "label": "CFET",
+        "labelPlacement": "left",
+        "labelAlignment": "left",
+        "colorForValue": [
+            {
+                "color": "#8d8b8b",
+                "value": "false",
+                "valueType": "bool"
+            },
+            {
+                "color": "#008000",
+                "value": "true",
+                "valueType": "bool"
+            }
+        ],
+        "allowColorForValueInMessage": false,
+        "shape": "square",
+        "showGlow": true,
+        "name": "CFET",
+        "x": 490,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "d83078db04a8a9b1",
+        "type": "ui_led",
+        "z": "2d519f9110a6099a",
+        "order": 7,
+        "group": "c4b7ed610a9d4ce8",
+        "width": "4",
+        "height": "1",
+        "label": "DFET",
+        "labelPlacement": "left",
+        "labelAlignment": "left",
+        "colorForValue": [
+            {
+                "color": "#888686",
+                "value": "false",
+                "valueType": "bool"
+            },
+            {
+                "color": "#008000",
+                "value": "true",
+                "valueType": "bool"
+            }
+        ],
+        "allowColorForValueInMessage": false,
+        "shape": "square",
+        "showGlow": true,
+        "name": "DFET",
+        "x": 490,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "191be4adbe022187",
+        "type": "ui_led",
+        "z": "2d519f9110a6099a",
+        "order": 5,
+        "group": "c4b7ed610a9d4ce8",
+        "width": "4",
+        "height": "1",
+        "label": "EOC",
+        "labelPlacement": "left",
+        "labelAlignment": "left",
+        "colorForValue": [
+            {
+                "color": "#8d8b8b",
+                "value": "false",
+                "valueType": "bool"
+            },
+            {
+                "color": "#008000",
+                "value": "true",
+                "valueType": "bool"
+            }
+        ],
+        "allowColorForValueInMessage": false,
+        "shape": "square",
+        "showGlow": true,
+        "name": "EOC",
+        "x": 490,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "e7f21a749a109171",
+        "type": "ui_led",
+        "z": "2d519f9110a6099a",
+        "order": 6,
+        "group": "c4b7ed610a9d4ce8",
+        "width": "4",
+        "height": "1",
+        "label": "LVC",
+        "labelPlacement": "left",
+        "labelAlignment": "left",
+        "colorForValue": [
+            {
+                "color": "#888686",
+                "value": "false",
+                "valueType": "bool"
+            },
+            {
+                "color": "#008000",
+                "value": "true",
+                "valueType": "bool"
+            }
+        ],
+        "allowColorForValueInMessage": false,
+        "shape": "square",
+        "showGlow": true,
+        "name": "LVC",
+        "x": 490,
+        "y": 520,
+        "wires": []
+    },
+    {
+        "id": "5980b0f8078164d0",
+        "type": "ui_led",
+        "z": "2d519f9110a6099a",
+        "order": 4,
+        "group": "c4b7ed610a9d4ce8",
+        "width": "4",
+        "height": "1",
+        "label": "OVLK",
+        "labelPlacement": "left",
+        "labelAlignment": "left",
+        "colorForValue": [
+            {
+                "color": "#888686",
+                "value": "false",
+                "valueType": "bool"
+            },
+            {
+                "color": "#008000",
+                "value": "true",
+                "valueType": "bool"
+            }
+        ],
+        "allowColorForValueInMessage": false,
+        "shape": "square",
+        "showGlow": true,
+        "name": "OVLK",
+        "x": 490,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "69ed24ab3f2ed2db",
+        "type": "ui_led",
+        "z": "2d519f9110a6099a",
+        "order": 8,
+        "group": "c4b7ed610a9d4ce8",
+        "width": "4",
+        "height": "1",
+        "label": "UVLK",
+        "labelPlacement": "left",
+        "labelAlignment": "left",
+        "colorForValue": [
+            {
+                "color": "#888686",
+                "value": "false",
+                "valueType": "bool"
+            },
+            {
+                "color": "#008000",
+                "value": "true",
+                "valueType": "bool"
+            }
+        ],
+        "allowColorForValueInMessage": false,
+        "shape": "square",
+        "showGlow": true,
+        "name": "UVLK",
+        "x": 490,
+        "y": 600,
+        "wires": []
+    },
+    {
+        "id": "f3f5a059221328d8",
+        "type": "ui_led",
+        "z": "2d519f9110a6099a",
+        "order": 10,
+        "group": "c4b7ed610a9d4ce8",
+        "width": "4",
+        "height": "1",
+        "label": "CELF",
+        "labelPlacement": "left",
+        "labelAlignment": "left",
+        "colorForValue": [
+            {
+                "color": "#888686",
+                "value": "false",
+                "valueType": "bool"
+            },
+            {
+                "color": "#008000",
+                "value": "true",
+                "valueType": "bool"
+            }
+        ],
+        "allowColorForValueInMessage": false,
+        "shape": "square",
+        "showGlow": true,
+        "name": "CELF",
+        "x": 490,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "a8fbf0b38de68291",
+        "type": "ui_led",
+        "z": "2d519f9110a6099a",
+        "order": 9,
+        "group": "c4b7ed610a9d4ce8",
+        "width": "4",
+        "height": "1",
+        "label": "IOT",
+        "labelPlacement": "left",
+        "labelAlignment": "left",
+        "colorForValue": [
+            {
+                "color": "#888686",
+                "value": "false",
+                "valueType": "bool"
+            },
+            {
+                "color": "#008000",
+                "value": "true",
+                "valueType": "bool"
+            }
+        ],
+        "allowColorForValueInMessage": false,
+        "shape": "square",
+        "showGlow": true,
+        "name": "IOT",
+        "x": 490,
+        "y": 680,
+        "wires": []
+    },
+    {
+        "id": "f0018d8d1833ff97",
+        "type": "ui_level",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "group": "",
+        "order": 2,
+        "width": "5",
+        "height": "1",
+        "name": "Fridge",
+        "label": "Fridge",
+        "colorHi": "#e60000",
+        "colorWarn": "#ff9903",
+        "colorNormal": "#ff9903",
+        "colorOff": "#595959",
+        "min": 0,
+        "max": "-5",
+        "segWarn": "",
+        "segHigh": "",
+        "unit": "",
+        "layout": "sh",
+        "channelA": "",
+        "channelB": "",
+        "decimals": "2",
+        "animations": "soft",
+        "shape": "1",
+        "colorschema": "rainbow",
+        "textoptions": "default",
+        "colorText": "#ffffff",
+        "fontLabel": "1",
+        "fontValue": "1",
+        "fontSmall": "0.65",
+        "colorFromTheme": false,
+        "textAnimations": false,
+        "hideValue": false,
+        "tickmode": "off",
+        "peakmode": false,
+        "property": "payload",
+        "peaktime": 3000,
+        "x": 810,
+        "y": 940,
+        "wires": []
+    },
+    {
+        "id": "1e49c5d2de7f7d95",
+        "type": "ui_level",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "group": "",
+        "order": 3,
+        "width": "5",
+        "height": "1",
+        "name": "Heater",
+        "label": "Heater",
+        "colorHi": "#e60000",
+        "colorWarn": "#ff9900",
+        "colorNormal": "#ff9903",
+        "colorOff": "#595959",
+        "min": 0,
+        "max": "-5",
+        "segWarn": "",
+        "segHigh": "",
+        "unit": "",
+        "layout": "sh",
+        "channelA": "",
+        "channelB": "",
+        "decimals": "2",
+        "animations": "soft",
+        "shape": "1",
+        "colorschema": "rainbow",
+        "textoptions": "default",
+        "colorText": "#eeeeee",
+        "fontLabel": "10",
+        "fontValue": "",
+        "fontSmall": "",
+        "colorFromTheme": true,
+        "textAnimations": false,
+        "hideValue": false,
+        "tickmode": "off",
+        "peakmode": false,
+        "property": "payload",
+        "peaktime": 3000,
+        "x": 810,
+        "y": 980,
+        "wires": []
+    },
+    {
+        "id": "5747b63719bc63d8",
+        "type": "ui_level",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "group": "",
+        "order": 4,
+        "width": "5",
+        "height": "1",
+        "name": "Lights & F",
+        "label": "Lights & F",
+        "colorHi": "#e60000",
+        "colorWarn": "#ff9900",
+        "colorNormal": "#ff9903",
+        "colorOff": "#595959",
+        "min": 0,
+        "max": "-5",
+        "segWarn": "",
+        "segHigh": "",
+        "unit": "",
+        "layout": "sh",
+        "channelA": "",
+        "channelB": "",
+        "decimals": "2",
+        "animations": "soft",
+        "shape": "1",
+        "colorschema": "rainbow",
+        "textoptions": "default",
+        "colorText": "#eeeeee",
+        "fontLabel": "10",
+        "fontValue": "",
+        "fontSmall": "",
+        "colorFromTheme": true,
+        "textAnimations": false,
+        "hideValue": false,
+        "tickmode": "off",
+        "peakmode": false,
+        "property": "payload",
+        "peaktime": 3000,
+        "x": 820,
+        "y": 1020,
+        "wires": []
+    },
+    {
+        "id": "1c9a55cf760a2fbe",
+        "type": "ui_level",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "group": "",
+        "order": 6,
+        "width": "5",
+        "height": "1",
+        "name": "WiFi.St.L.Si",
+        "label": "WiFi.St.L.Si",
+        "colorHi": "#e60000",
+        "colorWarn": "#ff9900",
+        "colorNormal": "#ff9903",
+        "colorOff": "#595959",
+        "min": 0,
+        "max": "-5",
+        "segWarn": "",
+        "segHigh": "",
+        "unit": "",
+        "layout": "sh",
+        "channelA": "",
+        "channelB": "",
+        "decimals": "2",
+        "animations": "soft",
+        "shape": "1",
+        "colorschema": "rainbow",
+        "textoptions": "default",
+        "colorText": "#eeeeee",
+        "fontLabel": "10",
+        "fontValue": "",
+        "fontSmall": "",
+        "colorFromTheme": true,
+        "textAnimations": false,
+        "hideValue": false,
+        "tickmode": "off",
+        "peakmode": false,
+        "property": "payload",
+        "peaktime": 3000,
+        "x": 830,
+        "y": 1060,
+        "wires": []
+    },
+    {
+        "id": "7b44d541ed75fe14",
+        "type": "ui_level",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "group": "",
+        "order": 8,
+        "width": "5",
+        "height": "1",
+        "name": "12V FR",
+        "label": "12V FR",
+        "colorHi": "#e60000",
+        "colorWarn": "#ff9900",
+        "colorNormal": "#ff9903",
+        "colorOff": "#595959",
+        "min": 0,
+        "max": "-5",
+        "segWarn": "",
+        "segHigh": "",
+        "unit": "",
+        "layout": "sh",
+        "channelA": "",
+        "channelB": "",
+        "decimals": "2",
+        "animations": "soft",
+        "shape": "1",
+        "colorschema": "rainbow",
+        "textoptions": "default",
+        "colorText": "#eeeeee",
+        "fontLabel": "10",
+        "fontValue": "",
+        "fontSmall": "",
+        "colorFromTheme": true,
+        "textAnimations": false,
+        "hideValue": false,
+        "tickmode": "off",
+        "peakmode": false,
+        "property": "payload",
+        "peaktime": 3000,
+        "x": 820,
+        "y": 1100,
+        "wires": []
+    },
+    {
+        "id": "6344ac7ab009a971",
+        "type": "ui_level",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "group": "",
+        "order": 9,
+        "width": "5",
+        "height": "1",
+        "name": "12V S",
+        "label": "12V S",
+        "colorHi": "#e60000",
+        "colorWarn": "#ff9900",
+        "colorNormal": "#ff9903",
+        "colorOff": "#595959",
+        "min": 0,
+        "max": "-5",
+        "segWarn": "",
+        "segHigh": "",
+        "unit": "",
+        "layout": "sh",
+        "channelA": "",
+        "channelB": "",
+        "decimals": "2",
+        "animations": "soft",
+        "shape": "1",
+        "colorschema": "rainbow",
+        "textoptions": "default",
+        "colorText": "#eeeeee",
+        "fontLabel": "10",
+        "fontValue": "",
+        "fontSmall": "",
+        "colorFromTheme": true,
+        "textAnimations": false,
+        "hideValue": false,
+        "tickmode": "off",
+        "peakmode": false,
+        "property": "payload",
+        "peaktime": 3000,
+        "x": 810,
+        "y": 1140,
+        "wires": []
+    },
+    {
+        "id": "1f1b23aa4dae52c7",
+        "type": "ui_level",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "group": "",
+        "order": 11,
+        "width": "5",
+        "height": "1",
+        "name": "Starter C",
+        "label": "Starter C",
+        "colorHi": "#e60000",
+        "colorWarn": "#ff9900",
+        "colorNormal": "#ff9903",
+        "colorOff": "#595959",
+        "min": 0,
+        "max": "-5",
+        "segWarn": "",
+        "segHigh": "",
+        "unit": "",
+        "layout": "sh",
+        "channelA": "",
+        "channelB": "",
+        "decimals": "2",
+        "animations": "soft",
+        "shape": "1",
+        "colorschema": "rainbow",
+        "textoptions": "default",
+        "colorText": "#eeeeee",
+        "fontLabel": "10",
+        "fontValue": "",
+        "fontSmall": "",
+        "colorFromTheme": true,
+        "textAnimations": false,
+        "hideValue": false,
+        "tickmode": "off",
+        "peakmode": false,
+        "property": "payload",
+        "peaktime": 3000,
+        "x": 820,
+        "y": 1180,
+        "wires": []
+    },
+    {
+        "id": "e32f1def3fe2a696",
+        "type": "ui_level",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "group": "",
+        "order": 12,
+        "width": "5",
+        "height": "1",
+        "name": "Alm & Rly",
+        "label": "Alm & Rly",
+        "colorHi": "#e60000",
+        "colorWarn": "#ff9900",
+        "colorNormal": "#ff9903",
+        "colorOff": "#595959",
+        "min": 0,
+        "max": "-5",
+        "segWarn": "",
+        "segHigh": "",
+        "unit": "",
+        "layout": "sh",
+        "channelA": "",
+        "channelB": "",
+        "decimals": "2",
+        "animations": "soft",
+        "shape": "1",
+        "colorschema": "rainbow",
+        "textoptions": "default",
+        "colorText": "#eeeeee",
+        "fontLabel": "10",
+        "fontValue": "",
+        "fontSmall": "",
+        "colorFromTheme": true,
+        "textAnimations": false,
+        "hideValue": false,
+        "tickmode": "off",
+        "peakmode": false,
+        "property": "payload",
+        "peaktime": 3000,
+        "x": 820,
+        "y": 1220,
+        "wires": []
+    },
+    {
+        "id": "9c4dc6c5273d3502",
+        "type": "ui_level",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "group": "",
+        "order": 14,
+        "width": "5",
+        "height": "1",
+        "name": "Inverter",
+        "label": "Inverter",
+        "colorHi": "#e60000",
+        "colorWarn": "#ff9900",
+        "colorNormal": "#ff9903",
+        "colorOff": "#595959",
+        "min": 0,
+        "max": "-100",
+        "segWarn": "",
+        "segHigh": "",
+        "unit": "",
+        "layout": "sh",
+        "channelA": "",
+        "channelB": "",
+        "decimals": "1",
+        "animations": "soft",
+        "shape": "1",
+        "colorschema": "rainbow",
+        "textoptions": "default",
+        "colorText": "#eeeeee",
+        "fontLabel": "10",
+        "fontValue": "",
+        "fontSmall": "",
+        "colorFromTheme": true,
+        "textAnimations": false,
+        "hideValue": false,
+        "tickmode": "off",
+        "peakmode": false,
+        "property": "payload",
+        "peaktime": 3000,
+        "x": 820,
+        "y": 800,
+        "wires": []
+    },
+    {
+        "id": "16386168699769ba",
+        "type": "delay",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "0",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 100,
+        "y": 1420,
+        "wires": [
+            [
+                "b4af8001761184dd",
+                "53150d4eca6b76ad",
+                "33ef2dd3f9b5b968",
+                "1586a16038f18fb0",
+                "9bce7db9c816ce47",
+                "da6f5f1f72031446",
+                "1038aca9dfadc172",
+                "35c115f9c366e42f",
+                "6ee9fe4f100fa9be",
+                "e9c559e29688c5a5",
+                "2745343deac198f8",
+                "3f7420ddc94aae1f",
+                "fde722e1f39b8623",
+                "5066ce0ec37e5b43",
+                "aaa830a644233d42",
+                "f1c141227ff5159a",
+                "9529d9ac21c35af9",
+                "21705273ddeeefb3",
+                "498a62f43e41acb1",
+                "a50e0e123397ae69",
+                "de504b8f4fe8ace5",
+                "7a27c824089e3b39",
+                "9965130c37ca3c3a",
+                "7c7786a99da04a5f",
+                "5724cc1be612a757",
+                "874c15745b1b816a"
+            ]
+        ]
+    }
+]
