@@ -1,5 +1,7 @@
 # Proposed Android process
 
+Current step: [standalone Pico base 0.1.0](pico-base/README.md) is implemented and has passed automated comparison/connection tests. Live Pi/Pico verification is pending; see [BUILD-VALIDATION.md](BUILD-VALIDATION.md) and [NEXT-BUILD-CHANGES.md](NEXT-BUILD-CHANGES.md).
+
 - **Agree the baseline:** use `PicoData/python/pico-mqtt.py` and [`node.red/flows.json`](../node.red/flows.json) to list required readings, calculations and dashboard behaviour; confirm target devices/Android versions, layout, history and background needs.
 - **Capture reference data:** record Pico configuration and live packets plus ElectroDacus MQTT JSON. Map sensor IDs, exact names, units, topic slashes, missing values and Node-RED conversions to expected display values.
 - **Reconcile the implementations:** take connectivity ideas from `node.js/lib/` and live decoding from `node.js/index.js` (copied from `pico2signalk`), excluding SignalK output. Restore your pitch/roll and tank/battery changes; resolve current signs, Celsius/Kelvin, pressure and SOC scaling against the baseline.

@@ -19,7 +19,7 @@ The Android goal is to read Pico data directly over Wi-Fi and display it alongsi
 | [`node.js/`](node.js/) | Copy of the updated `pico2signalk` Node.js code (0.0.21). `lib/` contains discovery, TCP protocol, CRC and sensor-list code; `index.js` combines live UDP decoding with SignalK output. `bin/` contains a configuration dump tool and `test/` a CRC encoding test. |
 | [`node.red/`](node.red/) | Existing Node-RED dashboard project. [`flows.json`](node.red/flows.json) defines displayed fields, conversions and charts; `package.json` defines the project. It subscribes to `/Ella/Pico/` and `/Ella/sbms`; preserve exact topic spelling and slashes. |
 | [`simarine/`](simarine/) | Reference APK, `simarine.apk`, and JADX output in `simarine jadx/`. The inspected app uses .NET MAUI/Mono; Java decompilation does not establish that its managed Pico protocol implementation is available. |
-| [`android/`](android/) | Destination for the new Android application and its related documentation. Currently planning only; see [PROCESS.md](android/PROCESS.md). |
+| [`android/`](android/) | Android work and related documentation. The [standalone Pico base](android/pico-base/README.md) is implemented for live Pi validation before the Android port; see [PROCESS.md](android/PROCESS.md) and [BUILD-VALIDATION.md](android/BUILD-VALIDATION.md). |
 
 ## Related repositories
 
