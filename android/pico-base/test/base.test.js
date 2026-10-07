@@ -15,7 +15,7 @@ const { decodeReadings, formatEllaJson, roundEven } = require('../lib/readings')
 const { PicoClient, waitForBroadcast, createDiscoverySocket } = require('../lib/client');
 const { fields, frame, fixture } = require('./fixtures');
 const { verifyCapture } = require('../bin/verify-capture');
-const baseline = path.resolve(__dirname, '../../../python/pico-mqtt.py');
+const baseline = path.join(__dirname, 'reference/pico-mqtt.py');
 const normalized = data => JSON.parse(JSON.stringify(data));
 function awaitEvent(emitter, name, predicate = () => true, timeoutMs = 3000) {
   return new Promise((resolve, reject) => {
@@ -238,4 +238,26 @@ test('capture verifier does not certify bad CRCs or empty captures', async t => 
   const summary = await verifyCapture(capture, { comparePython: true });
   assert.equal(summary.udpCrcMatches, 0); assert.equal(summary.pythonMatches, 1);
   assert.equal(summary.ok, false);
+});
+
+test('flat installation verifies captures without the original repository folders', t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ella-flat-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const installed = path.join(directory, 'PicoData/node.js');
+  fs.cpSync(path.join(__dirname, '..'), installed, { recursive: true });
+  assert.equal(fs.existsSync(path.join(directory, 'PicoData/python')), false);
+  assert.equal(fs.existsSync(path.join(directory, 'PicoData/android')), false);
+  const data = fixture(), capture = path.join(installed, 'capture.jsonl');
+  fs.writeFileSync(capture, [
+    { kind: 'config', config: data.config },
+    { kind: 'tcp', direction: 'complete', hex: frame(fields(data.config[0]), 0x42).toString('hex') },
+    { kind: 'packet', receivedAt: '2026-10-07T12:34:56Z', hex: data.packet.toString('hex') },
+  ].map(record => JSON.stringify(record)).join('\n'));
+  const result = spawnSync(process.execPath, ['bin/verify-capture.js', 'capture.jsonl', '--compare-python'], {
+    cwd: installed, encoding: 'utf8',
+  });
+  assert.equal(result.status, 0, result.stderr);
+  const summary = JSON.parse(result.stdout);
+  assert.equal(summary.ok, true);
+  assert.equal(summary.pythonMatches, 1);
 });

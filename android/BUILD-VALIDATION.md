@@ -8,7 +8,7 @@ This is a standalone Node.js reference implementation in `android/pico-base/`, n
 
 ## Completed checks
 
-`npm test`: **15 passed, 0 failed**, using Node.js 24.19.0 and Python 3.12.14 in the development environment.
+`npm test`: **16 passed, 0 failed**, using Node.js 24.19.0 and Python 3.12.14 in the development environment. Re-run after correcting support for a flat installation in `~/PicoData/node.js`.
 
 - Golden CRC/request vectors from the upstream test.
 - Six synthetic sensor/value sets compared with the actual Python sensor-list functions, reading functions and output block. They cover all handled types, battery/tank calculations, current signs, negative temperatures, pitch/roll, hidden names, trailing spaces and duplicate labels.
@@ -21,6 +21,7 @@ This is a standalone Node.js reference implementation in `android/pico-base/`, n
 - Loopback TCP/UDP Pico simulators for both discovery and fixed-IP operation, including failed configuration, stale/reconnect recovery, stop and restart.
 - Actual CLI execution against the simulator, JSON stdout, capture recording and Python comparison of the recorded samples.
 - Capture verification rejects empty evidence and bad CRCs.
+- An isolated copy containing only the base's files in `PicoData/node.js` verifies a synthetic capture against Python successfully, without the original `android/` or `python/` folders. The bundled Python reference has the same Git blob hash as the original baseline (`eb99d3dfc57c7c9d6ca721754015a296fb086741`).
 
 Synthetic packets are explicitly synthetic; none were captured from the owner's hardware. Loopback tests do not establish Wi-Fi broadcast delivery, firmware compatibility, changed-IP recovery on the real LAN or Android behaviour.
 

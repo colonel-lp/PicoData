@@ -44,7 +44,7 @@ async function verifyCapture(filename, { comparePython = false, replay = false }
       const time = { year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate(),
         hour: now.getHours(), minute: now.getMinutes(), second: now.getSeconds() };
       const oracle = spawnSync('python3', [path.join(__dirname, '../test/python-oracle.py'),
-        path.resolve(__dirname, '../../../python/pico-mqtt.py')], {
+        path.join(__dirname, '../test/reference/pico-mqtt.py')], {
         input: JSON.stringify({ config, element, time }), encoding: 'utf8',
       });
       if (oracle.status !== 0) throw new Error('Python reference could not decode capture: ' + oracle.stderr.trim());

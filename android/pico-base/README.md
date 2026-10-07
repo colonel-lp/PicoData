@@ -6,15 +6,15 @@ Standalone Node.js starting point for the Android Pico reader. It uses the updat
 
 ## Run on the Pi
 
-Use a current checkout of this repository and Node.js 18 or later. No npm packages are required to run the reader. Python 3 is needed only for comparison tests. Check the runtime first:
+Use Node.js 18 or later. No npm packages are required to run the reader. Python 3 is needed only for comparison tests. All files inside `pico-base/` can be installed directly in `~/PicoData/node.js`; the original repository folders are not required. For that installation:
 
 ```bash
 node --version
-cd android/pico-base
+cd ~/PicoData/node.js
 node bin/pico.js --record pico-capture.jsonl --duration 60
 ```
 
-Run from the repository root before `cd`. The Pi and Pico must be on the same Wi-Fi LAN. This discovers the Pico via UDP 43210, fetches its configuration via TCP 5001 and prints one Ella JSON object per second to stdout. Connection status goes to stderr. The local capture records configuration, TCP requests/replies and live packets; it contains no MQTT credentials.
+For an unchanged repository checkout, use `cd android/pico-base` from the repository root instead. The Pi and Pico must be on the same Wi-Fi LAN. This discovers the Pico via UDP 43210, fetches its configuration via TCP 5001 and prints one Ella JSON object per second to stdout. Connection status goes to stderr. The local capture records configuration, TCP requests/replies and live packets; it contains no MQTT credentials.
 
 If discovery fails, also test the known Pico address:
 
@@ -30,7 +30,7 @@ Replace the example address with the Pico's actual address. `DEBUG=pico` enables
 node bin/verify-capture.js pico-capture.jsonl --compare-python
 ```
 
-The summary reports counts for configuration, TCP replies, live packets, length/checksum matches and Python output matches. Exit status 0 and `"ok":true` mean those checks passed for the recorded samples. Python comparison uses the functions and output block extracted from the existing source via AST; it does not import its MQTT/network setup or run the old service.
+The summary reports counts for configuration, TCP replies, live packets, length/checksum matches and Python output matches. Exit status 0 and `"ok":true` mean those checks passed for the recorded samples. Python comparison extracts the functions and output block via AST from the bundled `test/reference/pico-mqtt.py`; it does not import its MQTT/network setup or run the old service. That file is an unchanged snapshot of `python/pico-mqtt.py`, Git blob `eb99d3dfc57c7c9d6ca721754015a296fb086741`. Refresh it deliberately if the agreed Python baseline changes. Both comparison tests and capture verification work without a sibling `python/` folder.
 
 Receive framing assumes the big-endian length at header offsets 11–12 follows the layout used by upstream requests. The checker also tests incoming CRCs using the upstream outgoing CRC rule. Neither assumption has been confirmed on the owner's Pico yet. Raw TCP records are retained even when a read fails so an incompatible reply can be examined. Incoming CRCs are reported by the checker, not yet enforced by the live receiver.
 

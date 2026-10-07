@@ -8,6 +8,7 @@
 - [x] Add fragmented TCP reads, error/retry handling, sender checks and clean shutdown.
 - [x] Compare normal readings with the original Python functions and test simulated connection failures/recovery.
 - [x] Provide recording, verification and replay commands for a live Pi test.
+- [x] Support installation directly in `~/PicoData/node.js`, including a bundled Python comparison reference so deleted original folders are not needed.
 - [ ] Confirm discovery, configuration and required sensor readings on the owner's actual Pico.
 - [ ] Confirm real receive frame lengths/checksums; investigate any differences before the Android port.
 - [ ] Confirm live readings against the existing Node-RED/Pico display and exercise Wi-Fi loss/Pico restart.
