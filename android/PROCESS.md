@@ -1,6 +1,6 @@
 # Proposed Android process
 
-- **Agree the baseline:** use `PicoData/python/pico-mqtt.py` and `node-red-ella/flows.json` to list required readings, calculations and dashboard behaviour; confirm target devices/Android versions, layout, history and background needs.
+- **Agree the baseline:** use `PicoData/python/pico-mqtt.py` and [`node.red/flows.json`](../node.red/flows.json) to list required readings, calculations and dashboard behaviour; confirm target devices/Android versions, layout, history and background needs.
 - **Capture reference data:** record Pico configuration and live packets plus ElectroDacus MQTT JSON. Map sensor IDs, exact names, units, topic slashes, missing values and Node-RED conversions to expected display values.
 - **Reconcile the implementations:** take connectivity ideas from `node.js/lib/` and live decoding from `node.js/index.js` (copied from `pico2signalk`), excluding SignalK output. Restore your pitch/roll and tank/battery changes; resolve current signs, Celsius/Kelvin, pressure and SOC scaling against the baseline.
 - **Choose the MQTT route early:** assess an embedded Android broker for direct ElectroDacus publishing, including firmware settings, a stable reachable Wi-Fi address, authentication and screen-off/reconnect reliability. Keep the Pi Mosquitto client route available.

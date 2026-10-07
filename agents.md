@@ -18,7 +18,7 @@ These instructions apply throughout `colonel-lp/PicoData`, branch `main`. Read t
 - Current Pi baseline: `python/pico-mqtt.py`, with CRC helper `python/brainsmoke.py`.
 - Earlier reference code: `_old/`. Do not treat these variants or `python/scratch` as the running baseline.
 - Updated connectivity reference: `node.js/`, copied from `colonel-lp/pico2signalk/master` (0.0.21). Use the in-repository copy for this project and compare the separate fork when reviewing upstream updates.
-- Existing dashboard: `colonel-lp/node-red-ella/main/flows.json`.
+- Existing dashboard: [`node.red/flows.json`](node.red/flows.json) in this repository. Use this copy as the project reference, with `node.red/package.json` for project metadata.
 - Vendor reference: `simarine/simarine.apk` and `simarine/simarine jadx/`. The inspected manifest and activity identify a .NET MAUI/Mono app; JADX Java wrappers may not expose managed protocol logic. State this limitation rather than claiming a complete decompilation.
 - Use the current GitHub source. Verify branch heads before editing and again before pushing. Preserve concurrent owner changes; never force-push over them.
 - Commit requested project documents to `PicoData/main`. Do not modify the related repositories or relocate their contents without a request.
@@ -27,7 +27,7 @@ Initial review on 2026-10-07 used:
 
 - PicoData: `cee91e7f08bed1a8151a1a778aeafe1f4a31b14d`.
 - pico2signalk: `49beac3c42110c0bf82dafa97102852f258d68e7` (package version 0.0.21).
-- node-red-ella: `4c82ffb7dabf6bb340796b3908f3727ada4fe27e`.
+- Node-RED flow blob: `c46d025991b3ba25aee052a65faf78a5ce0e7813`; the same reviewed flow is now available at [`node.red/flows.json`](node.red/flows.json) (copy verified in PicoData commit `3ef9d741da44ecbfd55fb6075440167294a76489`).
 
 These identify the reviewed baseline, not permanently pinned development versions.
 
