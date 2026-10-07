@@ -1,0 +1,11 @@
+package org.jetbrains.annotations;
+
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Target;
+
+/* JADX INFO: loaded from: classes2.dex */
+@Target({ElementType.METHOD, ElementType.CONSTRUCTOR, ElementType.TYPE, ElementType.PACKAGE})
+@Documented
+public @interface CheckReturnValue {
+}

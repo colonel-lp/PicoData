@@ -1,0 +1,142 @@
+package kotlinx.atomicfu;
+
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import kotlin.Metadata;
+import kotlin.jvm.internal.DefaultConstructorMarker;
+import kotlin.jvm.internal.Intrinsics;
+import kotlin.reflect.KProperty;
+
+/* JADX INFO: compiled from: AtomicFU.kt */
+/* JADX INFO: loaded from: classes2.dex */
+@Metadata(d1 = {"\u00004\n\u0002\u0018\u0002\n\u0002\u0010\u0000\n\u0000\n\u0002\u0010\b\n\u0000\n\u0002\u0018\u0002\n\u0002\b\n\n\u0002\u0018\u0002\n\u0002\u0010\u0002\n\u0002\b\u0002\n\u0002\u0010\u000b\n\u0002\b\r\n\u0002\u0010\u000e\n\u0002\b\u0002\u0018\u0000 #2\u00020\u0001:\u0001#B\u0019\b\u0000\u0012\u0006\u0010\u0002\u001a\u00020\u0003\u0012\u0006\u0010\u0004\u001a\u00020\u0005¢\u0006\u0004\b\u0006\u0010\u0007J\u001f\u0010\n\u001a\u00020\u00032\b\u0010\u000e\u001a\u0004\u0018\u00010\u00012\n\u0010\u000f\u001a\u0006\u0012\u0002\b\u00030\u0010H\u0087\nJ'\u0010\f\u001a\u00020\u00112\b\u0010\u000e\u001a\u0004\u0018\u00010\u00012\n\u0010\u000f\u001a\u0006\u0012\u0002\b\u00030\u00102\u0006\u0010\u0002\u001a\u00020\u0003H\u0087\nJ\u000e\u0010\u0012\u001a\u00020\u00112\u0006\u0010\u0002\u001a\u00020\u0003J\u0016\u0010\u0013\u001a\u00020\u00142\u0006\u0010\u0015\u001a\u00020\u00032\u0006\u0010\u0016\u001a\u00020\u0003J\u000e\u0010\u0017\u001a\u00020\u00032\u0006\u0010\u0002\u001a\u00020\u0003J\u0006\u0010\u0018\u001a\u00020\u0003J\u0006\u0010\u0019\u001a\u00020\u0003J\u000e\u0010\u001a\u001a\u00020\u00032\u0006\u0010\u001b\u001a\u00020\u0003J\u000e\u0010\u001c\u001a\u00020\u00032\u0006\u0010\u001b\u001a\u00020\u0003J\u0006\u0010\u001d\u001a\u00020\u0003J\u0006\u0010\u001e\u001a\u00020\u0003J\u0011\u0010\u001f\u001a\u00020\u00112\u0006\u0010\u001b\u001a\u00020\u0003H\u0086\nJ\u0011\u0010 \u001a\u00020\u00112\u0006\u0010\u001b\u001a\u00020\u0003H\u0086\nJ\b\u0010!\u001a\u00020\"H\u0016R\u0011\u0010\u0004\u001a\u00020\u0005¢\u0006\b\n\u0000\u001a\u0004\b\b\u0010\tR$\u0010\u0002\u001a\u00020\u00032\u0006\u0010\u0002\u001a\u00020\u0003@FX\u0086\u000e¢\u0006\u000e\n\u0000\u001a\u0004\b\n\u0010\u000b\"\u0004\b\f\u0010\r¨\u0006$"}, d2 = {"Lkotlinx/atomicfu/AtomicInt;", "", "value", "", "trace", "Lkotlinx/atomicfu/TraceBase;", "<init>", "(ILkotlinx/atomicfu/TraceBase;)V", "getTrace", "()Lkotlinx/atomicfu/TraceBase;", "getValue", "()I", "setValue", "(I)V", "thisRef", "property", "Lkotlin/reflect/KProperty;", "", "lazySet", "compareAndSet", "", "expect", "update", "getAndSet", "getAndIncrement", "getAndDecrement", "getAndAdd", "delta", "addAndGet", "incrementAndGet", "decrementAndGet", "plusAssign", "minusAssign", "toString", "", "Companion", "atomicfu"}, k = 1, mv = {2, 0, 0}, xi = 48)
+public final class AtomicInt {
+    private static final Companion Companion = new Companion(null);
+    private static final AtomicIntegerFieldUpdater<AtomicInt> FU = AtomicIntegerFieldUpdater.newUpdater(AtomicInt.class, "value");
+    private final TraceBase trace;
+    private volatile int value;
+
+    public AtomicInt(int i, TraceBase trace) {
+        Intrinsics.checkNotNullParameter(trace, "trace");
+        this.trace = trace;
+        this.value = i;
+    }
+
+    public final TraceBase getTrace() {
+        return this.trace;
+    }
+
+    public final int getValue() {
+        return this.value;
+    }
+
+    public final void setValue(int i) {
+        this.value = i;
+        if (this.trace != TraceBase.None.INSTANCE) {
+            this.trace.append("set(" + i + ')');
+        }
+    }
+
+    private final int getValue(Object thisRef, KProperty<?> property) {
+        Intrinsics.checkNotNullParameter(property, "property");
+        return getValue();
+    }
+
+    private final void setValue(Object thisRef, KProperty<?> property, int value) {
+        Intrinsics.checkNotNullParameter(property, "property");
+        setValue(value);
+    }
+
+    public final void lazySet(int value) {
+        FU.lazySet(this, value);
+        if (this.trace != TraceBase.None.INSTANCE) {
+            this.trace.append("lazySet(" + value + ')');
+        }
+    }
+
+    public final boolean compareAndSet(int expect, int update) {
+        boolean zCompareAndSet = FU.compareAndSet(this, expect, update);
+        if (zCompareAndSet && this.trace != TraceBase.None.INSTANCE) {
+            this.trace.append("CAS(" + expect + ", " + update + ')');
+        }
+        return zCompareAndSet;
+    }
+
+    public final int getAndSet(int value) {
+        int andSet = FU.getAndSet(this, value);
+        if (this.trace != TraceBase.None.INSTANCE) {
+            this.trace.append("getAndSet(" + value + "):" + andSet);
+        }
+        return andSet;
+    }
+
+    public final int getAndIncrement() {
+        int andIncrement = FU.getAndIncrement(this);
+        if (this.trace != TraceBase.None.INSTANCE) {
+            this.trace.append("getAndInc():" + andIncrement);
+        }
+        return andIncrement;
+    }
+
+    public final int getAndDecrement() {
+        int andDecrement = FU.getAndDecrement(this);
+        if (this.trace != TraceBase.None.INSTANCE) {
+            this.trace.append("getAndDec():" + andDecrement);
+        }
+        return andDecrement;
+    }
+
+    public final int getAndAdd(int delta) {
+        int andAdd = FU.getAndAdd(this, delta);
+        if (this.trace != TraceBase.None.INSTANCE) {
+            this.trace.append("getAndAdd(" + delta + "):" + andAdd);
+        }
+        return andAdd;
+    }
+
+    public final int addAndGet(int delta) {
+        int iAddAndGet = FU.addAndGet(this, delta);
+        if (this.trace != TraceBase.None.INSTANCE) {
+            this.trace.append("addAndGet(" + delta + "):" + iAddAndGet);
+        }
+        return iAddAndGet;
+    }
+
+    public final int incrementAndGet() {
+        int iIncrementAndGet = FU.incrementAndGet(this);
+        if (this.trace != TraceBase.None.INSTANCE) {
+            this.trace.append("incAndGet():" + iIncrementAndGet);
+        }
+        return iIncrementAndGet;
+    }
+
+    public final int decrementAndGet() {
+        int iDecrementAndGet = FU.decrementAndGet(this);
+        if (this.trace != TraceBase.None.INSTANCE) {
+            this.trace.append("decAndGet():" + iDecrementAndGet);
+        }
+        return iDecrementAndGet;
+    }
+
+    public final void plusAssign(int delta) {
+        getAndAdd(delta);
+    }
+
+    public final void minusAssign(int delta) {
+        getAndAdd(-delta);
+    }
+
+    public String toString() {
+        return String.valueOf(this.value);
+    }
+
+    /* JADX INFO: compiled from: AtomicFU.kt */
+    @Metadata(d1 = {"\u0000\u0018\n\u0002\u0018\u0002\n\u0002\u0010\u0000\n\u0002\b\u0003\n\u0002\u0018\u0002\n\u0002\u0018\u0002\n\u0002\b\u0003\b\u0082\u0003\u0018\u00002\u00020\u0001B\t\b\u0002¢\u0006\u0004\b\u0002\u0010\u0003R4\u0010\u0004\u001a&\u0012\f\u0012\n \u0007*\u0004\u0018\u00010\u00060\u0006 \u0007*\u0012\u0012\f\u0012\n \u0007*\u0004\u0018\u00010\u00060\u0006\u0018\u00010\u00050\u0005X\u0082\u0004¢\u0006\u0004\n\u0002\u0010\b¨\u0006\t"}, d2 = {"Lkotlinx/atomicfu/AtomicInt$Companion;", "", "<init>", "()V", "FU", "Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;", "Lkotlinx/atomicfu/AtomicInt;", "kotlin.jvm.PlatformType", "Ljava/util/concurrent/atomic/AtomicIntegerFieldUpdater;", "atomicfu"}, k = 1, mv = {2, 0, 0}, xi = 48)
+    private static final class Companion {
+        public /* synthetic */ Companion(DefaultConstructorMarker defaultConstructorMarker) {
+            this();
+        }
+
+        private Companion() {
+        }
+    }
+}

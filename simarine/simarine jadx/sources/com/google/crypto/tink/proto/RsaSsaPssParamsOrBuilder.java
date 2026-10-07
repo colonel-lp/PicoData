@@ -1,0 +1,16 @@
+package com.google.crypto.tink.proto;
+
+import com.google.crypto.tink.shaded.protobuf.MessageLiteOrBuilder;
+
+/* JADX INFO: loaded from: classes2.dex */
+public interface RsaSsaPssParamsOrBuilder extends MessageLiteOrBuilder {
+    HashType getMgf1Hash();
+
+    int getMgf1HashValue();
+
+    int getSaltLength();
+
+    HashType getSigHash();
+
+    int getSigHashValue();
+}

@@ -1,0 +1,46 @@
+package crc640ec207abc449b2ca;
+
+import com.google.android.material.appbar.AppBarLayout;
+import java.util.ArrayList;
+import mono.android.IGCUserPeer;
+import mono.android.Runtime;
+import mono.android.TypeManager;
+
+/* JADX INFO: loaded from: classes2.dex */
+public class ShellFlyoutTemplatedContentRenderer implements IGCUserPeer, AppBarLayout.OnOffsetChangedListener {
+    public static final String __md_methods = "n_onOffsetChanged:(Lcom/google/android/material/appbar/AppBarLayout;I)V:GetOnOffsetChanged_Lcom_google_android_material_appbar_AppBarLayout_IHandler:Google.Android.Material.AppBar.AppBarLayout/IOnOffsetChangedListenerInvoker, Xamarin.Google.Android.Material\n";
+    private ArrayList refList;
+
+    private native void n_onOffsetChanged(AppBarLayout appBarLayout, int i);
+
+    static {
+        Runtime.register("Microsoft.Maui.Controls.Platform.Compatibility.ShellFlyoutTemplatedContentRenderer, Microsoft.Maui.Controls", ShellFlyoutTemplatedContentRenderer.class, "n_onOffsetChanged:(Lcom/google/android/material/appbar/AppBarLayout;I)V:GetOnOffsetChanged_Lcom_google_android_material_appbar_AppBarLayout_IHandler:Google.Android.Material.AppBar.AppBarLayout/IOnOffsetChangedListenerInvoker, Xamarin.Google.Android.Material\n");
+    }
+
+    public ShellFlyoutTemplatedContentRenderer() {
+        if (getClass() == ShellFlyoutTemplatedContentRenderer.class) {
+            TypeManager.Activate("Microsoft.Maui.Controls.Platform.Compatibility.ShellFlyoutTemplatedContentRenderer, Microsoft.Maui.Controls", "", this, new Object[0]);
+        }
+    }
+
+    @Override // com.google.android.material.appbar.AppBarLayout.OnOffsetChangedListener, com.google.android.material.appbar.AppBarLayout.BaseOnOffsetChangedListener
+    public void onOffsetChanged(AppBarLayout appBarLayout, int i) {
+        n_onOffsetChanged(appBarLayout, i);
+    }
+
+    @Override // mono.android.IGCUserPeer
+    public void monodroidAddReference(Object obj) {
+        if (this.refList == null) {
+            this.refList = new ArrayList();
+        }
+        this.refList.add(obj);
+    }
+
+    @Override // mono.android.IGCUserPeer
+    public void monodroidClearReferences() {
+        ArrayList arrayList = this.refList;
+        if (arrayList != null) {
+            arrayList.clear();
+        }
+    }
+}

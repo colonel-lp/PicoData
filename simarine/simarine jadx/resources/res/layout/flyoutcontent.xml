@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<crc640ec207abc449b2ca.ShellFlyoutLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:background="@android:color/background_light"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <com.google.android.material.appbar.AppBarLayout
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
+        android:id="@+id/flyoutcontent_appbar"
+        android:background="@null"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:elevation="0dp"/>
+</crc640ec207abc449b2ca.ShellFlyoutLayout>

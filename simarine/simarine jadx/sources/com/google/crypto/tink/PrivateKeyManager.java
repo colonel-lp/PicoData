@@ -1,0 +1,10 @@
+package com.google.crypto.tink;
+
+import com.google.crypto.tink.proto.KeyData;
+import com.google.crypto.tink.shaded.protobuf.ByteString;
+import java.security.GeneralSecurityException;
+
+/* JADX INFO: loaded from: classes2.dex */
+public interface PrivateKeyManager<P> extends KeyManager<P> {
+    KeyData getPublicKeyData(ByteString serializedKey) throws GeneralSecurityException;
+}
