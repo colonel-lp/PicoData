@@ -92,3 +92,10 @@
 - [x] Owner supplied a live MQTT JSON payload containing SOC, cell-voltage slots and battery/PV1/PV2/external-load current fields. Publish the field contract only, not the sample readings or device inventory.
 - [ ] Confirm configured active cell channels for derived pack voltage, polarity under known charge/load conditions, reporting cadence and retained/stale message behaviour. Use Pi UTC receipt time for logging rather than relying on the currently unaligned device date.
 - [ ] Decide whether external-load current is required in the logged channel set; keep it distinct from battery balance and overlapping load-shunt sums.
+
+## Owner-confirmed acquisition details — 2026-10-08
+
+- [x] Confirm Pi acquisition/receipt timestamps for both Pico and ElectroDacus logging; preserve existing MQTT output.
+- [x] Confirm the active cells in the supplied example and that its negative battery current is discharge. Keep the actual cell map and present installation inventory private.
+- [ ] Convert PV1/PV2 mA to A with division by 1000 and include both solar channels in electrical history; log valid zeros distinctly from unavailable readings.
+- [ ] Include PV2 for future use, with its directional verification performed when connected. This confirmation does not establish its charging polarity from the current zero sample.

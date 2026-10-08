@@ -84,6 +84,15 @@ The owner supplied one live JSON message. Record the field contract only; do not
 
 A single sample establishes field presence and example types, not charge/discharge calibration, active-cell configuration, reporting rate, timing validity or long-run recovery. Match battery and supply/load readings to known operating conditions before accepting directional totals. No source implementation is included in this update.
 
+## Owner confirmations — 2026-10-08
+
+- Use Pi acquisition/receipt time for the logged Pico and ElectroDacus data; do not depend on externally synchronizing the monitor's clock. Store UTC wall time and use monotonic elapsed time for integration. Keep the existing Pico MQTT payload/format unchanged; its formatter already creates the timestamp from the Pi's current time.
+- The nonzero cell slots in the supplied example are confirmed active. Keep the actual enabled-cell map as private runtime configuration, not a published inventory. Derive pack voltage from all configured active inputs; invalid/missing active inputs invalidate derived voltage/power.
+- The supplied example is confirmed discharging: negative `currentMA.battery` represents battery outflow in that operating condition. Charging-condition and other channel sign checks remain separate.
+- Convert `currentMA.pv1` and `currentMA.pv2` from mA to A by dividing by 1000. Battery and external-load current fields also use mA.
+- PV2 is presently unconnected but must have a logging channel and follow the agreed electrical summary/retention policy alongside PV1. Preserve explicit valid zero readings; do not confuse them with a missing/null field. Treat present connection state as private runtime configuration. Verify PV2 polarity/measurement point when it is connected rather than asserting that a zero sample proves its sign.
+- Avoid persisting retained MQTT snapshots as fresh acquisitions. Pi receipt time timestamps arrival, but freshness/repetition handling is still needed.
+
 ## Proposed implementation order and Android access
 
 Planning outline, 2026-10-08; no source implementation is requested by this next-step discussion.
