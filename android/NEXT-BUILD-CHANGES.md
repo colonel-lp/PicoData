@@ -43,7 +43,7 @@
 
 - Keep collection/logging on the always-on, headless Pi Zero 2 W; the head unit is not continuously powered.
 - Prefer one focused service over an expanding dashboard/database stack. Measure actual memory/CPU before replacing working services.
-- SQLite plus a small history API is the preferred proposal; sampling, retention and final display/app architecture remain to be agreed. No logging/API/UI implementation is included in this MQTT addition.
+- SQLite plus a small history API is the preferred proposal; the owner's selected logging/retention rules are in `node.js/DATABASE-PLAN.md`, with calculation details and final display/app architecture still to be agreed. No logging/API/UI implementation is included in this MQTT addition.
 - Keep history on persistent storage outside zram-managed directories (proposed `/var/lib/ella/`), with batched durable commits; reserve `/var/log` for diagnostics.
 - Add ElectroDacus MQTT decoding later, preserving the existing Mosquitto destination during validation.
 
@@ -59,3 +59,14 @@
 - [ ] Agree logged measurements, power/energy inputs and signs, sampling/retention, daily timezone and acceptable uncommitted-data window.
 - [ ] Confirm a live SBMS payload, active cell channels and directly available solar measurements; an unwired dashboard gauge is not evidence of a working reading.
 - [ ] Implement and benchmark the agreed persistent SQLite history only after implementation is requested. Keep legacy MQTT output unchanged, separate sources, and preserve gaps/validity in summaries and energy totals.
+
+## Owner logging specification — 2026-10-08
+
+- [x] Record the owner's selected measurements and retention in [`node.js/DATABASE-PLAN.md`](../node.js/DATABASE-PLAN.md), superseding the initial broad candidates and retention tiers.
+- [ ] Barometer: hourly for 1 month; last valid daily reading indefinitely.
+- [ ] All Pico current shunts: `[W, A, V]` minute/hour/day/month summaries retained for 1 day / 1 week / 1 month / indefinitely; add main-battery SOC.
+- [ ] Outside temperature: hourly for 1 month; daily minimum/maximum indefinitely.
+- [ ] Add independent ElectroDacus MQTT subscription for voltage, total/battery current, PV1/PV2 charging current and SOC, after validating a live payload and voltage/current associations.
+- [ ] Agree instantaneous-power averaging, duration-aware rollups and directional energy/charge totals so short-history deletion does not remove information needed for later calculations.
+- [ ] Confirm SOC/hourly environmental aggregation, calendar timezone/cutoffs, ElectroDacus retention and durable in-progress bucket recovery.
+- This records planning requirements only; no logging implementation or version change is authorized by the calculation question.

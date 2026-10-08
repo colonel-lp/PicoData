@@ -1,47 +1,67 @@
-# Database and logging proposal
+# Database and logging plan
 
-Draft for discussion, 2026-10-08. No database, logger or history API is implemented by this document. Values, sampling and retention remain to be agreed.
+Updated discussion draft, 2026-10-08. The owner's logging/retention requests below supersede the initial broad candidate list and retention proposal. No database, logger, ElectroDacus subscriber or history API is implemented by this document. Calculation/storage refinements and the remaining decisions require agreement.
 
-## Storage and structure
+## Owner-requested measurements and retention
 
-Use a local SQLite database on persistent Pi storage outside zram-managed directories (proposed `/var/lib/ella/history.sqlite`). The existing collector would write it; a future local API would serve live/history data to a browser or Android viewer. Keep existing MQTT payloads unchanged. SQLite is appropriate for embedded local storage with one writer; this is a design recommendation, not a measured Pi benchmark.
+| Measurement | Record | Retain |
+| --- | --- | --- |
+| Barometer | One reading each hour | 1 month |
+| Barometer | Last valid reading of each day | Indefinitely |
+| All Pico current shunts | Minute array of watts, amps and volts; main battery adds SOC | 1 day |
+| All Pico current shunts | Hour array | 1 week |
+| All Pico current shunts | Day array | 1 month |
+| All Pico current shunts | Month array | Indefinitely |
+| Outside temperature | One reading each hour | 1 month |
+| Outside temperature | Daily minimum and maximum | Indefinitely |
+| ElectroDacus | Voltage, total/battery current, PV1/PV2 charge currents and SOC; analogous electrical summaries with the extra values | Confirm whether the same electrical retention rules apply |
+
+Do not silently include other temperatures, tanks, tilt, cell voltages or flags in regular history. They were initial candidates, not selections in the owner's latest request. Connection/coverage tracking supports correct calculations; user-facing alarm/event history is a separate decision.
+
+The owner's proposed aggregation sums received current and voltage over each minute and divides each by 60, then multiplies their averages. The following refinements are recommendations for accurate power/energy reporting, not changes already agreed or implemented.
+
+## Proposed calculation refinements
+
+- For each valid, time-aligned current/voltage pair calculate power as watts = amps × volts. Average these power values, rather than multiplying average current by average voltage; the two differ when current and voltage vary together.
+- Division by 60 is valid only for exactly 60 equally spaced samples covering the minute. Account for actual received samples and elapsed valid time. The Pico and SBMS may have different reporting rates.
+- Maintain time integrals: watt-seconds = sum(power × valid elapsed seconds), amp-seconds = sum(current × valid elapsed seconds), and volt-seconds = sum(voltage × valid elapsed seconds). Proposed array values are those integrals divided by their respective valid covered durations.
+- Electrical energy is Wh = watt-seconds / 3600; charge is Ah = amp-seconds / 3600. Average watts describes power, not “watts per minute”. Roll up additive integrals and durations into hours/days/months; do not blindly average child averages.
+- Power coverage may differ from current/voltage coverage because power requires both fresh inputs. Preserve the applicable durations and timestamps so an average cannot be mistaken for a complete interval.
+- Store consumed/generated Wh and discharged/charged Ah separately for bidirectional channels. A net monthly average alone cannot recover both gross totals after smaller intervals are deleted.
+- Keep every monitor/channel separate. Do not add Pico and ElectroDacus battery measurements as though they were separate batteries.
+- Reject invalid/sentinel values for logging while preserving existing legacy MQTT output. Do not turn missing/stale inputs into zero or extend readings over outages/restarts. Use monotonic elapsed time within a run; UTC timestamps identify stored intervals.
+- Daily outside-temperature extrema should inspect all fresh received readings, not just the hourly stored readings.
+- Select the last valid barometer reading actually received within the day; do not carry yesterday's value into an empty day.
+
+A compact electrical representation can remain `[average_W, average_A, average_V]`, with the main battery adding SOC. Recommended timestamp/coverage and Wh/Ah totals belong in named database columns alongside that array. SOC aggregation is still to be chosen; last valid SOC is recommended for an end-of-period battery state. Per-shunt voltage association must be explicit and correct for the measurement point. Do not present battery-side estimated solar power as directly measured panel-side power.
+
+## Storage proposal
+
+Use a local SQLite database on persistent Pi storage outside zram-managed directories (proposed `/var/lib/ella/history.sqlite`). The collector writes it; a future local API serves graphs to Android or a browser. Existing MQTT payloads remain unchanged.
 
 | Table | Proposed contents |
 | --- | --- |
-| `metrics` | Numeric metric ID, source/device identifier, stable sensor ID or MQTT field path, metric key, exact display label, unit and measured/derived provenance. Keep nominal capacity/configuration metadata here rather than repeating it in every sample. Preserve sensor identity across label changes and distinguish sources. |
-| `history` | Metric ID, UTC interval start, resolution, mean/minimum/maximum/last value, valid sample count and valid coverage duration. Unique key `(metric_id, resolution, interval_start)` supports range queries and prevents duplicate summaries. Reject unavailable/sentinel measurements without changing legacy MQTT output. |
-| `energy_totals` | Per circuit/source/day charge and discharge Ah, generated and consumed Wh, and coverage duration. Keep generation/consumption separate rather than just a net balance; define the reporting timezone before daily grouping. Derived totals retain their input provenance. |
-| `events` | UTC timestamp, source, event type and state: connection loss/recovery, monitor flags/alarms, collector restarts and clock discontinuities. Record changes, rather than repeating unchanged flags every second. |
+| `metrics` | Source/channel identity, exact label, unit, stable sensor ID or MQTT field path, voltage association and measured/derived provenance. |
+| `history` | UTC interval bounds, resolution, electrical averages or environmental readings/extrema, optional SOC, additive integrals/energy and valid coverage. Unique channel/resolution/interval keys prevent duplicate rollups. |
+| `energy_totals` | Optional retained directional Wh/Ah totals, or store these alongside each electrical summary to avoid duplication. Final schema remains open. |
+| `events` | Proposed source/collector availability and clock-change records; additional monitor alarms/flags are not selected yet. |
 
-UTC timestamps are independent of the legacy MQTT local-time components. Use monotonic elapsed time for energy integration within a collector run and do not bridge restarts, stale readings, missing inputs or clock jumps. Keep Pico and ElectroDacus history distinct; choose an explicit preferred source for combined reports instead of adding both monitors' measurements of the same battery.
+Minutes/hours/days/months identify non-overlapping buckets. Confirm the reporting timezone, calendar versus fixed-day retention, and incomplete-current-period display. Day lengths and calendar month lengths vary; never assume every day has 24 elapsed hours or every month has 30 days. Commit longer-term summaries before pruning shorter-term rows. Restart-safe checkpoints must prevent duplicate energy accumulation or loss of the in-progress bucket.
 
-## Candidate readings
+Batch bounded writes into transactions; commit cadence and acceptable uncommitted-data loss are still open. Indefinite monthly/environmental history has no automatic expiry. Measure storage growth and range-query performance on the Pi before making resource claims.
 
-- Electrical: battery voltage/current/SOC/remaining Ah from each monitor; starter voltage; each available circuit current; directly reported solar currents; active cell voltages, cell imbalance and monitor temperatures.
-- Environment: each available temperature, tank percentage/remaining capacity, barometric pressure, pitch and roll. Decide whether tilt needs continuous history or live display only.
-- Events: charge/discharge permission flags, cell/voltage/temperature-related flags, end-of-charge and source availability, after confirming actual SBMS field semantics.
-- Derived: circuit/battery power, separately accumulated charge/discharge Ah and generated/consumed Wh, and daily totals. Derive watts only with the correct voltage for the measurement point and sufficiently fresh inputs. Do not treat a battery-side estimate as measured panel-side solar power.
+## ElectroDacus input
 
-The Pico implementation is `lib/readings.js`; existing dashboard mappings are in [`../node.red/flows.json`](../node.red/flows.json). The flow maps SBMS `soc`, `cellsMV`, `tempInt`, `tempExt`, `currentMA.battery`, `currentMA.pv1` and `flags`. `currentMA.extLoad` has no downstream display connection and the PV2 gauge has no incoming wire; their presence in the flow does not establish a working extra measurement. Confirm active cell indices, solar channels, scaling, signs and flags from a live SBMS payload before implementation. No private sensor/device inventory is included here.
+Subscribe to the existing broker's ElectroDacus topic independently of Pico acquisition. Confirm a live payload and source timestamps/reporting cadence before implementing voltage, battery/total current, PV1/PV2 current and SOC decoding. The existing flow maps `soc`, `cellsMV`, `currentMA.battery` and `currentMA.pv1`; its PV2 gauge has no incoming wire. This does not establish that PV2 is unavailable in the firmware, only that the copied flow does not receive/display it.
 
-## Proposed sampling and retention
-
-Process fresh incoming readings at their available rate for power/energy calculations, independently of history resolution. Suggested starting policy, subject to agreement and storage measurement:
-
-- Keep 10-second summaries for 7 days.
-- Keep 1-minute summaries for 90 days.
-- Keep hourly summaries and daily energy totals for 2 years.
-- Keep status/alarm events on change.
-
-Min/max preserve peaks in a graph, but do not preserve their exact shape/timing. Weight aggregates by valid elapsed coverage, combine summaries without averaging averages blindly, and do not infer energy from a sparse snapshot or integrate an outage as zero. Graphs should show missing coverage. Apply retention only after the longer-term summaries are committed, and avoid counting multiple resolutions in energy totals.
-
-Batch bounded writes into transactions (proposed every 30 seconds) to reduce commit frequency. Abrupt power loss may lose the uncommitted batch; the durability policy must be explicit. Benchmark representative selected-metric volumes, range queries, retention and interruption recovery on the Pi before accepting storage/performance claims.
+Establish whether voltage is directly supplied or must be derived from the correct active cell readings, and confirm current signs and the physical location of each current/voltage measurement. See [existing dashboard mappings](../node.red/flows.json). No private runtime/device inventory is included here.
 
 ## Decisions still needed
 
-- Record every useful measurement or only selected electrical/environmental channels?
-- Required graph detail and history duration; acceptable power-loss window.
-- Preferred battery/voltage sources, correct voltage points for power calculations, actual SBMS payload and current polarity.
-- Whether daily reporting follows UTC or a configured local timezone.
+- Agree averaging instantaneous power, duration-aware rollups and preservation of directional Wh/Ah/coverage alongside the requested arrays.
+- SOC: last valid value, average, or another representation?
+- Hourly pressure/outside temperature: last valid reading or an average? Daily pressure is explicitly the last valid reading; daily temperature is explicitly minimum/maximum.
+- Reporting timezone and precise retention cutoffs; same electrical retention for ElectroDacus?
+- Correct per-shunt voltages, SBMS payload/PV2 mapping and accepted power-loss window.
 
 Reference: [SQLite appropriate uses](https://sqlite.org/whentouse.html).
