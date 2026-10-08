@@ -70,6 +70,20 @@ Subscribe to the existing broker's ElectroDacus topic independently of Pico acqu
 
 Establish whether voltage is directly supplied or must be derived from the correct active cell readings, and confirm current signs and the physical location of each current/voltage measurement. See [existing dashboard mappings](../node.red/flows.json). No private runtime/device inventory is included here.
 
+## Received SBMS payload contract — 2026-10-08
+
+The owner supplied one live JSON message. Record the field contract only; do not publish its actual readings, cell/channel inventory or device-clock value.
+
+- `soc`: percentage.
+- `cellsMV`: eight cell-voltage slots in millivolts; the supplied message includes unused zero slots. No explicit pack-voltage field is present. Proposed pack voltage is the sum of configured active cells divided by 1000, after confirming the enabled-cell map. Do not infer that a configured active cell reporting zero/missing is merely unused; invalidate derived voltage/power when an expected active input is unavailable.
+- `currentMA.battery`: signed battery/net current in milliamps.
+- `currentMA.pv1` and `currentMA.pv2`: both keys are present. Their actual charge polarity and wiring/availability still need verification; a zero sample does not prove an installed channel or establish charging direction.
+- `currentMA.extLoad`: external-load current is also available, in milliamps. Its role is load; verify its sign and relationship to other load channels before selecting it for totals to avoid double counting.
+- `tempInt`, `tempExt`, `ad2`, `ad3`, `ad4`, `heat1`, `heat2` and `flags` exist. These extra values are not automatically added to the requested logging scope. Do not guess the units/roles of the auxiliary fields.
+- The device `time` is not aligned with the current date in the supplied example. Use a reliable Pi UTC receipt timestamp for logging; retain source time separately only if useful. Receipt time alone does not prove source freshness, so define retained-message/repetition/stale handling and confirm source reporting cadence before integrating energy.
+
+A single sample establishes field presence and example types, not charge/discharge calibration, active-cell configuration, reporting rate, timing validity or long-run recovery. Match battery and supply/load readings to known operating conditions before accepting directional totals. No source implementation is included in this update.
+
 ## Proposed implementation order and Android access
 
 Planning outline, 2026-10-08; no source implementation is requested by this next-step discussion.

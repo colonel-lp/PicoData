@@ -86,3 +86,9 @@
 - [ ] Define stable API IDs/units/array field meanings, credentials/transport/port/address discovery, partial/gap responses, backups/export and schema migration.
 - [ ] Test restart recovery, power interruption, clock/calendar boundaries, pruning, denied MQTT/API access and long unattended collection; privately measure Pi performance.
 - This is the proposed next-step order, not an implementation or Android build authorization.
+
+## Received ElectroDacus example — 2026-10-08
+
+- [x] Owner supplied a live MQTT JSON payload containing SOC, cell-voltage slots and battery/PV1/PV2/external-load current fields. Publish the field contract only, not the sample readings or device inventory.
+- [ ] Confirm configured active cell channels for derived pack voltage, polarity under known charge/load conditions, reporting cadence and retained/stale message behaviour. Use Pi UTC receipt time for logging rather than relying on the currently unaligned device date.
+- [ ] Decide whether external-load current is required in the logged channel set; keep it distinct from battery balance and overlapping load-shunt sums.
