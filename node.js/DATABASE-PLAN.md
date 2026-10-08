@@ -70,6 +70,31 @@ Subscribe to the existing broker's ElectroDacus topic independently of Pico acqu
 
 Establish whether voltage is directly supplied or must be derived from the correct active cell readings, and confirm current signs and the physical location of each current/voltage measurement. See [existing dashboard mappings](../node.red/flows.json). No private runtime/device inventory is included here.
 
+## Proposed implementation order and Android access
+
+Planning outline, 2026-10-08; no source implementation is requested by this next-step discussion.
+
+1. Obtain representative live Pico and SBMS payloads; map stable channels, SBMS voltage/PV1/PV2 fields, per-shunt voltages and reported current polarity.
+2. Extend the Pi collector to subscribe to the existing ElectroDacus MQTT topic. Retain the existing broker destination and Pico MQTT publishing contract. Keep each source's receipt time, validity, freshness and reconnect handling independent.
+3. Add persistent SQLite logging, minute/hour/day/month accumulators, selected environmental records, restart-safe checkpoints and the owner's retention rules. Verify calculations on synthetic/replay data before comparing live totals.
+4. Add a small authenticated local HTTP API in the same service, using Node.js's built-in HTTP server as the lightweight starting proposal. Android/browser clients request JSON; only the Pi opens the database. No remote SQL or shared database file is needed.
+5. Check Pi resource use, query latency, outage/restart/power-loss behaviour, rollup boundaries, pruning and a long unattended run. Keep all owner runtime/resource details private.
+
+Proposed versioned endpoints:
+
+| Endpoint | Response |
+| --- | --- |
+| `GET /api/v1/metrics` | Available source/channel IDs, labels, units, verified direction, resolutions and available history range. |
+| `GET /api/v1/live` | Current Pico/SBMS readings with timestamps and independent stale/connection indicators. |
+| `GET /api/v1/history?metric=ID&resolution=hour&from=UTC&to=UTC` | The requested channel/time range at minute/hour/day/month or the selected environmental resolution, with values, interval bounds and missing coverage. |
+| `GET /api/v1/totals?metric=ID&from=UTC&to=UTC` | Directional Wh/Ah totals over available retained complete/partial intervals, with coverage and actual returned bounds. Do not imply unavailable detail remains reconstructible after retention. |
+
+Keep query windows/point counts bounded and return labelled fields or an explicit array-field definition. The client polls live values only while viewing them and fetches history when a graph/range changes; an update stream can be considered later if needed. Retention and partial buckets must be visible in responses. Android may cache received history locally for use while disconnected, but the Pi remains the authoritative logger.
+
+Access credentials, network transport/TLS choice, API bind address/port and Pi address discovery are still to be agreed. Preserve API/socket lifecycle cleanup and bounded query execution so history requests do not disrupt collection. Plan a consistent database backup/export method and schema migrations before relying on indefinite records.
+
+References: [SQLite server-side application pattern](https://sqlite.org/whentouse.html), [Node.js HTTP server](https://nodejs.org/api/http.html).
+
 ## Decisions still needed
 
 - Agree averaging instantaneous power, duration-aware rollups and preservation of directional Wh/Ah/coverage alongside the requested arrays.
