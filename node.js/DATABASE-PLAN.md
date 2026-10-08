@@ -35,6 +35,18 @@ The owner's proposed aggregation sums received current and voltage over each min
 
 A compact electrical representation can remain `[average_W, average_A, average_V]`, with the main battery adding SOC. Recommended timestamp/coverage and Wh/Ah totals belong in named database columns alongside that array. SOC aggregation is still to be chosen; last valid SOC is recommended for an end-of-period battery state. Per-shunt voltage association must be explicit and correct for the measurement point. Do not present battery-side estimated solar power as directly measured panel-side power.
 
+## Current direction verification
+
+Owner requirement, 2026-10-08: do not assume every current draw is negative or every charging channel follows the same sign convention.
+
+- Preserve the current source values and legacy MQTT output unchanged.
+- Identify each channel by source and stable sensor ID/MQTT field path. Record its physical role (battery balance, load or charging supply), associated voltage, and separately verified polarity. Do not apply a global absolute-value conversion or global sign reversal.
+- Check known load-only and charging conditions, including simultaneous supply/load operation where practical, against monitor readings and controlled changes. Dashboard sign inversions are reference transformations, not proof of the sensor's physical direction.
+- Proposed internal convention: battery current positive into the battery and negative out; load-channel current positive for consumption; supply-channel current positive for generation. Apply a channel-specific multiplier only after confirming its orientation. Preserve meaningful reverse flow rather than taking absolute values indiscriminately.
+- Until polarity is verified, retain the source reading as unclassified; do not assign it to charged/discharged or generated/consumed totals.
+- The main battery current is a net charge-minus-load balance. Splitting it by verified sign measures net battery inflow/outflow, not all simultaneous generation/consumption. Pico and ElectroDacus battery balances remain separate comparisons.
+- PV1 is owner-described as a charging-only supply channel. Accumulate its supplied energy independently after confirming its reported polarity, measurement point and voltage. Confirm PV2 from an actual payload before defining its mapping.
+
 ## Storage proposal
 
 Use a local SQLite database on persistent Pi storage outside zram-managed directories (proposed `/var/lib/ella/history.sqlite`). The collector writes it; a future local API serves graphs to Android or a browser. Existing MQTT payloads remain unchanged.
