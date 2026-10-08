@@ -30,7 +30,7 @@
 - [x] Remove normal readings from terminal/journal output by default; retain connection/error status. `--stdout` enables diagnostic JSON and `--no-mqtt` enables reader-only testing.
 - [x] Add a generic systemd service template with the correct `bin/pico.js` path, network/broker ordering and a 30-second process restart interval.
 - [x] Confirm default config resolution and silent MQTT payload parity in an isolated installation; missing config fails visibly.
-- [ ] Confirm the updated service starts and restarts on the owner's Pi.
+- [x] Owner reports clean shutdown/restart and successful MQTT/Pico live connections with the updated service.
 - Publish functional test outcomes only; exclude owner runtime/process snapshots, device inventory, addresses, credentials and account details.
 
 ## Repository layout — 2026-10-08
@@ -52,3 +52,10 @@
 - Start the Android port after reviewing the live Pi evidence; confirm target hardware, Android range, layout and background requirements first.
 - Add ElectroDacus MQTT reception later. Review Android's role as a viewer/client of the Pi logger; direct Pico/embedded-broker operation can remain a separate future option. The current step implements optional Pico MQTT publishing only.
 - Keep SignalK functionality outside the Android scope.
+
+## Database planning — 2026-10-08
+
+- [x] Review existing Pico output and dashboard SBMS mappings; record the discussion draft in [`node.js/DATABASE-PLAN.md`](../node.js/DATABASE-PLAN.md).
+- [ ] Agree logged measurements, power/energy inputs and signs, sampling/retention, daily timezone and acceptable uncommitted-data window.
+- [ ] Confirm a live SBMS payload, active cell channels and directly available solar measurements; an unwired dashboard gauge is not evidence of a working reading.
+- [ ] Implement and benchmark the agreed persistent SQLite history only after implementation is requested. Keep legacy MQTT output unchanged, separate sources, and preserve gaps/validity in summaries and energy totals.
