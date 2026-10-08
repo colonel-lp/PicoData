@@ -1,5 +1,14 @@
 # Pico base changelog
 
+## 0.4.0 — 2026-10-08
+
+- Receive ElectroDacus JSON from `/Ella/sbms` using the existing MQTT connection and credentials, independently of Pico acquisition. Retry subscription refusal and resubscribe after broker reconnection.
+- Decode battery, PV1, PV2 and external-load currents from mA to A, SOC and pack voltage from privately configured active-cell channels. Preserve reported signs/valid zero readings and make unavailable voltage explicit.
+- Timestamp reception using Pi UTC and monotonic time; retain source time separately. Ignore retained snapshots and exact repeats of source time/measurements, reject malformed input, and clear current state on timeout/disconnection.
+- Keep Pico MQTT fields/values, topic/wire settings, service paths and quiet default unchanged. Add optional `--sbms-stdout`, `--no-sbms`, SBMS config keys and local normalized capture records; capture verification still checks Pico only.
+- All 39 automated tests pass, including simultaneous reception/Python payload parity, wire subscription/refusal/reconnection and CLI operation without a Pico. Increase older CLI test startup windows to accommodate concurrent test processes.
+- Document private configuration and pending Pi checks. SQLite logging, rollups, directional totals, history API and Android implementation are not included in this acquisition step.
+
 ## Repository layout — 2026-10-08 (version unchanged)
 
 - Place the standalone collector in the repository root `node.js/`, matching the Pi installation layout. Update checkout/update commands, documentation links and source provenance.

@@ -219,12 +219,13 @@ for (const mqttMode of ['disabled', 'online', 'denied']) test(`real CLI publishe
   }
   const child = spawn(process.execPath, [path.join(__dirname, '../bin/pico.js'),
     '--ip', '127.0.0.1', '--udp-port', String(sim.port), '--tcp-port', String(sim.port),
-    '--duration', '1.5', '--record', capture, '--stdout', ...mqttArgs]);
+    '--duration', '3', '--record', capture, '--stdout', ...mqttArgs]);
   t.after(() => { if (child.exitCode === null) child.kill(); });
   let stdout = '', stderr = '';
   child.stdout.on('data', b => { stdout += b; }); child.stderr.on('data', b => { stderr += b; });
   const code = await new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
   assert.equal(code, 0, stderr);
+  assert.ok(stdout.trim(), 'No Pico output before test duration expired: ' + stderr);
   const lines = stdout.trim().split('\n').map(line => JSON.parse(line));
   assert.ok(lines.length > 0); assert.equal(lines[0].inclinometer.pitch, 2.3);
   assert.equal(lines[0].battery['Ella  '].voltage, 13.24);
@@ -339,4 +340,42 @@ test('missing default config fails visibly without readings or credentials', t =
     cwd: directory, encoding: 'utf8',
   });
   assert.equal(conflict.status, 2); assert.ok(conflict.stderr.includes('Usage:'));
+});
+
+test('simultaneous SBMS reception preserves live Pico MQTT JSON and its capture verification', async t => {
+  const sim = await simulator(t), broker = await mqttBroker(t);
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ella-combined-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const config = path.join(directory, 'mqtt'), capture = path.join(directory, 'capture.jsonl');
+  fs.writeFileSync(config, `server=127.0.0.1\nport=${broker.port}\nprefix=/Ella/Pico/\nusername=test-user\npassword=test-pass=extra\nsbms_cells=1,2,3,4\n`);
+  const packets = []; broker.events.on('publish', packet => packets.push(packet));
+  const child = spawn(process.execPath, [path.join(__dirname, '../bin/pico.js'), '--mqtt-config', config,
+    '--ip', '127.0.0.1', '--udp-port', String(sim.port), '--tcp-port', String(sim.port),
+    '--duration', '1.2', '--record', capture, '--stdout', '--sbms-stdout']);
+  t.after(() => { if (child.exitCode === null) child.kill(); });
+  let stdout = '', stderr = '', second = 1;
+  child.stdout.on('data', data => { stdout += data; }); child.stderr.on('data', data => { stderr += data; });
+  const timer = setInterval(() => broker.send('/Ella/sbms', {
+    time: { year: 1, month: 2, day: 3, hour: 4, minute: 5, second: second++ % 60 }, soc: 62,
+    cellsMV: [3200, 3300, 3400, 3500, 0, 0, 0, 0], currentMA: { battery: -3000, pv1: 1000, pv2: 0, extLoad: 4000 },
+  }), 50);
+  t.after(() => clearInterval(timer));
+  const code = await new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
+  clearInterval(timer); assert.equal(code, 0, stderr);
+  const lines = stdout.trim().split('\n').map(line => JSON.parse(line));
+  const pico = lines.filter(line => line.source !== 'sbms'), sbms = lines.filter(line => line.source === 'sbms');
+  assert.ok(pico.length > 0); assert.ok(sbms.length > 0); assert.ok(packets.length > 0);
+  assert.equal(sbms[0].voltage, 13.4); assert.equal(sbms[0].current.pv2, 0);
+  for (const packet of packets) {
+    assert.equal(packet.topic, '/Ella/Pico/'); assert.equal(packet.qos, 0); assert.equal(packet.retain, false);
+    const output = JSON.parse(packet.payload.toString());
+    assert.ok(pico.some(value => JSON.stringify(value) === JSON.stringify(output)));
+    const now = output.time;
+    const oracle = spawnSync('python3', [path.join(__dirname, 'python-oracle.py'), baseline], {
+      input: JSON.stringify({ ...sim.data, time: { ...now, year: now.year + 2000 } }), encoding: 'utf8',
+    });
+    assert.equal(oracle.status, 0, oracle.stderr); assert.deepEqual(output, JSON.parse(oracle.stdout).output);
+  }
+  assert.equal((await verifyCapture(capture, { comparePython: true })).ok, true);
+  assert.equal(stderr.includes('test-pass'), false);
 });

@@ -1,6 +1,15 @@
 # Next build changes
 
-## Current authorized step: Pico base 0.3.0 for service operation
+## Current authorized step: ElectroDacus reception in collector 0.4.0
+
+- [x] Receive `/Ella/sbms` on the existing MQTT connection independently of Pico availability; resubscribe after reconnection and retry denied subscription without stopping publishing.
+- [x] Decode all four mA current fields to amps, SOC and pack voltage from a private configured cell map; include PV2 and preserve valid zeros/current signs.
+- [x] Use Pi UTC receipt time and keep monitor time separately. Reject invalid payloads, ignore retained/exact repeated samples, and clear current readings on stale timeout or broker disconnect.
+- [x] Preserve original Pico MQTT output and quiet service operation; add `--sbms-stdout`, `--no-sbms` and local SBMS capture records for diagnostics.
+- [ ] Verify the new receiver on the Pi, including subscription permissions, configured pack voltage, reporting cadence and broker restart. Confirm charging polarity under known conditions before directional integration.
+- [ ] Implement selected SQLite history, rollups/retention and restart recovery next, followed by the local history API. No database/API is added in 0.4.0.
+
+## Previous Pico base and service work
 
 - [x] Start with updated Node.js discovery/configuration and TCP request methods.
 - [x] Carry over the owner's sensor mappings, pitch/roll and Ella JSON calculations/formatting from Python.
@@ -45,19 +54,19 @@
 - Prefer one focused service over an expanding dashboard/database stack. Measure actual memory/CPU before replacing working services.
 - SQLite plus a small history API is the preferred proposal; the owner's selected logging/retention rules are in `node.js/DATABASE-PLAN.md`, with calculation details and final display/app architecture still to be agreed. No logging/API/UI implementation is included in this MQTT addition.
 - Keep history on persistent storage outside zram-managed directories (proposed `/var/lib/ella/`), with batched durable commits; reserve `/var/log` for diagnostics.
-- Add ElectroDacus MQTT decoding later, preserving the existing Mosquitto destination during validation.
+- ElectroDacus MQTT decoding is now implemented in 0.4.0, preserving the existing Mosquitto destination during validation.
 
 ## Later Android work
 
 - Start the Android port after reviewing the live Pi evidence; confirm target hardware, Android range, layout and background requirements first.
-- Add ElectroDacus MQTT reception later. Review Android's role as a viewer/client of the Pi logger; direct Pico/embedded-broker operation can remain a separate future option. The current step implements optional Pico MQTT publishing only.
+- Review Android's role as a viewer/client of the Pi logger; direct Pico/embedded-broker operation can remain a separate future option. ElectroDacus reception is implemented on the Pi; Android source is not yet implemented.
 - Keep SignalK functionality outside the Android scope.
 
 ## Database planning — 2026-10-08
 
 - [x] Review existing Pico output and dashboard SBMS mappings; record the discussion draft in [`node.js/DATABASE-PLAN.md`](../node.js/DATABASE-PLAN.md).
 - [ ] Agree logged measurements, power/energy inputs and signs, sampling/retention, daily timezone and acceptable uncommitted-data window.
-- [ ] Confirm a live SBMS payload, active cell channels and directly available solar measurements; an unwired dashboard gauge is not evidence of a working reading.
+- [x] Confirm a live SBMS payload and active cell channels privately; solar current fields are present. Solar voltage/measurement-point verification remains pending.
 - [ ] Implement and benchmark the agreed persistent SQLite history only after implementation is requested. Keep legacy MQTT output unchanged, separate sources, and preserve gaps/validity in summaries and energy totals.
 
 ## Owner logging specification — 2026-10-08
@@ -66,7 +75,7 @@
 - [ ] Barometer: hourly for 1 month; last valid daily reading indefinitely.
 - [ ] All Pico current shunts: `[W, A, V]` minute/hour/day/month summaries retained for 1 day / 1 week / 1 month / indefinitely; add main-battery SOC.
 - [ ] Outside temperature: hourly for 1 month; daily minimum/maximum indefinitely.
-- [ ] Add independent ElectroDacus MQTT subscription for voltage, total/battery current, PV1/PV2 charging current and SOC, after validating a live payload and voltage/current associations.
+- [x] Add independent ElectroDacus MQTT subscription/decoding for voltage, total/battery current, PV1/PV2 current and SOC. Pi operation and solar voltage/current associations remain to verify.
 - [ ] Agree instantaneous-power averaging, duration-aware rollups and directional energy/charge totals so short-history deletion does not remove information needed for later calculations.
 - [ ] Confirm SOC/hourly environmental aggregation, calendar timezone/cutoffs, ElectroDacus retention and durable in-progress bucket recovery.
 - This records planning requirements only; no logging implementation or version change is authorized by the calculation question.
@@ -81,21 +90,24 @@
 ## Proposed implementation sequence and history API — 2026-10-08
 
 - [ ] Confirm live SBMS fields/reporting cadence, per-channel voltage/sign mapping and remaining aggregation/timezone choices.
-- [ ] Add ElectroDacus subscription using the existing Mosquitto destination, then implement persistent selected history/rollups/retention without altering Pico MQTT output.
+- [x] Add ElectroDacus subscription using the existing Mosquitto destination without altering Pico MQTT output.
+- [ ] Implement persistent selected history/rollups/retention after Pi reception validation.
 - [ ] Add an authenticated local JSON API: metric catalogue, live readings/freshness, bounded per-channel history queries and retained Wh/Ah totals. Only the Pi opens SQLite; Android/browser clients request data through the API.
 - [ ] Define stable API IDs/units/array field meanings, credentials/transport/port/address discovery, partial/gap responses, backups/export and schema migration.
 - [ ] Test restart recovery, power interruption, clock/calendar boundaries, pruning, denied MQTT/API access and long unattended collection; privately measure Pi performance.
-- This is the proposed next-step order, not an implementation or Android build authorization.
+- Reception is now authorized and implemented; the remaining sequence is planned Pi logging/API work, not an Android build.
 
 ## Received ElectroDacus example — 2026-10-08
 
 - [x] Owner supplied a live MQTT JSON payload containing SOC, cell-voltage slots and battery/PV1/PV2/external-load current fields. Publish the field contract only, not the sample readings or device inventory.
-- [ ] Confirm configured active cell channels for derived pack voltage, polarity under known charge/load conditions, reporting cadence and retained/stale message behaviour. Use Pi UTC receipt time for logging rather than relying on the currently unaligned device date.
+- [x] Confirm configured active cells and the example's discharge condition privately. Implement Pi UTC receipt time and retained/stale handling.
+- [ ] Verify remaining channel polarity, actual reporting cadence and retained/repeated behaviour on the Pi before integration.
 - [ ] Decide whether external-load current is required in the logged channel set; keep it distinct from battery balance and overlapping load-shunt sums.
 
 ## Owner-confirmed acquisition details — 2026-10-08
 
 - [x] Confirm Pi acquisition/receipt timestamps for both Pico and ElectroDacus logging; preserve existing MQTT output.
 - [x] Confirm the active cells in the supplied example and that its negative battery current is discharge. Keep the actual cell map and present installation inventory private.
-- [ ] Convert PV1/PV2 mA to A with division by 1000 and include both solar channels in electrical history; log valid zeros distinctly from unavailable readings.
+- [x] Convert PV1/PV2 mA to A with division by 1000 in reception, preserving valid zero readings.
+- [ ] Include both solar channels in electrical history; log valid zeros distinctly from unavailable readings.
 - [ ] Include PV2 for future use, with its directional verification performed when connected. This confirmation does not establish its charging polarity from the current zero sample.

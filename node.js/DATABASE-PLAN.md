@@ -1,6 +1,6 @@
 # Database and logging plan
 
-Updated discussion draft, 2026-10-08. The owner's logging/retention requests below supersede the initial broad candidate list and retention proposal. No database, logger, ElectroDacus subscriber or history API is implemented by this document. Calculation/storage refinements and the remaining decisions require agreement.
+Updated discussion draft, 2026-10-08. The owner's logging/retention requests below supersede the initial broad candidate list and retention proposal. Collector 0.4.0 now implements ElectroDacus subscription/decoding as the first acquisition step; see [README.md](README.md). SQLite logging, rollups and the history API remain unimplemented. Calculation/storage refinements and the remaining decisions require agreement.
 
 ## Owner-requested measurements and retention
 
@@ -66,7 +66,7 @@ Batch bounded writes into transactions; commit cadence and acceptable uncommitte
 
 ## ElectroDacus input
 
-Subscribe to the existing broker's ElectroDacus topic independently of Pico acquisition. Confirm a live payload and source timestamps/reporting cadence before implementing voltage, battery/total current, PV1/PV2 current and SOC decoding. The existing flow maps `soc`, `cellsMV`, `currentMA.battery` and `currentMA.pv1`; its PV2 gauge has no incoming wire. This does not establish that PV2 is unavailable in the firmware, only that the copied flow does not receive/display it.
+Collector 0.4.0 subscribes to the existing broker's ElectroDacus topic independently of Pico acquisition. It decodes voltage, battery/total current, PV1/PV2 current, external-load current and SOC from the confirmed field contract. Confirm actual reporting cadence and recovery on the Pi before logging/integration. The existing flow maps `soc`, `cellsMV`, `currentMA.battery` and `currentMA.pv1`; its PV2 gauge has no incoming wire. This does not establish that PV2 is unavailable in the firmware, only that the copied flow does not receive/display it.
 
 Establish whether voltage is directly supplied or must be derived from the correct active cell readings, and confirm current signs and the physical location of each current/voltage measurement. See [existing dashboard mappings](../node.red/flows.json). No private runtime/device inventory is included here.
 
@@ -82,7 +82,7 @@ The owner supplied one live JSON message. Record the field contract only; do not
 - `tempInt`, `tempExt`, `ad2`, `ad3`, `ad4`, `heat1`, `heat2` and `flags` exist. These extra values are not automatically added to the requested logging scope. Do not guess the units/roles of the auxiliary fields.
 - The device `time` is not aligned with the current date in the supplied example. Use a reliable Pi UTC receipt timestamp for logging; retain source time separately only if useful. Receipt time alone does not prove source freshness, so define retained-message/repetition/stale handling and confirm source reporting cadence before integrating energy.
 
-A single sample establishes field presence and example types, not charge/discharge calibration, active-cell configuration, reporting rate, timing validity or long-run recovery. Match battery and supply/load readings to known operating conditions before accepting directional totals. No source implementation is included in this update.
+A single sample establishes field presence and example types, not charge/discharge calibration, reporting rate, timing validity or long-run recovery. Active cells and the example's discharge condition were subsequently confirmed below. Match battery and supply/load readings to known operating conditions before accepting directional totals. The 0.4.0 receiver preserves the source current signs without assigning directional totals.
 
 ## Owner confirmations — 2026-10-08
 
@@ -95,7 +95,7 @@ A single sample establishes field presence and example types, not charge/dischar
 
 ## Proposed implementation order and Android access
 
-Planning outline, 2026-10-08; no source implementation is requested by this next-step discussion.
+Sequence, 2026-10-08. ElectroDacus reception is implemented in 0.4.0 following the owner's request to proceed. Remaining logging/API work follows acquisition validation.
 
 1. Obtain representative live Pico and SBMS payloads; map stable channels, SBMS voltage/PV1/PV2 fields, per-shunt voltages and reported current polarity.
 2. Extend the Pi collector to subscribe to the existing ElectroDacus MQTT topic. Retain the existing broker destination and Pico MQTT publishing contract. Keep each source's receipt time, validity, freshness and reconnect handling independent.

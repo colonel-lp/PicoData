@@ -1,5 +1,22 @@
 # Build validation
 
+## Pi collector 0.4.0 — ElectroDacus reception, 2026-10-08
+
+Source parent: `6eb9c5fab6f1fcf6a8f39b70c152a4d344961fcd`. MQTT dependencies are unchanged.
+
+`npm test`: **39 passed, 0 failed** in the development environment. Existing Pico/MQTT tests remain included. CLI syntax and help checks pass. The test fixtures contain invented measurements and cell maps, not the owner's runtime sample or installation inventory.
+
+- Verify exact-topic/config validation, all four mA-to-A conversions, unchanged signs, valid zero PV2, SOC and Pi UTC receipt time independent of the device date.
+- Verify configured pack voltage, no guessed enabled-cell map, null voltage on failed selected cells and rejection of malformed, oversized, incomplete or coerced input.
+- Verify retained/duplicate samples cannot refresh freshness, changed measurements within a source-clock second are accepted, malformed input cannot keep readings alive and disconnect/stale timeout clears current state.
+- Exercise actual MQTT 3.1.1 subscription packets, shared Pico publishing, denied subscription/retry and broker reconnect/resubscribe. Verify stale callbacks and shutdown cleanup.
+- Run the real CLI against the loopback MQTT fixture while the simulated Pico is unavailable: silent default, opt-in SBMS output, capture records and independent receive/disable controls work. Invalid config/flags fail without printing credentials.
+- Run simultaneous Pico/SBMS CLI acquisition: Pico stdout and published JSON still match the original Python oracle; Pico capture verification still succeeds while ignoring the added SBMS records.
+
+The full suite initially exposed an empty-output timeout in an older 1.5-second CLI test during concurrent startup. That test passed in isolation; its startup duration was increased to three seconds with an explicit no-output assertion. The complete suite then passed. No runtime Pico timeout or protocol change was made for this test adjustment.
+
+The MQTT endpoint is a loopback wire fixture, not Mosquitto. New SBMS reception has not yet been tested on the real Pi. Confirm the broker account's subscription permissions, private active-cell settings, decoded values, publishing cadence, retained/repeated-message behaviour and actual broker restart. Verify each charging/load polarity and voltage association before directional integration. No database, logger, history API or Android APK is implemented in 0.4.0.
+
 ## Repository relocation — 2026-10-08
 
 Moved the complete collector to root `node.js/` and preserved the original upstream reference under `_old/pico2signalk/`. Version remains 0.3.0. All **26 automated tests pass** from the new location; the CLI syntax check also passes. Documentation links and install/update examples use the new layout. The runtime MQTT config resolver and systemd entry point are unchanged. These are local checks, not a new Pi hardware test.
@@ -10,7 +27,7 @@ Source parent: `3148bd0544a56621d16a32292ad01f169a6ad1b3`.
 
 `npm test`: **26 passed, 0 failed** in the development environment. Existing Pico/MQTT tests remain included. New checks run the CLI in an isolated flat `PicoData/node.js` installation with the config in `PicoData/mqtt` and a different working directory: MQTT publishes the same parsed Python output, stdout is empty, status remains available, and shutdown completes normally. Missing default config exits with an actionable error without leaking credentials; conflicting MQTT flags are rejected. Existing CLI stdout tests now request `--stdout` explicitly.
 
-The generic systemd unit passed `systemd-analyze verify` locally with its account and executable placeholders replaced by available development values. This is unit validation, not an actual Pi service installation. Pi service startup remains pending.
+The generic systemd unit passed `systemd-analyze verify` locally with its account and executable placeholders replaced by available development values. This is unit validation, not an actual Pi service installation. The owner subsequently reported clean shutdown/restart and successful MQTT/Pico connections with the updated service.
 
 The owner reports successful Pico reboot/Wi-Fi recovery and correct-looking MQTT output in the existing Node-RED webpage. Some reboots recover after the normal stale/retry path. This is functional evidence supplied by the owner; no timed recovery/per-field audit, changed-IP test, actual broker-restart test or long unattended soak is recorded yet. System inventories, resource/process snapshots, account details and actual network addresses are excluded from published validation notes.
 

@@ -15,7 +15,7 @@ These instructions apply throughout `colonel-lp/PicoData`, branch `main`. Read t
 ## Repository map and evidence
 
 - Main project and future Android work: `colonel-lp/PicoData/main`; Android application and related documentation belong under `android/`; the active Pi collector and its operational documentation belong under root `node.js/`, with root project guidance alongside.
-- Current tested Pi collector: `node.js/bin/pico.js` (0.3.0); use `node.js/README.md` for install/update/service commands. Default MQTT config is the parent `PicoData/mqtt`; normal readings are silent unless `--stdout` is requested.
+- Current tested Pi collector: `node.js/bin/pico.js` (0.4.0); use `node.js/README.md` for install/update/service commands. Default MQTT config is the parent `PicoData/mqtt`. It publishes unchanged Pico JSON and receives SBMS on the same broker connection. Normal readings are silent; `--stdout` shows Pico and `--sbms-stdout` shows decoded SBMS.
 - Python behaviour baseline: `python/pico-mqtt.py`, with CRC helper `python/brainsmoke.py`; the collector bundles an unchanged comparison snapshot under `node.js/test/reference/`.
 - Earlier reference code: `_old/`. Do not treat these variants or `python/scratch` as the running baseline.
 - Upstream connectivity reference: `_old/pico2signalk/`, copied from `colonel-lp/pico2signalk/master` (0.0.21). This archived SignalK implementation is separate from the active `node.js/` collector. Compare it and the separate fork when reviewing upstream updates.
@@ -43,6 +43,8 @@ These identify the reviewed baseline, not permanently pinned development version
 - Python's output includes `time`, `barometer`, `inclinometer`, `voltage`, `current`, `temperature`, `tank` and `battery`; battery voltage is also copied into `voltage`. Sensors with `[` in their names are excluded by the current output filter. Do not remove these behaviours inadvertently.
 - Node-RED topics are `/Ella/Pico/` and `/Ella/sbms`. Its SBMS mappings include `soc`, `cellsMV`, `tempInt`, `tempExt`, `currentMA` and `flags`; Node-RED adds conversions, sums, rounding and sign changes. Trace complete paths to the displayed values, including disabled nodes, before reproducing them.
 - Capture real Pico configuration/packets and SBMS JSON to establish the full data contract. Dashboard mappings alone do not define every SBMS field or missing-value rule.
+- SBMS reception is implemented in `node.js/lib/sbms.js`. Preserve Pi UTC receipt time, all four mA-to-A conversions, separate source time, explicit private active-cell mapping and null voltage on unavailable selected cells. Ignore retained snapshots and exact repeated samples; clear current state on staleness/disconnection. Do not publish the owner's cell map or fixtures copied from actual runtime measurements.
+- SQLite logging, rollups, directional totals and the history API are the next stages, not part of the 0.4.0 receiver. Follow `node.js/DATABASE-PLAN.md`; do not silently add unselected monitor fields to history or infer current polarity from zero readings.
 - The reviewed Python MQTT setup has no network-loop/reconnect management. The archived upstream Node.js configuration retries do not establish complete live-stream recovery: TCP reads finish on the first data chunk, discovery accepts the first sender, and plugin stop does not close the live socket. Do not carry these limitations forward as approved Android behaviour.
 
 ## Android design and validation
