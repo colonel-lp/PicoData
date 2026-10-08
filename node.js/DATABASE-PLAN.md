@@ -39,8 +39,10 @@ A compact electrical representation can remain `[average_W, average_A, average_V
 
 Owner requirement, 2026-10-08: do not assume every current draw is negative or every charging channel follows the same sign convention.
 
+Owner-confirmed roles: every non-battery Pico current shunt measures a load/current draw. Pico and ElectroDacus main-battery current measure the net battery balance; ElectroDacus PV channels measure charging supply. These roles are established by the owner; verification concerns reported polarity, voltage association and actual SBMS field availability, rather than rediscovering whether a non-battery Pico shunt is a load.
+
 - Preserve the current source values and legacy MQTT output unchanged.
-- Identify each channel by source and stable sensor ID/MQTT field path. Record its physical role (battery balance, load or charging supply), associated voltage, and separately verified polarity. Do not apply a global absolute-value conversion or global sign reversal.
+- Identify each channel by source and stable sensor ID/MQTT field path. Use the owner-confirmed physical role (battery balance, load or charging supply), record its associated voltage, and separately verify reported polarity. Do not apply a global absolute-value conversion or global sign reversal.
 - Check known load-only and charging conditions, including simultaneous supply/load operation where practical, against monitor readings and controlled changes. Dashboard sign inversions are reference transformations, not proof of the sensor's physical direction.
 - Proposed internal convention: battery current positive into the battery and negative out; load-channel current positive for consumption; supply-channel current positive for generation. Apply a channel-specific multiplier only after confirming its orientation. Preserve meaningful reverse flow rather than taking absolute values indiscriminately.
 - Until polarity is verified, retain the source reading as unclassified; do not assign it to charged/discharged or generated/consumed totals.
