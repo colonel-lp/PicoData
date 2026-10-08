@@ -1,2 +1,5 @@
 *.jsonl
 __pycache__/
+node_modules/
+/mqtt
+/mqtt.local

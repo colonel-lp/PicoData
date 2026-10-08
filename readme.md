@@ -8,7 +8,7 @@ Monitoring for the Ella campervan, combining Simarine Pico sensor data and Elect
 - The ElectroDacus also publishes its data to that broker.
 - The Node-RED project in [`node.red/`](node.red/) subscribes to both sources and presents the existing web dashboard.
 
-The Android goal is to read Pico data directly over Wi-Fi and display it alongside ElectroDacus MQTT data. Prefer direct ElectroDacus publishing to an MQTT broker embedded in the app if practical; retain the Raspberry Pi broker as a supported fallback. SignalK integration is outside the Android scope.
+The current direction is continuous collection/logging on the headless Pi Zero 2 W, with an Android app or browser displaying live data and history. A lightweight collector with SQLite and a small API is the proposal, not yet implemented. The [Pico base 0.2.0](android/pico-base/README.md) can optionally publish the original Ella JSON to the existing MQTT/Node-RED setup for validation. Direct Android Pico reception and an embedded MQTT broker remain future options to reassess. SignalK integration is outside the scope.
 
 ## Directories in this repository
 

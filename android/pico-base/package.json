@@ -1,9 +1,20 @@
 {
   "name": "ella-pico-base",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Standalone Pico acquisition and Ella JSON reference for the Android port",
   "main": "lib/client.js",
-  "engines": { "node": ">=18" },
-  "scripts": { "test": "node --test test/*.test.js", "start": "node bin/pico.js" }
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "start": "node bin/pico.js"
+  },
+  "dependencies": {
+    "mqtt": "5.16.0"
+  },
+  "devDependencies": {
+    "mqtt-packet": "9.0.2"
+  }
 }

@@ -15,6 +15,7 @@ const { decodeReadings, formatEllaJson, roundEven } = require('../lib/readings')
 const { PicoClient, waitForBroadcast, createDiscoverySocket } = require('../lib/client');
 const { fields, frame, fixture } = require('./fixtures');
 const { verifyCapture } = require('../bin/verify-capture');
+const { mqttBroker } = require('./mqtt-broker');
 const baseline = path.join(__dirname, 'reference/pico-mqtt.py');
 const normalized = data => JSON.parse(JSON.stringify(data));
 function awaitEvent(emitter, name, predicate = () => true, timeoutMs = 3000) {
@@ -203,14 +204,22 @@ test('discovery socket closes on abort during initial bind', async () => {
   controller.abort(); await assert.rejects(pending, { name: 'AbortError' });
 });
 
-test('real CLI path writes live JSON and a verifiable capture without MQTT or SignalK', async t => {
+for (const mqttMode of ['disabled', 'online', 'denied']) test(`real CLI publishes live JSON and records a capture: MQTT ${mqttMode}`, async t => {
   const sim = await simulator(t);
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ella-cli-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const capture = path.join(directory, 'capture.jsonl');
+  const mqttArgs = [], messages = [];
+  if (mqttMode !== 'disabled') {
+    const broker = await mqttBroker(t), config = path.join(directory, 'mqtt');
+    if (mqttMode === 'denied') broker.deny();
+    fs.writeFileSync(config, `server=127.0.0.1\nport=${broker.port}\nprefix=/Ella/Pico/\nusername=test-user\npassword=test-pass=extra\n`);
+    broker.events.on('publish', packet => messages.push(packet));
+    mqttArgs.push('--mqtt-config', config);
+  }
   const child = spawn(process.execPath, [path.join(__dirname, '../bin/pico.js'),
     '--ip', '127.0.0.1', '--udp-port', String(sim.port), '--tcp-port', String(sim.port),
-    '--duration', '1.5', '--record', capture]);
+    '--duration', '1.5', '--record', capture, ...mqttArgs]);
   t.after(() => { if (child.exitCode === null) child.kill(); });
   let stdout = '', stderr = '';
   child.stdout.on('data', b => { stdout += b; }); child.stderr.on('data', b => { stderr += b; });
@@ -219,6 +228,27 @@ test('real CLI path writes live JSON and a verifiable capture without MQTT or Si
   const lines = stdout.trim().split('\n').map(line => JSON.parse(line));
   assert.ok(lines.length > 0); assert.equal(lines[0].inclinometer.pitch, 2.3);
   assert.equal(lines[0].battery['Ella  '].voltage, 13.24);
+  if (mqttMode === 'online') {
+    assert.ok(messages.length > 0);
+    for (const packet of messages) {
+      assert.equal(packet.topic, '/Ella/Pico/');
+      assert.equal(packet.qos, 0); assert.equal(packet.retain, false);
+      const received = JSON.parse(packet.payload.toString());
+      assert.ok(lines.some(line => JSON.stringify(line) === JSON.stringify(received)));
+      const now = received.time;
+      const oracle = spawnSync('python3', [path.join(__dirname, 'python-oracle.py'), baseline], {
+        input: JSON.stringify({ ...sim.data, time: { ...now, year: now.year + 2000 } }), encoding: 'utf8',
+      });
+      assert.equal(oracle.status, 0, oracle.stderr);
+      assert.deepEqual(received, JSON.parse(oracle.stdout).output);
+    }
+    assert.equal(stderr.includes('test-pass'), false);
+  }
+  if (mqttMode === 'denied') {
+    assert.equal(messages.length, 0);
+    assert.ok(stderr.includes('connection-error'));
+    assert.equal(stderr.includes('test-pass'), false);
+  }
   const summary = await verifyCapture(capture, { comparePython: true });
   assert.equal(summary.ok, true, JSON.stringify(summary));
   assert.ok(summary.tcpResponses > 1); assert.ok(summary.pythonMatches > 0);
@@ -244,7 +274,8 @@ test('flat installation verifies captures without the original repository folder
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ella-flat-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const installed = path.join(directory, 'PicoData/node.js');
-  fs.cpSync(path.join(__dirname, '..'), installed, { recursive: true });
+  fs.cpSync(path.join(__dirname, '..'), installed, { recursive: true,
+    filter: source => path.basename(source) !== 'node_modules' });
   assert.equal(fs.existsSync(path.join(directory, 'PicoData/python')), false);
   assert.equal(fs.existsSync(path.join(directory, 'PicoData/android')), false);
   const data = fixture(), capture = path.join(installed, 'capture.jsonl');

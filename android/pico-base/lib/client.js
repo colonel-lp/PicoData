@@ -131,7 +131,9 @@ class PicoClient extends EventEmitter {
         this.emit('packet', { picoIp: ip, receivedAt: new Date().toISOString(), hex: msg.toString('hex') });
         if (!active) { active = true; this.status('connected', { ip }); }
         if (Date.now() - lastOutput < this.options.updateIntervalMs) return;
-        const readings = decodeReadings(sensorList, element);
+        let readings;
+        try { readings = decodeReadings(sensorList, element, { legacyPython: this.options.legacyPythonOutput }); }
+        catch (err) { this.emit('diagnostic', 'Skipped output: ' + err.message); return; }
         this.emit('readings', formatEllaJson(readings));
         lastOutput = Date.now();
       };

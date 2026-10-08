@@ -3,11 +3,12 @@
 
 const fs = require('node:fs');
 const { PicoClient } = require('../lib/client');
+const { readMqttConfig, MqttPublisher } = require('../lib/mqtt-publisher');
 const args = process.argv.slice(2);
-const options = {}, allowed = new Set(['--ip', '--record', '--duration', '--udp-port', '--tcp-port']);
-let recordPath, duration;
+const options = {}, allowed = new Set(['--ip', '--record', '--duration', '--udp-port', '--tcp-port', '--mqtt-config']);
+let recordPath, duration, mqttConfigPath;
 function usage() {
-  console.error('Usage: node bin/pico.js [--ip ADDRESS] [--record FILE.jsonl] [--duration SECONDS] [--udp-port PORT] [--tcp-port PORT]');
+  console.error('Usage: node bin/pico.js [--ip ADDRESS] [--record FILE.jsonl] [--duration SECONDS] [--udp-port PORT] [--tcp-port PORT] [--mqtt-config FILE]');
   console.error('Ella JSON goes to stdout; connection status goes to stderr. DEBUG=pico adds diagnostics.');
 }
 for (let i = 0; i < args.length; i++) {
@@ -19,10 +20,23 @@ for (let i = 0; i < args.length; i++) {
   if (flag === '--duration') duration = Number(value);
   if (flag === '--udp-port') options.udpPort = Number(value);
   if (flag === '--tcp-port') options.port = Number(value);
+  if (flag === '--mqtt-config') mqttConfigPath = value;
 }
 if ((duration !== undefined && (!Number.isFinite(duration) || duration <= 0)) ||
   ['port', 'udpPort'].some(k => options[k] !== undefined && (!Number.isInteger(options[k]) || options[k] < 1 || options[k] > 65535))) {
   usage(); process.exit(2);
+}
+let publisher;
+if (mqttConfigPath) {
+  try {
+    publisher = new MqttPublisher(readMqttConfig(mqttConfigPath));
+    publisher.on('status', status => console.error(new Date().toISOString(), JSON.stringify(status)));
+    publisher.start();
+    options.legacyPythonOutput = true;
+  } catch {
+    console.error('MQTT setup failed. Check the configuration file and run npm ci; credentials are not printed.');
+    process.exit(1);
+  }
 }
 // Recordings are local evidence, never an automatic upload. Append allows
 // reconnects/config refreshes to remain together in one capture.
@@ -33,7 +47,10 @@ writeRecord('session', { version: require('../package.json').version, startedAt:
 client.on('tcp', data => writeRecord('tcp', data));
 client.on('config', data => writeRecord('config', data));
 client.on('packet', data => writeRecord('packet', data));
-client.on('readings', data => process.stdout.write(JSON.stringify(data) + '\n'));
+client.on('readings', data => {
+  process.stdout.write(JSON.stringify(data) + '\n');
+  publisher?.publish(data);
+});
 client.on('status', status => console.error(new Date().toISOString(), JSON.stringify(status)));
 if (process.env.DEBUG === 'pico') client.on('diagnostic', text => console.error(text));
 let timer, stopping = false;
@@ -41,6 +58,7 @@ async function stop() {
   if (stopping) return;
   stopping = true; clearTimeout(timer);
   await client.stop();
+  await publisher?.stop();
   if (recording) recording.end();
 }
 process.on('SIGINT', stop); process.on('SIGTERM', stop);

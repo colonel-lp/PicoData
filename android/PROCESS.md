@@ -1,6 +1,8 @@
 # Proposed Android process
 
-Current step: [standalone Pico base 0.1.0](pico-base/README.md) is implemented and has passed automated comparison/connection tests. Live Pi/Pico verification is pending; see [BUILD-VALIDATION.md](BUILD-VALIDATION.md) and [NEXT-BUILD-CHANGES.md](NEXT-BUILD-CHANGES.md).
+Current step: [standalone Pico base 0.2.0](pico-base/README.md) includes optional MQTT publishing for testing through the existing Node-RED dashboard. The owner reported 1,096 real captured outputs matching Python in 0.1.0; MQTT and real reconnect validation remain pending. See [BUILD-VALIDATION.md](BUILD-VALIDATION.md) and [NEXT-BUILD-CHANGES.md](NEXT-BUILD-CHANGES.md).
+
+Direction discussed on 2026-10-08: continuous logging belongs on the headless Pi Zero 2 W because the Android head unit is not powered 24/7. Prefer a lightweight collector with persistent history and a small API; SQLite and a browser/Android viewer are the current proposal. Keep history outside zram-managed folders. The original direct Android/embedded-broker route below is a future option to reassess, not the selected logging architecture.
 
 - **Agree the baseline:** use `PicoData/python/pico-mqtt.py` and [`node.red/flows.json`](../node.red/flows.json) to list required readings, calculations and dashboard behaviour; confirm target devices/Android versions, layout, history and background needs.
 - **Capture reference data:** record Pico configuration and live packets plus ElectroDacus MQTT JSON. Map sensor IDs, exact names, units, topic slashes, missing values and Node-RED conversions to expected display values.

@@ -11,7 +11,7 @@ function set(obj, key, value) {
   // Keep exact names, including trailing spaces and literal '__proto__'.
   Object.defineProperty(obj, key, { value, enumerable: true, writable: true, configurable: true });
 }
-function decodeReadings(sensorList, element) {
+function decodeReadings(sensorList, element, { legacyPython = false } = {}) {
   const result = JSON.parse(JSON.stringify(sensorList));
   function pair(pos) {
     const p = element[pos];
@@ -20,7 +20,12 @@ function decodeReadings(sensorList, element) {
   }
   for (const [id, metadata] of Object.entries(sensorList)) {
     const out = result[id], pos = metadata.pos, p = pair(pos);
-    if (!p) continue; // Missing readings never become fresh zeros.
+    if (!p) {
+      if (legacyPython && ['barometer', 'thermometer', 'tank', 'battery', 'volt', 'ohm', 'current', 'inclinometer'].includes(metadata.type)) {
+        throw new Error('Incomplete Python-compatible sensor snapshot');
+      }
+      continue; // Missing readings never become fresh zeros.
+    }
     switch (metadata.type) {
       case 'barometer': out.pressure = (p[1] + 65536) / 100; break;
       case 'thermometer': out.temperature = celsius(p[1]); break;
@@ -33,13 +38,14 @@ function decodeReadings(sensorList, element) {
         break;
       case 'battery': {
         const v = pair(pos + 2), i = pair(pos + 1);
+        if (legacyPython && (!v || !i)) throw new Error('Incomplete Python-compatible battery snapshot');
         out['capacity.nominal'] = metadata['capacity.nominal'] / 43200;
-        if (v && v[1] !== 65535) out.voltage = v[1] / 1000;
+        if (v && (legacyPython || v[1] !== 65535)) out.voltage = v[1] / 1000;
         if (i) out.current = currentAmps(i[1]);
-        if (p[0] !== 65535) {
+        if (legacyPython || p[0] !== 65535) {
           out.stateOfCharge = p[0] / 160;
           out['capacity.remaining'] = metadata['capacity.nominal'] * out.stateOfCharge / 4320000;
-          if (out.current !== undefined) {
+          if (out.current !== undefined && p[0] !== 65535) {
             let remaining = roundEven(metadata['capacity.nominal'] / 12 /
               (out.current * out.stateOfCharge / 100 + 0.001));
             if (remaining < 0) remaining = 604800;
@@ -48,7 +54,7 @@ function decodeReadings(sensorList, element) {
         }
         break;
       }
-      case 'volt': if (p[1] !== 65535) out.voltage = p[1] / 1000; break;
+      case 'volt': if (legacyPython || p[1] !== 65535) out.voltage = p[1] / 1000; break;
       case 'ohm': out.ohm = p[1]; break;
       case 'current': out.current = currentAmps(p[1]); break;
       case 'inclinometer':

@@ -1,12 +1,12 @@
-# Ella Pico base — 0.1.0
+# Ella Pico base — 0.2.0
 
-Standalone Node.js starting point for the Android Pico reader. It uses the updated `../../node.js/` acquisition code, with the owner's `../../python/pico-mqtt.py` sensor mappings, calculations and Ella JSON format carried over. There is no MQTT connection, publishing or SignalK runtime dependency.
+Standalone Node.js starting point for the Android Pico reader. It uses the updated `../../node.js/` acquisition code, with the owner's `../../python/pico-mqtt.py` sensor mappings, calculations and Ella JSON format carried over. MQTT publishing is optional and uses the existing Python configuration/topic and Ella JSON contract. SignalK remains excluded.
 
-**Status:** 16 automated tests pass. On 2026-10-07 the owner reported a successful real Pi/Pico capture: all 108 TCP replies and 1,096 UDP packets passed length/CRC checks; all 1,096 decoded outputs matched the original Python, with zero differences. Visual comparison and real restart/Wi-Fi recovery checks remain pending. See [build validation](../BUILD-VALIDATION.md) for evidence and remaining checks.
+**Status:** 24 automated tests pass, including MQTT wire tests and Python payload comparison. On 2026-10-07 the owner reported a successful real Pi/Pico capture: all 108 TCP replies and 1,096 UDP packets passed length/CRC checks; all 1,096 decoded outputs matched the original Python, with zero differences. Visual comparison and real restart/Wi-Fi recovery checks remain pending. See [build validation](../BUILD-VALIDATION.md) for evidence and remaining checks.
 
 ## Run on the Pi
 
-Use Node.js 18 or later. No npm packages are required to run the reader. Python 3 is needed only for comparison tests. All files inside `pico-base/` can be installed directly in `~/PicoData/node.js`; the original repository folders are not required. For that installation:
+Use Node.js 18 or later. The reader without MQTT needs no installed npm packages; MQTT publishing requires `npm ci --omit=dev` to install the pinned MQTT.js dependency. Python 3 is needed only for comparison tests. All files inside `pico-base/` can be installed directly in `~/PicoData/node.js`; the original repository folders are not required. For that installation:
 
 ```bash
 node --version
@@ -22,7 +22,27 @@ If discovery fails, also test the known Pico address:
 node bin/pico.js --ip 192.168.1.50 --record pico-fixed-ip.jsonl --duration 60
 ```
 
-Replace the example address with the Pico's actual address. `DEBUG=pico` enables additional diagnostics. Omit `--duration` to run until Ctrl+C. The code does not change Pico settings, contact Mosquitto or modify the existing Python service. If binding fails because UDP 43210 is already occupied, stop the existing Pico reader only for the test, then restore it afterwards; otherwise both readers can remain running if the Pi permits the shared UDP binding.
+Replace the example address with the Pico's actual address. `DEBUG=pico` enables additional diagnostics. Omit `--duration` to run until Ctrl+C. The code does not change Pico settings or modify the existing Python service. It contacts the MQTT broker only when `--mqtt-config` is supplied. If binding fails because UDP 43210 is already occupied, stop the existing Pico reader only for the test, then restore it afterwards; otherwise both readers can remain running if the Pi permits the shared UDP binding.
+
+## Publish to the existing Node-RED dashboard
+
+Install dependencies, then point the reader at the same `mqtt` configuration file used by Python:
+
+```bash
+cd ~/PicoData/node.js
+npm ci --omit=dev
+node bin/pico.js --mqtt-config /absolute/path/to/your/existing/mqtt
+```
+
+Replace the path with the actual file location. If the file is already in `~/PicoData/node.js`, use `--mqtt-config mqtt`. No credentials need to be shared or entered into source. `mqtt.example` shows the five existing keys: `server`, `port`, `prefix`, `username`, `password`. The parser preserves '=' inside a password and uses the exact `prefix` as the publishing topic; it does not append a suffix. The current dashboard subscribes to `/Ella/Pico/`.
+
+One reading object is published roughly once per second, matching stdout. MQTT uses the original MQTT 3.1.1 protocol, 60-second keepalive, QoS 0 and retain=false. There is no wrapper, status field, added measurement or changed label/unit. JSON structure, keys and values match the Python source, including trailing spaces in labels, battery voltage duplication, hidden-name filtering and rounding. JSON whitespace, Unicode escaping and spelling such as `12` versus `12.0` can differ; Node-RED receives the same parsed object.
+
+With MQTT enabled, decoding preserves Python's original raw-65535 voltage/SOC calculations rather than the newer null/omission handling. Incomplete snapshots are skipped instead of inventing fields. The same compatibility object is printed to stdout and sent to MQTT. Normal readings in either mode already matched the owner's real capture. Wire/CLI tests cover normal output, and additional Python comparisons cover the legacy sentinel values.
+
+Broker connection/reconnection runs independently of Pico acquisition. Connection errors go to stderr without credentials. MQTT retries every five seconds, including broker refusal; readings and capture recording continue while it is unavailable. No offline reading backlog or automatic snapshot replay is sent after reconnection: the next fresh reading is published. One pending write limits buffering under backpressure. Ctrl+C stops both transports.
+
+For an unambiguous dashboard comparison, run only one publisher on the original Pico topic at a time; otherwise Python and Node.js updates can interleave. ElectroDacus settings and `/Ella/sbms` are unchanged. Actual Mosquitto/Node-RED testing on the owner's Pi is still pending.
 
 ## Verify the real capture
 
@@ -50,7 +70,7 @@ node bin/verify-capture.js pico-capture.jsonl --replay
 - The `time`, `barometer`, `inclinometer`, `voltage`, `current`, `temperature`, `tank` and `battery` sections, including battery voltage duplicated into `voltage`. Raw ohm readings remain internal because the old JSON does not export them.
 - Local-time timestamp components and roughly one output per second. Key order and numeric spelling such as `12` versus `12.0` are not promised to be byte-identical JSON.
 
-Two deliberate invalid-data differences are documented: an unavailable/confirmed-invalid voltage is omitted or represented as null rather than 65.535 V; unavailable battery SOC/capacity is null rather than the old out-of-range SOC. Missing measurements are not replaced with zero. Signed raw 65535 temperature/current values retain Python interpretation; this value is not treated as a universal sentinel.
+Without MQTT, two deliberate invalid-data differences remain: an unavailable/confirmed-invalid voltage is omitted or represented as null rather than 65.535 V; unavailable battery SOC/capacity is null rather than the old out-of-range SOC. Missing measurements are not replaced with zero. Signed raw 65535 temperature/current values retain Python interpretation; this value is not treated as a universal sentinel.
 
 ## Connection changes
 
@@ -66,9 +86,11 @@ Packet fields are bounds-checked. Unknown field types, broken separators and unt
 | `lib/pico-protocol.js` | TCP requests/framing and binary field parser. |
 | `lib/crc16.js` | Upstream CRC implementation, unchanged. |
 | `lib/sensor-list.js` | Upstream sensor mapping plus the owner's inclinometer support. |
-| `lib/readings.js` | Owner's conversions and JSON formatter. |
+| `lib/readings.js` | Owner's conversions and JSON formatter, with optional legacy Python value handling. |
+| `lib/mqtt-publisher.js` | Existing config parser, optional MQTT publisher, reconnect and bounded buffering. |
+| `mqtt.example` | Configuration layout with placeholder credentials. |
 | `bin/pico.js` | Live JSON reader and evidence recorder. |
 | `bin/verify-capture.js` | Real capture checks, Python comparison and replay. |
 | `test/` | Synthetic fixtures, Python reference extraction and automated tests. |
 
-`npm test` runs the tests. See [build validation](../BUILD-VALIDATION.md) for their results and remaining hardware checks. Preserve the upstream MIT notice in `LICENSE`; this baseline has not been published as a package or release. Once the Pi tests pass, port these components into Android's native networking/data layers and repeat device testing there.
+`npm ci` followed by `npm test` runs all tests. [CHANGELOG.md](CHANGELOG.md) records the complete base history. See [build validation](../BUILD-VALIDATION.md) for their results and remaining hardware checks. Preserve the upstream MIT notice in `LICENSE`; this baseline has not been published as a package or release. Once the Pi tests pass, port these components into Android's native networking/data layers and repeat device testing there.
