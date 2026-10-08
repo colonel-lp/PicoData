@@ -1,43 +1,20 @@
 {
-  "name": "pico2signalk",
-  "description": "Read Simarine Pico config and updates from the network",
-  "version": "0.0.21",
-  "private": false,
-  "license": "UNLICENSED",
-  "keywords": [
-    "signalk-node-server-plugin",
-    "signalk-category-hardware",
-    "marine",
-    "nautic"
-  ],
-  "author": {
-    "name": "Hans Tool",
-    "email": "hans@defect.org"
-  },
-  "main": "index.js",
-  "bin": {
-    "dump-pico-config": "bin/dump-pico-config.js"
-  },
-  "files": [
-    "index.js",
-    "bin/",
-    "lib/",
-    "public/"
-  ],
+  "name": "ella-pico-base",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Standalone Pico acquisition and Ella JSON reference for the Android port",
+  "main": "lib/client.js",
   "engines": {
-    "node": ">=14"
+    "node": ">=18"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/htool/pico2signalk.git"
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "start": "node bin/pico.js"
   },
-  "bugs": {
-    "url": "https://github.com/htool/pico2signalk/issues"
+  "dependencies": {
+    "mqtt": "5.16.0"
   },
-  "signalk": {
-    "appIcon": "./public/signalk-logo.png",
-    "displayName": "Pico to SignalK"
-  },
-  "homepage": "https://github.com/htool/pico2signalk#readme",
-  "signalk-plugin-enabled-by-default": true
+  "devDependencies": {
+    "mqtt-packet": "9.0.2"
+  }
 }

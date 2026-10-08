@@ -33,6 +33,12 @@
 - [ ] Confirm the updated service starts and restarts on the owner's Pi.
 - Publish functional test outcomes only; exclude owner runtime/process snapshots, device inventory, addresses, credentials and account details.
 
+## Repository layout — 2026-10-08
+
+- [x] Move the standalone collector to the repository root `node.js/` and remove its former folder.
+- [x] Preserve the original SignalK reference under `_old/pico2signalk/` to avoid mixing it with the collector.
+- [x] Update documentation, links, code provenance and checkout/update examples. The parent MQTT config and deployed service path are unchanged.
+
 ## Proposed Pi logging direction
 
 - Keep collection/logging on the always-on, headless Pi Zero 2 W; the head unit is not continuously powered.

@@ -1,296 +1,186 @@
 'use strict';
 
-const net = require('net');
+// Based on _old/pico2signalk/lib/pico-protocol.js: same requests, CRC and field layouts.
+const net = require('node:net');
 const { calcRevCrc16 } = require('./crc16');
 
-function hexdump(byte) {
-  let hex = byte.toString(16);
-  if (hex.length === 1) {
-    hex = '0' + hex;
-  }
-  if (hex.length === 2) {
-    hex = '00' + hex;
-  }
-  if (hex.length === 3) {
-    hex = '0' + hex;
-  }
-  return hex.slice(0, 2) + ' ' + hex.slice(2, 4);
+function abortError() { const e = new Error('Stopped'); e.name = 'AbortError'; return e; }
+function delay(ms, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(abortError());
+    const finish = (err) => {
+      clearTimeout(timer); signal?.removeEventListener('abort', onAbort);
+      err ? reject(err) : resolve();
+    };
+    const onAbort = () => finish(abortError());
+    const timer = setTimeout(finish, ms);
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
 }
-
-function hexToByte(hexStr) {
-  const bytes = [];
-  const normalized = hexStr.replace(/ /g, '');
-  for (let i = 0; i < normalized.length; i += 2) {
-    bytes.push(String.fromCharCode(parseInt(normalized.slice(i, i + 2), 16)));
-  }
-  return bytes.join('');
-}
-
-function bufferToHex(buffer) {
-  return Array.from(buffer, (byte) => byte.toString(16).padStart(2, '0')).join(' ');
-}
-
+function hexdump(value) { return value.toString(16).padStart(4, '0').match(/../g).join(' '); }
 function addCrc(message) {
-  const fields = message.split(/\s+/);
-  const messageInt = fields.slice(1).map((x) => parseInt(x, 16));
-  const crcInt = calcRevCrc16(messageInt.slice(0, -1));
-  return message + ' ' + hexdump(crcInt);
+  const fields = message.trim().split(/\s+/).map(x => parseInt(x, 16));
+  return message + ' ' + hexdump(calcRevCrc16(fields.slice(1, -1)));
+}
+function toBuffer(message) {
+  if (Buffer.isBuffer(message)) return message;
+  const hex = message.replace(/\s+/g, '');
+  if (!hex || hex.length % 2 || /[^0-9a-f]/i.test(hex)) throw new Error('Invalid hexadecimal packet');
+  return Buffer.from(hex, 'hex');
+}
+function bufferToHex(buffer) { return Array.from(buffer, b => b.toString(16).padStart(2, '0')).join(' '); }
+
+// The upstream requests encode bytes-after-offset-12 as a big-endian length
+// at offsets 11..12. Receive framing uses that layout; confirm on real hardware.
+function frameLength(buffer) {
+  if (buffer.length < 14) return null;
+  if (buffer[5] !== 0xff || buffer[13] !== 0xff) throw new Error('Unrecognised Pico header');
+  const size = buffer.readUInt16BE(11) + 13;
+  if (size < 16) throw new Error('Invalid Pico frame length');
+  return size;
+}
+function isPicoPacket(buffer) {
+  return buffer.length >= 16 && buffer[5] === 0xff && buffer[13] === 0xff;
+}
+function isLivePacket(buffer) { return isPicoPacket(buffer) && (buffer[6] & 0xf0) === 0xb0; }
+
+function parseResponse(message) {
+  const b = toBuffer(message);
+  if (!isPicoPacket(b)) throw new Error('Invalid Pico packet header');
+  const end = b.length - 2; // checksum bytes; incoming CRC is not yet enforced
+  const result = {};
+  let pos = 14;
+  const need = n => { if (pos + n > end) throw new Error('Truncated Pico field'); };
+  while (pos < end) {
+    need(2);
+    const id = b[pos], type = b[pos + 1];
+    if (Object.hasOwn(result, id)) throw new Error('Duplicate Pico field ' + id);
+    if (type === 1) {
+      need(7);
+      if (b[pos + 6] !== 0xff) throw new Error('Missing field separator');
+      result[id] = [b.readUInt16BE(pos + 2), b.readUInt16BE(pos + 4)];
+      pos += 7;
+    } else if (type === 3) {
+      need(12);
+      if (b[pos + 11] !== 0xff) throw new Error('Missing field separator');
+      result[id] = b.readUInt32BE(pos + 7) === 0x7fffffff ? '' :
+        [b.readUInt16BE(pos + 7), b.readUInt16BE(pos + 9)];
+      pos += 12;
+    } else if (type === 4) {
+      need(9);
+      const start = pos + 7;
+      const nul = b.indexOf(0, start);
+      if (nul < start || nul + 1 >= end || b[nul + 1] !== 0xff) throw new Error('Unterminated Pico string');
+      // Latin-1 preserves Python HexToByte behaviour; do not trim sensor names.
+      result[id] = b.subarray(start, nul).toString('latin1');
+      pos = nul + 2;
+    } else throw new Error('Unknown Pico field type ' + type);
+  }
+  return result;
+}
+
+async function openTcp(picoIp, options = {}) {
+  const { port = 5001, maxRetries = 5, retryDelayMs = 5000,
+    connectTimeoutMs = 10000, signal, debug = () => {} } = options;
+  let lastError;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    if (signal?.aborted) throw abortError();
+    try {
+      debug(`TCP connect ${attempt}/${maxRetries} to ${picoIp}:${port}`);
+      return await new Promise((resolve, reject) => {
+        const socket = new net.Socket();
+        socket.setNoDelay(true);
+        function cleanup() {
+          clearTimeout(timer); signal?.removeEventListener('abort', onAbort);
+          socket.removeListener('connect', onConnect); socket.removeListener('error', onError);
+        }
+        function fail(err) { cleanup(); socket.destroy(); reject(err); }
+        const onError = err => fail(err);
+        const onAbort = () => fail(abortError());
+        const onConnect = () => {
+          cleanup();
+          // Avoid an unhandled error between serial requests; sendReceive also
+          // listens for errors and checks a closed socket before each write.
+          socket.on('error', () => {});
+          resolve(socket);
+        };
+        const timer = setTimeout(() => fail(new Error('TCP connect timeout')), connectTimeoutMs);
+        socket.once('connect', onConnect); socket.once('error', onError);
+        signal?.addEventListener('abort', onAbort, { once: true });
+        socket.connect(port, picoIp);
+      });
+    } catch (err) {
+      if (err.name === 'AbortError') throw err;
+      lastError = err; debug('TCP connect failed: ' + err.message);
+      if (attempt < maxRetries) await delay(retryDelayMs, signal);
+    }
+  }
+  throw lastError || new Error('No TCP connection attempts configured');
 }
 
 function sendReceive(socket, message, options = {}) {
-  const {
-    debug = () => {},
-    responseTimeoutMs = parseInt(process.env.PICO_TCP_TIMEOUT_MS || '30000', 10),
-    label = 'request',
-  } = options;
-
+  const { responseTimeoutMs = 30000, signal, debug = () => {}, label = 'request', onTcp = () => {} } = options;
   return new Promise((resolve, reject) => {
-    const buffer = Buffer.from(message.replace(/ /g, ''), 'hex');
-    let response = '';
-    let settled = false;
-
-    function finish(err, value) {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      cleanup();
-      if (err) {
-        reject(err);
-      } else {
-        resolve(value);
-      }
-    }
-
-    function onData(chunk) {
-      for (const byte of chunk) {
-        response += byte.toString(16).padStart(2, '0') + ' ';
-      }
-      debug(`TCP ${label}: received ${chunk.length} bytes (${response.trim().split(/\s+/).length} total)`);
-      debug(`TCP ${label}: response ${response.trim()}`);
-      finish(null, response);
-    }
-
-    function onError(err) {
-      debug(`TCP ${label}: socket error ${err.message}`);
-      finish(err);
-    }
-
-    function onClose(hadError) {
-      if (response.length > 0) {
-        debug(`TCP ${label}: connection closed after partial response (${response.trim().split(/\s+/).length} bytes)`);
-        finish(null, response);
-        return;
-      }
-      debug(`TCP ${label}: connection closed before response${hadError ? ' (with error)' : ''}`);
-      finish(new Error(`connection closed before TCP response (${label})`));
-    }
-
-    function onTimeout() {
-      debug(`TCP ${label}: read timeout after ${responseTimeoutMs}ms`);
-      finish(new Error(`timed out waiting for TCP response (${label}, ${responseTimeoutMs}ms)`));
-    }
-
+    if (signal?.aborted) return reject(abortError());
+    if (socket.destroyed) return reject(new Error('TCP socket is closed'));
+    let response = Buffer.alloc(0), settled = false;
     function cleanup() {
-      clearTimeout(timeout);
-      socket.setTimeout(0);
-      socket.removeListener('data', onData);
-      socket.removeListener('error', onError);
-      socket.removeListener('close', onClose);
-      socket.removeListener('timeout', onTimeout);
+      clearTimeout(timer); signal?.removeEventListener('abort', onAbort);
+      socket.removeListener('data', onData); socket.removeListener('error', onError);
+      socket.removeListener('close', onClose); socket.removeListener('end', onClose);
     }
-
-    const timeout = setTimeout(onTimeout, responseTimeoutMs);
-    socket.setTimeout(responseTimeoutMs);
-    socket.on('data', onData);
-    socket.once('error', onError);
-    socket.once('close', onClose);
-    socket.once('timeout', onTimeout);
-
-    debug(`TCP ${label}: sending ${buffer.length} bytes`);
-    debug(`TCP ${label}: message ${message}`);
-
-    const hexPayload = message.replace(/ /g, '');
-    if (hexPayload.length % 2 !== 0) {
-      finish(new Error(`invalid hex message (odd length ${hexPayload.length}): ${message}`));
-      return;
+    function finish(err) {
+      if (settled) return;
+      settled = true; cleanup();
+      onTcp({ direction: 'complete', label, hex: response.toString('hex'), error: err?.message });
+      err ? reject(err) : resolve(response);
     }
-
-    const writeOk = socket.write(buffer, (err) => {
-      if (err) {
-        debug(`TCP ${label}: write callback error ${err.message}`);
-        finish(err);
-      } else {
-        debug(`TCP ${label}: write flushed, waiting for response`);
-      }
-    });
-
-    if (!writeOk) {
-      debug(`TCP ${label}: write buffer full, waiting for drain`);
-      socket.once('drain', () => {
-        debug(`TCP ${label}: socket drained`);
-      });
+    function onData(chunk) {
+      try {
+        onTcp({ direction: 'receive', label, hex: chunk.toString('hex') });
+        response = Buffer.concat([response, chunk]);
+        const size = frameLength(response);
+        debug(`TCP ${label}: ${response.length} bytes collected`);
+        if (response.length > 65548) throw new Error('Oversized TCP response');
+        if (size !== null && response.length > size) throw new Error('TCP response exceeds declared length');
+        if (size !== null && response.length === size) finish();
+      } catch (err) { finish(err); }
     }
+    const onError = err => finish(err);
+    const onClose = () => finish(new Error('TCP closed before complete response'));
+    const onAbort = () => finish(abortError());
+    const timer = setTimeout(() => finish(new Error(`TCP ${label} timeout (${response.length} bytes)`)), responseTimeoutMs);
+    socket.on('data', onData); socket.once('error', onError);
+    socket.once('close', onClose); socket.once('end', onClose);
+    signal?.addEventListener('abort', onAbort, { once: true });
+    try {
+      const request = toBuffer(message);
+      onTcp({ direction: 'send', label, hex: request.toString('hex') });
+      socket.write(request, err => { if (err) finish(err); });
+    }
+    catch (err) { finish(err); }
   });
-}
-
-function openTcp(picoIp, options = {}) {
-  const {
-    port = 5001,
-    maxRetries = 5,
-    retryDelayMs = 5000,
-    connectTimeoutMs = 10000,
-    debug = () => {},
-  } = options;
-
-  return new Promise((resolve) => {
-    let retries = 0;
-
-    function attempt() {
-      debug(`TCP connect attempt ${retries + 1}/${maxRetries} to ${picoIp}:${port}`);
-      const socket = new net.Socket();
-      socket.setNoDelay(true);
-
-      const timeout = setTimeout(() => {
-        debug(`TCP connect timeout after ${connectTimeoutMs}ms`);
-        socket.destroy();
-        onFailure(new Error('connection timeout'));
-      }, connectTimeoutMs);
-
-      socket.once('connect', () => {
-        clearTimeout(timeout);
-        debug(`Connected to ${picoIp}:${port}`);
-        resolve(socket);
-      });
-
-      socket.once('error', (err) => {
-        clearTimeout(timeout);
-        onFailure(err);
-      });
-
-      socket.connect(port, picoIp);
-    }
-
-    function onFailure(err) {
-      debug(`Connection attempt failed: ${err.message}`);
-      retries += 1;
-      if (retries < maxRetries) {
-        debug(`Retrying in ${retryDelayMs / 1000} seconds...`);
-        setTimeout(attempt, retryDelayMs);
-      } else {
-        debug(`Max retries (${maxRetries}) reached.`);
-        resolve(null);
-      }
-    }
-
-    attempt();
-  });
-}
-
-function getNextField(response) {
-  const fieldNr = parseInt(response.slice(0, 2), 16);
-  const fieldType = parseInt(response.slice(3, 5), 16);
-
-  if (fieldType === 1) {
-    const data = response.slice(6, 17);
-    response = response.slice(21);
-    const a = parseInt(data.slice(0, 5).replace(/ /g, ''), 16);
-    const b = parseInt(data.slice(6, 11).replace(/ /g, ''), 16);
-    return [fieldNr, [a, b], response];
-  }
-
-  if (fieldType === 3) {
-    const data = response.slice(21, 32);
-    response = response.slice(36);
-    if (data.slice(0, 11) === '7f ff ff ff') {
-      return [fieldNr, '', response];
-    }
-    const a = parseInt(data.slice(0, 5).replace(/ /g, ''), 16);
-    const b = parseInt(data.slice(6, 11).replace(/ /g, ''), 16);
-    return [fieldNr, [a, b], response];
-  }
-
-  if (fieldType === 4) {
-    response = response.slice(21);
-    let nextHex = response.slice(0, 2);
-    let word = '';
-    while (nextHex !== '00') {
-      word += nextHex;
-      response = response.slice(3);
-      nextHex = response.slice(0, 2);
-    }
-    const fieldData = hexToByte(word);
-    response = response.slice(6);
-    return [fieldNr, fieldData, response];
-  }
-
-  throw new Error(`Unknown field type ${fieldType}`);
-}
-
-function parseResponse(response) {
-  const dict = {};
-  response = response.slice(42);
-  while (response.length > 6) {
-    const [fieldNr, fieldData, rest] = getNextField(response);
-    dict[fieldNr] = fieldData;
-    response = rest;
-  }
-  return dict;
 }
 
 async function getPicoConfigTcp(picoIp, options = {}) {
-  const { debug = () => {} } = options;
-  debug(`Opening TCP config session to ${picoIp}`);
+  const { signal, debug = () => {} } = options;
   const socket = await openTcp(picoIp, options);
-  if (!socket) {
-    debug('getPicoConfigTcp: openTcp returned null (Pico TCP unresponsive)');
-    return null;
-  }
-
-  const config = {};
   try {
-    let message = '00 00 00 00 00 ff 02 04 8c 55 4b 00 03 ff';
-    message = addCrc(message);
-    debug('Querying config entry count');
-    const response = await sendReceive(socket, message, { debug, label: 'config-count' });
-    const fields = response.trim().split(/\s+/);
-    if (fields.length < 20) {
-      throw new Error(`config-count response too short (${fields.length} bytes)`);
+    const count = await sendReceive(socket, addCrc('00 00 00 00 00 ff 02 04 8c 55 4b 00 03 ff'),
+      { ...options, label: 'config-count' });
+    if (count.length < 22) throw new Error('Config-count response too short');
+    const entries = count[19] + 1; // Same count extraction as the upstream fork.
+    const config = {};
+    for (let pos = 0; pos < entries; pos++) {
+      if (signal?.aborted) throw abortError();
+      const request = addCrc('00 00 00 00 00 ff 41 04 8c 55 4b 00 16 ff 00 01 00 00 00 ' +
+        pos.toString(16).padStart(2, '0') + ' ff 01 03 00 00 00 00 ff 00 00 00 00 ff');
+      config[pos] = parseResponse(await sendReceive(socket, request, { ...options, label: `config-${pos}` }));
+      debug(`Config entry ${pos + 1}/${entries}`);
     }
-    const reqCount = parseInt(fields[19], 16) + 1;
-    debug(`Config entry count: ${reqCount}`);
-
-    for (let pos = 0; pos < reqCount; pos++) {
-      message = `00 00 00 00 00 ff 41 04 8c 55 4b 00 16 ff 00 01 00 00 00 ${pos.toString(16).padStart(2, '0')} ff 01 03 00 00 00 00 ff 00 00 00 00 ff`;
-      const request = addCrc(message);
-      debug(`Fetching config entry ${pos + 1}/${reqCount}`);
-      const entryResponse = await sendReceive(socket, request, {
-        debug,
-        label: `config-entry-${pos}`,
-      });
-      config[pos] = parseResponse(entryResponse);
-      debug(`Parsed config entry ${pos}: ${Object.keys(config[pos]).length} fields`);
-    }
-
-    debug(`TCP config session complete (${reqCount} entries)`);
     return config;
-  } catch (err) {
-    debug(`getPicoConfigTcp failed: ${err.message}`);
-    return null;
-  } finally {
-    debug('Closing TCP config session');
-    socket.destroy();
-  }
+  } finally { socket.destroy(); }
 }
 
-module.exports = {
-  addCrc,
-  bufferToHex,
-  getNextField,
-  getPicoConfigTcp,
-  hexdump,
-  hexToByte,
-  openTcp,
-  parseResponse,
-  sendReceive,
-};
+module.exports = { abortError, delay, hexdump, addCrc, toBuffer, bufferToHex,
+  frameLength, isPicoPacket, isLivePacket, parseResponse, openTcp, sendReceive, getPicoConfigTcp };

@@ -1,6 +1,6 @@
 'use strict';
 
-// Discovery/configuration sequence derives from node.js/lib/get-pico-config.js.
+// Discovery/configuration sequence derives from _old/pico2signalk/lib/get-pico-config.js.
 const dgram = require('node:dgram');
 const { EventEmitter } = require('node:events');
 const { abortError, delay, getPicoConfigTcp, isPicoPacket, isLivePacket, parseResponse } = require('./pico-protocol');

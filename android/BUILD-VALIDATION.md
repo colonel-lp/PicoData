@@ -1,5 +1,9 @@
 # Build validation
 
+## Repository relocation — 2026-10-08
+
+Moved the complete collector to root `node.js/` and preserved the original upstream reference under `_old/pico2signalk/`. Version remains 0.3.0. All **26 automated tests pass** from the new location; the CLI syntax check also passes. Documentation links and install/update examples use the new layout. The runtime MQTT config resolver and systemd entry point are unchanged. These are local checks, not a new Pi hardware test.
+
 ## Pico base 0.3.0 — service operation, 2026-10-08
 
 Source parent: `3148bd0544a56621d16a32292ad01f169a6ad1b3`.
@@ -30,9 +34,9 @@ The automated MQTT endpoint is a loopback protocol fixture, not Mosquitto. Later
 
 ## Pico base 0.1.0 — 2026-10-07
 
-Source baseline: `PicoData/main` at `2846a9d74fb6bdf4d09f11e43eb9f0746d83a3da`. Acquisition reference: in-repository `node.js/` (pico2signalk 0.0.21). Sensor/output reference: `python/pico-mqtt.py` (blob `eb99d3dfc57c7c9d6ca721754015a296fb086741`). Dashboard reference remains `node.red/flows.json`.
+Source baseline: `PicoData/main` at `2846a9d74fb6bdf4d09f11e43eb9f0746d83a3da`. Acquisition reference: pico2signalk 0.0.21, now preserved in `_old/pico2signalk/`. Sensor/output reference: `python/pico-mqtt.py` (blob `eb99d3dfc57c7c9d6ca721754015a296fb086741`). Dashboard reference remains `node.red/flows.json`.
 
-This is a standalone Node.js reference implementation in `android/pico-base/`, not an Android application or APK.
+This is a standalone Node.js reference implementation in the repository root `node.js/`, not an Android application or APK.
 
 ## Completed checks
 

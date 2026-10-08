@@ -14,10 +14,11 @@ These instructions apply throughout `colonel-lp/PicoData`, branch `main`. Read t
 
 ## Repository map and evidence
 
-- Main project and future Android work: `colonel-lp/PicoData/main`; application and related documentation belong under `android/`, apart from root project guidance.
-- Current Pi baseline: `python/pico-mqtt.py`, with CRC helper `python/brainsmoke.py`.
+- Main project and future Android work: `colonel-lp/PicoData/main`; Android application and related documentation belong under `android/`; the active Pi collector and its operational documentation belong under root `node.js/`, with root project guidance alongside.
+- Current tested Pi collector: `node.js/bin/pico.js` (0.3.0); use `node.js/README.md` for install/update/service commands. Default MQTT config is the parent `PicoData/mqtt`; normal readings are silent unless `--stdout` is requested.
+- Python behaviour baseline: `python/pico-mqtt.py`, with CRC helper `python/brainsmoke.py`; the collector bundles an unchanged comparison snapshot under `node.js/test/reference/`.
 - Earlier reference code: `_old/`. Do not treat these variants or `python/scratch` as the running baseline.
-- Updated connectivity reference: `node.js/`, copied from `colonel-lp/pico2signalk/master` (0.0.21). Use the in-repository copy for this project and compare the separate fork when reviewing upstream updates.
+- Upstream connectivity reference: `_old/pico2signalk/`, copied from `colonel-lp/pico2signalk/master` (0.0.21). This archived SignalK implementation is separate from the active `node.js/` collector. Compare it and the separate fork when reviewing upstream updates.
 - Existing dashboard: [`node.red/flows.json`](node.red/flows.json) in this repository. Use this copy as the project reference, with `node.red/package.json` for project metadata.
 - Vendor reference: `simarine/simarine.apk` and `simarine/simarine jadx/`. The inspected manifest and activity identify a .NET MAUI/Mono app; JADX Java wrappers may not expose managed protocol logic. State this limitation rather than claiming a complete decompilation.
 - Use the current GitHub source. Verify branch heads before editing and again before pushing. Preserve concurrent owner changes; never force-push over them.
@@ -36,13 +37,13 @@ These identify the reviewed baseline, not permanently pinned development version
 - Pico discovery/live readings use UDP 43210; configuration uses TCP 5001. Retrieve configuration before decoding values by sensor position.
 - Reuse the newer discovery, retry, timeout and configuration ideas, with the owner's Python changes added. Port the required behaviour into Android; do not assume the app must run Node.js.
 - Exclude SignalK plugin registration, instance/path routing, metadata and delta publication from the Android implementation. Keep protocol decoding and required sensor metadata.
-- The Python baseline adds type-13 inclinometer support (pitch/roll), tank remaining capacity and percentage, named battery/voltage output, and structured JSON sections. The reviewed Node.js sensor list/live decoder omit type-13 support; it must be retained.
-- Python reports Celsius, pressure divided by 100, percentage SOC, and current polarity opposite to the reviewed Node.js decoder. Node.js uses Kelvin, undivided pressure and fractional SOC. Battery remaining-capacity and tank-volume calculations also differ. Document and compare these against actual readings; do not silently substitute SignalK conventions.
+- The Python baseline adds type-13 inclinometer support (pitch/roll), tank remaining capacity and percentage, named battery/voltage output, and structured JSON sections. The archived upstream Node.js sensor list/live decoder omit type-13 support; the active collector restores it and it must be retained.
+- Python reports Celsius, pressure divided by 100, percentage SOC, and current polarity opposite to the reviewed Node.js decoder. The archived upstream Node.js code uses Kelvin, undivided pressure and fractional SOC; the active collector preserves Python conversions. Battery remaining-capacity and tank-volume calculations also differ. Document and compare these against actual readings; do not silently substitute SignalK conventions.
 - Preserve names exactly, including spaces: the dashboard accesses `battery["Ella  "]` with two trailing spaces. Keep stable sensor IDs separate from display labels; handle duplicate labels explicitly.
 - Python's output includes `time`, `barometer`, `inclinometer`, `voltage`, `current`, `temperature`, `tank` and `battery`; battery voltage is also copied into `voltage`. Sensors with `[` in their names are excluded by the current output filter. Do not remove these behaviours inadvertently.
 - Node-RED topics are `/Ella/Pico/` and `/Ella/sbms`. Its SBMS mappings include `soc`, `cellsMV`, `tempInt`, `tempExt`, `currentMA` and `flags`; Node-RED adds conversions, sums, rounding and sign changes. Trace complete paths to the displayed values, including disabled nodes, before reproducing them.
 - Capture real Pico configuration/packets and SBMS JSON to establish the full data contract. Dashboard mappings alone do not define every SBMS field or missing-value rule.
-- The reviewed Python MQTT setup has no network-loop/reconnect management. The newer Node.js configuration retries do not establish complete live-stream recovery: TCP reads finish on the first data chunk, discovery accepts the first sender, and plugin stop does not close the live socket. Do not carry these limitations forward as approved Android behaviour.
+- The reviewed Python MQTT setup has no network-loop/reconnect management. The archived upstream Node.js configuration retries do not establish complete live-stream recovery: TCP reads finish on the first data chunk, discovery accepts the first sender, and plugin stop does not close the live socket. Do not carry these limitations forward as approved Android behaviour.
 
 ## Android design and validation
 
@@ -59,7 +60,7 @@ These identify the reviewed baseline, not permanently pinned development version
 
 ## Documentation and delivery
 
-- Keep the process outline, pending changes, functionality notes, user guidance and build validation under `android/`; create those development records when they become needed.
+- Keep the Android process outline, pending changes and build validation under `android/`, and Pi operational guidance/changelog/service templates under `node.js/`; create those development records when they become needed.
 - For authorized builds, read the agreed pending list first, keep version identifiers consistent and update the complete changelog. Respect explicit instructions to retain a version for a correction.
 - Preserve signing identity once established. Never commit credentials, signing keys, local SDK paths or generated build output.
 - Preserve upstream attribution and applicable licence notices when reusing code. The fork has an MIT LICENSE but `package.json` says UNLICENSED; resolve the discrepancy before distributing reused code. Vendor APK/decompiled reference is not blanket permission to copy implementation or assets.

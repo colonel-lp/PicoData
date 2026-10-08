@@ -1,88 +1,30 @@
-# Changelog
+# Pico base changelog
 
-All notable changes to this project are documented here.
+## Repository layout — 2026-10-08 (version unchanged)
 
-## [0.0.21] - 2026-08-28
+- Place the standalone collector in the repository root `node.js/`, matching the Pi installation layout. Update checkout/update commands, documentation links and source provenance.
+- Preserve the original SignalK reference under `_old/pico2signalk/`; it is separate from the active collector. MQTT config remains in the parent `PicoData/mqtt`, and the service entry point remains `node.js/bin/pico.js`.
 
-### Changed — Node.js only
+## 0.3.0 — 2026-10-08
 
-Config discovery and retrieval no longer depend on Python. The plugin and CLI
-share the same Node.js implementation under `lib/`.
+- Enable MQTT by default using the parent `PicoData/mqtt` file for an installation directly in `PicoData/node.js`; retain explicit config override and add `--no-mqtt` for reader-only tests.
+- Silence normal terminal/journal readings by default. `--stdout` enables diagnostic JSON; connection/error status remains available. MQTT payload fields/values and wire settings are unchanged.
+- Add a generic systemd service template with the correct `bin/pico.js` entry point and document the existing-service update.
+- Validate parent config resolution independently of working directory, silent publishing/Python parity and missing/conflicting config handling; all 26 tests pass. The unit template passed local systemd validation; actual Pi service startup remains pending.
+- Record functional owner-reported recovery/dashboard outcomes without publishing system inventories, resource snapshots or account/address details.
 
-**Removed:**
+## 0.2.0 — 2026-10-08
 
-- `pico.py` — config dumper (replaced by `lib/get-pico-config.js`)
-- `brainsmoke.py` — CRC16 helper (replaced by `lib/crc16.js`)
+- Add optional `--mqtt-config FILE` publishing for the existing Mosquitto/Node-RED dashboard. Reuse Python's server, port, prefix, username and password settings.
+- Preserve the configured topic, JSON field structure/values, units, exact labels, QoS 0 and retain=false. Use original raw-65535 conversions when MQTT is enabled; stdout publishes the same compatibility object. JSON formatting is not byte-identical to Python's serializer.
+- Keep Pico and broker lifecycles independent. Retry MQTT without retaining/replaying old readings, bound pending writes, and stop both transports cleanly.
+- Pin MQTT.js dependencies, ignore local credential files, add placeholder configuration, and document flat Pi installation.
+- Extend automated validation to 24 tests, including wire settings, Python payload parity, broker refusal, reconnect, buffering and CLI execution. Actual Pi MQTT/Node-RED verification remains pending.
 
-**Added:**
+## 0.1.0 — 2026-10-07
 
-- `lib/get-pico-config.js` — UDP discovery + TCP config query
-- `lib/pico-protocol.js` — TCP protocol, parsing, CRC
-- `lib/sensor-list.js` — sensor list builder
-- `bin/dump-pico-config.js` — standalone CLI to dump config as JSON
-
-**Requirements:** Node.js 14 or later. Python 3 is no longer required.
-
-### Testing from the command line
-
-From the plugin directory, with a Pico on the same network:
-
-```bash
-# Dump sensor config as JSON (stdout)
-node bin/dump-pico-config.js
-
-# Pretty-printed JSON
-node bin/dump-pico-config.js --pretty
-
-# Include Pico IP and raw TCP config
-node bin/dump-pico-config.js --raw
-
-# Skip UDP discovery when you already know the Pico IP
-PICO_IP=192.168.2.5 node bin/dump-pico-config.js --pretty
-
-# Verbose debug logging (stderr): UDP/TCP send-receive, entry progress, retries
-DEBUG=pico node bin/dump-pico-config.js --raw
-```
-
-Successful output is a JSON object on stdout (sensor IDs → type, name, position,
-capacity, etc.). Debug and progress messages go to stderr when `DEBUG=pico` is set.
-
-Optional environment variables:
-
-| Variable | Default | Purpose |
-|---|---|---|
-| `PICO_IP` | _(discover via UDP)_ | Pico address; skips UDP discovery |
-| `DEBUG` | _(off)_ | Set to `pico` for verbose logging |
-| `PICO_TCP_TIMEOUT_MS` | `30000` | Per-request TCP read timeout |
-| `PICO_CONFIG_RETRY_MS` | `30000` | Delay between config fetch retries |
-
-Run the unit test for CRC encoding:
-
-```bash
-node test/hexdump.test.js
-```
-
-### Publishing to npm
-
-```bash
-npm whoami          # must show the account that owns pico2signalk
-npm login           # if not logged in (404 on publish usually means auth)
-npm publish         # if 2FA enabled: npm publish --otp=123456
-```
-
-If `npm publish` returns `404 Not Found`, the tarball is usually fine — npm returns
-404 instead of 403 when you are not logged in as the package owner. Verify with
-`npm owner ls pico2signalk`.
-
-After publishing globally, the CLI is also available as:
-
-```bash
-npx pico2signalk dump-pico-config --pretty
-# or, after npm install -g pico2signalk:
-dump-pico-config --pretty
-```
-
-## [0.0.20] and earlier
-
-Config was retrieved by spawning `python3 pico.py`. Live UDP value processing
-was already handled in Node.js (`index.js`).
+- Build a standalone Node.js acquisition base using the updated pico2signalk connection methods and the owner's Python sensor calculations/Ella JSON.
+- Add fragmented TCP response handling, sender filtering, retry/stale recovery and lifecycle cleanup. Exclude SignalK and initially omit MQTT transport.
+- Provide raw capture recording, offline verification/replay and Python comparison.
+- Make flat installation self-contained by bundling the unchanged Python comparison source; 16 automated tests pass.
+- Record the owner's real Pico verification: 108 TCP replies and 1,096 UDP packets pass length/CRC checks; all 1,096 outputs match Python with zero differences. Real reconnect testing remains pending.

@@ -55,6 +55,14 @@ function createSensorList(config) {
       sensorList[id]['capacity.nominal'] = config[entry][5][1] * 36 * 12;
       elementSize = 5;
     }
+    // Owner's Python type-13 mapping; it still consumes one live field.
+    if (type === 13) {
+      type = 'inclinometer';
+      const axis = config[entry][3][1];
+      sensorList[id].inclinometer_type = axis;
+      if (axis === 1) sensorList[id].name = 'pitch';
+      if (axis === 2) sensorList[id].name = 'roll';
+    }
     if (type === 14) {
       type = 'XX';
       elementSize = 1;
