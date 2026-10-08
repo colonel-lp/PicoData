@@ -1,6 +1,6 @@
 # Next build changes
 
-## Current authorized step: standalone Pico base 0.2.0 with optional MQTT
+## Current authorized step: Pico base 0.3.0 for service operation
 
 - [x] Start with updated Node.js discovery/configuration and TCP request methods.
 - [x] Carry over the owner's sensor mappings, pitch/roll and Ella JSON calculations/formatting from Python.
@@ -11,8 +11,9 @@
 - [x] Support installation directly in `~/PicoData/node.js`, including a bundled Python comparison reference so deleted original folders are not needed.
 - [x] Receive configurations and live readings from the owner's actual Pico; 1,096 captured outputs match the original Python, with zero differences (owner-reported verification).
 - [x] Confirm real receive frame lengths/checksums for the reported capture: 108 TCP responses and 1,096 UDP packets all pass.
-- [ ] Confirm automatic discovery mode and record Pico firmware/device identity and Pi Node.js version.
-- [ ] Confirm live readings against the existing Node-RED/Pico display and exercise Wi-Fi loss/Pico restart.
+- [ ] Confirm automatic discovery mode; retain device identity/runtime inventory privately unless the owner requests publication.
+- [x] Owner reports successful Pico reboot/Wi-Fi recovery and correct-looking MQTT output in the existing Node-RED webpage.
+- [ ] Audit expected values against the Pico display, test changed IP and actual broker restart, and run a long unattended stability check.
 
 ## MQTT addition — 2026-10-08
 
@@ -21,7 +22,16 @@
 - [x] Restore original raw-65535 value handling in MQTT compatibility mode; reject incomplete output snapshots.
 - [x] Add independent reconnect, no offline backlog/resync, bounded pending writes and clean shutdown.
 - [x] Test actual MQTT wire settings and received CLI payloads against the Python source; verify Pico output continues with broker access denied.
-- [ ] Test the publisher against the owner's Mosquitto broker and existing Node-RED dashboard.
+- [x] Owner reports successful publishing/display through the existing Mosquitto/Node-RED setup.
+
+## Service changes — 2026-10-08
+
+- [x] Use the parent `PicoData/mqtt` configuration by default for files installed directly in `PicoData/node.js`, independent of the working directory.
+- [x] Remove normal readings from terminal/journal output by default; retain connection/error status. `--stdout` enables diagnostic JSON and `--no-mqtt` enables reader-only testing.
+- [x] Add a generic systemd service template with the correct `bin/pico.js` path, network/broker ordering and a 30-second process restart interval.
+- [x] Confirm default config resolution and silent MQTT payload parity in an isolated installation; missing config fails visibly.
+- [ ] Confirm the updated service starts and restarts on the owner's Pi.
+- Publish functional test outcomes only; exclude owner runtime/process snapshots, device inventory, addresses, credentials and account details.
 
 ## Proposed Pi logging direction
 

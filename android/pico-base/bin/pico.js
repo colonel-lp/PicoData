@@ -2,17 +2,21 @@
 'use strict';
 
 const fs = require('node:fs');
+const path = require('node:path');
 const { PicoClient } = require('../lib/client');
 const { readMqttConfig, MqttPublisher } = require('../lib/mqtt-publisher');
 const args = process.argv.slice(2);
 const options = {}, allowed = new Set(['--ip', '--record', '--duration', '--udp-port', '--tcp-port', '--mqtt-config']);
-let recordPath, duration, mqttConfigPath;
+let recordPath, duration, mqttConfigPath = path.resolve(__dirname, '../../mqtt');
+let mqttDisabled = false, mqttConfigProvided = false, printReadings = false;
 function usage() {
-  console.error('Usage: node bin/pico.js [--ip ADDRESS] [--record FILE.jsonl] [--duration SECONDS] [--udp-port PORT] [--tcp-port PORT] [--mqtt-config FILE]');
-  console.error('Ella JSON goes to stdout; connection status goes to stderr. DEBUG=pico adds diagnostics.');
+  console.error('Usage: node bin/pico.js [--ip ADDRESS] [--record FILE.jsonl] [--duration SECONDS] [--udp-port PORT] [--tcp-port PORT] [--mqtt-config FILE | --no-mqtt] [--stdout]');
+  console.error('MQTT defaults to PicoData/mqtt beside node.js. Readings are silent unless --stdout is supplied. Status goes to stderr.');
 }
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--help' || args[i] === '-h') { usage(); process.exit(0); }
+  if (args[i] === '--no-mqtt') { mqttDisabled = true; continue; }
+  if (args[i] === '--stdout') { printReadings = true; continue; }
   if (!allowed.has(args[i]) || !args[i + 1] || args[i + 1].startsWith('--')) { usage(); process.exit(2); }
   const flag = args[i++], value = args[i];
   if (flag === '--ip') options.picoIp = value;
@@ -20,21 +24,22 @@ for (let i = 0; i < args.length; i++) {
   if (flag === '--duration') duration = Number(value);
   if (flag === '--udp-port') options.udpPort = Number(value);
   if (flag === '--tcp-port') options.port = Number(value);
-  if (flag === '--mqtt-config') mqttConfigPath = value;
+  if (flag === '--mqtt-config') { mqttConfigPath = value; mqttConfigProvided = true; }
 }
-if ((duration !== undefined && (!Number.isFinite(duration) || duration <= 0)) ||
+if ((mqttDisabled && mqttConfigProvided) ||
+  (duration !== undefined && (!Number.isFinite(duration) || duration <= 0)) ||
   ['port', 'udpPort'].some(k => options[k] !== undefined && (!Number.isInteger(options[k]) || options[k] < 1 || options[k] > 65535))) {
   usage(); process.exit(2);
 }
 let publisher;
-if (mqttConfigPath) {
+if (!mqttDisabled) {
   try {
     publisher = new MqttPublisher(readMqttConfig(mqttConfigPath));
     publisher.on('status', status => console.error(new Date().toISOString(), JSON.stringify(status)));
     publisher.start();
     options.legacyPythonOutput = true;
   } catch {
-    console.error('MQTT setup failed. Check the configuration file and run npm ci; credentials are not printed.');
+    console.error('MQTT setup failed. Check PicoData/mqtt (or --mqtt-config FILE) and run npm ci; use --no-mqtt for a reader-only test. Credentials are not printed.');
     process.exit(1);
   }
 }
@@ -48,7 +53,7 @@ client.on('tcp', data => writeRecord('tcp', data));
 client.on('config', data => writeRecord('config', data));
 client.on('packet', data => writeRecord('packet', data));
 client.on('readings', data => {
-  process.stdout.write(JSON.stringify(data) + '\n');
+  if (printReadings) process.stdout.write(JSON.stringify(data) + '\n');
   publisher?.publish(data);
 });
 client.on('status', status => console.error(new Date().toISOString(), JSON.stringify(status)));

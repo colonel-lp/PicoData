@@ -1,5 +1,13 @@
 # Pico base changelog
 
+## 0.3.0 — 2026-10-08
+
+- Enable MQTT by default using the parent `PicoData/mqtt` file for an installation directly in `PicoData/node.js`; retain explicit config override and add `--no-mqtt` for reader-only tests.
+- Silence normal terminal/journal readings by default. `--stdout` enables diagnostic JSON; connection/error status remains available. MQTT payload fields/values and wire settings are unchanged.
+- Add a generic systemd service template with the correct `bin/pico.js` entry point and document the existing-service update.
+- Validate parent config resolution independently of working directory, silent publishing/Python parity and missing/conflicting config handling; all 26 tests pass. The unit template passed local systemd validation; actual Pi service startup remains pending.
+- Record functional owner-reported recovery/dashboard outcomes without publishing system inventories, resource snapshots or account/address details.
+
 ## 0.2.0 — 2026-10-08
 
 - Add optional `--mqtt-config FILE` publishing for the existing Mosquitto/Node-RED dashboard. Reuse Python's server, port, prefix, username and password settings.

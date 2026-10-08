@@ -1,6 +1,6 @@
 {
   "name": "ella-pico-base",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Standalone Pico acquisition and Ella JSON reference for the Android port",
   "main": "lib/client.js",

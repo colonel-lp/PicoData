@@ -1,6 +1,6 @@
 # Proposed Android process
 
-Current step: [standalone Pico base 0.2.0](pico-base/README.md) includes optional MQTT publishing for testing through the existing Node-RED dashboard. The owner reported 1,096 real captured outputs matching Python in 0.1.0; MQTT and real reconnect validation remain pending. See [BUILD-VALIDATION.md](BUILD-VALIDATION.md) and [NEXT-BUILD-CHANGES.md](NEXT-BUILD-CHANGES.md).
+Current step: [Pico base 0.3.0](pico-base/README.md) publishes using the parent `PicoData/mqtt` config by default, suppresses terminal readings, and includes a generic systemd service template. The owner reported 1,096 captured outputs matching Python, successful reboot/Wi-Fi recovery and correct-looking MQTT output through the existing Node-RED webpage. Pi service startup, changed-IP/broker-restart and long unattended checks remain pending. See [BUILD-VALIDATION.md](BUILD-VALIDATION.md) and [NEXT-BUILD-CHANGES.md](NEXT-BUILD-CHANGES.md).
 
 Direction discussed on 2026-10-08: continuous logging belongs on the headless Pi Zero 2 W because the Android head unit is not powered 24/7. Prefer a lightweight collector with persistent history and a small API; SQLite and a browser/Android viewer are the current proposal. Keep history outside zram-managed folders. The original direct Android/embedded-broker route below is a future option to reassess, not the selected logging architecture.
 

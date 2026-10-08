@@ -1,5 +1,15 @@
 # Build validation
 
+## Pico base 0.3.0 — service operation, 2026-10-08
+
+Source parent: `3148bd0544a56621d16a32292ad01f169a6ad1b3`.
+
+`npm test`: **26 passed, 0 failed** in the development environment. Existing Pico/MQTT tests remain included. New checks run the CLI in an isolated flat `PicoData/node.js` installation with the config in `PicoData/mqtt` and a different working directory: MQTT publishes the same parsed Python output, stdout is empty, status remains available, and shutdown completes normally. Missing default config exits with an actionable error without leaking credentials; conflicting MQTT flags are rejected. Existing CLI stdout tests now request `--stdout` explicitly.
+
+The generic systemd unit passed `systemd-analyze verify` locally with its account and executable placeholders replaced by available development values. This is unit validation, not an actual Pi service installation. Pi service startup remains pending.
+
+The owner reports successful Pico reboot/Wi-Fi recovery and correct-looking MQTT output in the existing Node-RED webpage. Some reboots recover after the normal stale/retry path. This is functional evidence supplied by the owner; no timed recovery/per-field audit, changed-IP test, actual broker-restart test or long unattended soak is recorded yet. System inventories, resource/process snapshots, account details and actual network addresses are excluded from published validation notes.
+
 ## Pico base 0.2.0 — optional MQTT addition, 2026-10-08
 
 Source parent: `4e786e95ed70fa6b07ae67537b04dfca80915e7e`. MQTT.js is pinned to 5.16.0 with a committed npm lockfile; the MQTT wire fixture uses mqtt-packet 9.0.2. No version or APK change was made to an Android application; this remains the Node.js base.
@@ -16,7 +26,7 @@ New checks cover:
 - Bounded pending writes and delayed callbacks across reconnection.
 - Full Pico CLI execution with MQTT disabled, available, and access denied. With MQTT available, received payloads equal stdout and the Python oracle; with access denied, Pico stdout/capture still work and the CLI exits normally. Diagnostics exclude credentials.
 
-The MQTT endpoint is a loopback protocol fixture, not Mosquitto. Real Pi MQTT/Node-RED tests and real Pico/Wi-Fi recovery checks remain pending. No collector/logging/API/UI, ElectroDacus subscription or Android APK was added. The owner's 0.1.0 Pico capture below remains the recorded real-hardware evidence.
+The automated MQTT endpoint is a loopback protocol fixture, not Mosquitto. Later owner-reported MQTT/Node-RED and reboot/Wi-Fi outcomes are recorded above. No collector/logging/API/UI, ElectroDacus subscription or Android APK was added. The owner's 0.1.0 Pico capture below remains the recorded real-hardware evidence.
 
 ## Pico base 0.1.0 — 2026-10-07
 
@@ -53,16 +63,17 @@ The owner ran the base from `~/PicoData/node.js` on the Pi and supplied this ter
 
 All 108 complete TCP responses and 1,096 live UDP packets passed length and CRC checks. All 1,096 decoded output objects matched the original Python calculations/formatting, with zero differences. The same capture passed without Python comparison in 1.432 seconds; Python comparison completed after a longer silent wait because the current verifier launches Python once per packet.
 
-This is owner-reported hardware evidence; the raw capture has not been supplied to the agent for independent inspection. Two configurations alone do not establish recovery after a reboot or Wi-Fi interruption. Device/firmware identity, Pi runtime version, discovery mode and visual comparison remain unrecorded.
+This is owner-reported hardware evidence; the raw capture has not been supplied to the agent for independent inspection. Two configurations alone do not establish recovery after a reboot or Wi-Fi interruption. Discovery mode and a detailed visual per-field comparison remain unconfirmed. Later functional recovery/dashboard outcomes are recorded above; runtime/device inventory is excluded from publication.
 
 ## Pending real Pi checks
 
-- [ ] Record the Pico firmware/device identity and Pi Node.js version.
+- [ ] Keep any required device/runtime inventory private unless publication is explicitly requested.
 - [x] Retrieve configuration and live packets from the owner's Pico (owner-reported capture result).
 - [ ] Confirm automatic discovery mode on the common LAN.
 - [x] Pass `verify-capture.js ... --compare-python`: 1,096 matches, zero differences.
 - [ ] Verify all expected names/values against the current dashboard and Pico display, especially charge/discharge current signs, tank percentage, battery capacity and both inclinometer axes.
-- [ ] Test Pico power-cycle, Wi-Fi interruption and automatic discovery after an address change.
+- [x] Owner reports successful Pico reboot and Wi-Fi disconnect/reconnect recovery.
+- [ ] Test automatic discovery after an address change and an actual broker restart.
 - [ ] Check UDP binding while the existing Python reader runs; restore the original service after any temporary test stop.
 - [ ] Confirm Ctrl+C exits and a second start binds/connects normally.
 

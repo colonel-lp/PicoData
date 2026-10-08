@@ -64,3 +64,4 @@ These identify the reviewed baseline, not permanently pinned development version
 - Preserve signing identity once established. Never commit credentials, signing keys, local SDK paths or generated build output.
 - Preserve upstream attribution and applicable licence notices when reusing code. The fork has an MIT LICENSE but `package.json` says UNLICENSED; resolve the discrepancy before distributing reused code. Vendor APK/decompiled reference is not blanket permission to copy implementation or assets.
 - Report changed files, validation and remaining device checks concisely. Do not generate source ZIPs unless requested.
+- The owner authorizes publishing functional project/test results but excludes system details. Do not publish runtime/process/resource snapshots, account details, actual device/network addresses or private inventory. Use generic account/path placeholders in service templates; provide owner-specific commands only in chat.

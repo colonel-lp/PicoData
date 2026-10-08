@@ -209,7 +209,7 @@ for (const mqttMode of ['disabled', 'online', 'denied']) test(`real CLI publishe
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ella-cli-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const capture = path.join(directory, 'capture.jsonl');
-  const mqttArgs = [], messages = [];
+  const mqttArgs = mqttMode === 'disabled' ? ['--no-mqtt'] : [], messages = [];
   if (mqttMode !== 'disabled') {
     const broker = await mqttBroker(t), config = path.join(directory, 'mqtt');
     if (mqttMode === 'denied') broker.deny();
@@ -219,7 +219,7 @@ for (const mqttMode of ['disabled', 'online', 'denied']) test(`real CLI publishe
   }
   const child = spawn(process.execPath, [path.join(__dirname, '../bin/pico.js'),
     '--ip', '127.0.0.1', '--udp-port', String(sim.port), '--tcp-port', String(sim.port),
-    '--duration', '1.5', '--record', capture, ...mqttArgs]);
+    '--duration', '1.5', '--record', capture, '--stdout', ...mqttArgs]);
   t.after(() => { if (child.exitCode === null) child.kill(); });
   let stdout = '', stderr = '';
   child.stdout.on('data', b => { stdout += b; }); child.stderr.on('data', b => { stderr += b; });
@@ -291,4 +291,52 @@ test('flat installation verifies captures without the original repository folder
   const summary = JSON.parse(result.stdout);
   assert.equal(summary.ok, true);
   assert.equal(summary.pythonMatches, 1);
+});
+
+test('deployed CLI finds parent mqtt config and publishes silently from another working directory', async t => {
+  const sim = await simulator(t), broker = await mqttBroker(t);
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ella-service-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const root = path.join(directory, 'PicoData'), installed = path.join(root, 'node.js');
+  fs.cpSync(path.join(__dirname, '..'), installed, { recursive: true,
+    filter: source => path.basename(source) !== 'node_modules' });
+  fs.mkdirSync(path.join(root, 'python'));
+  fs.writeFileSync(path.join(root, 'mqtt'), `server=127.0.0.1\nport=${broker.port}\nprefix=/Ella/Pico/\nusername=test-user\npassword=test-pass=extra\n`);
+  const messages = []; broker.events.on('publish', packet => messages.push(packet));
+  const child = spawn(process.execPath, [path.join(installed, 'bin/pico.js'),
+    '--ip', '127.0.0.1', '--udp-port', String(sim.port), '--tcp-port', String(sim.port), '--duration', '1.5'], {
+    cwd: directory, env: { ...process.env, NODE_PATH: path.join(__dirname, '../node_modules') },
+  });
+  t.after(() => { if (child.exitCode === null) child.kill(); });
+  let stdout = '', stderr = '';
+  child.stdout.on('data', b => { stdout += b; }); child.stderr.on('data', b => { stderr += b; });
+  const code = await new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
+  assert.equal(code, 0, stderr); assert.equal(stdout, '');
+  assert.ok(stderr.includes('connected')); assert.ok(stderr.includes('stopped'));
+  assert.ok(messages.length > 0);
+  for (const packet of messages) {
+    assert.equal(packet.topic, '/Ella/Pico/'); assert.equal(packet.qos, 0); assert.equal(packet.retain, false);
+    const received = JSON.parse(packet.payload.toString()), now = received.time;
+    const oracle = spawnSync('python3', [path.join(__dirname, 'python-oracle.py'), baseline], {
+      input: JSON.stringify({ ...sim.data, time: { ...now, year: now.year + 2000 } }), encoding: 'utf8',
+    });
+    assert.equal(oracle.status, 0, oracle.stderr);
+    assert.deepEqual(received, JSON.parse(oracle.stdout).output);
+  }
+  assert.equal(stderr.includes('test-pass'), false);
+});
+
+test('missing default config fails visibly without readings or credentials', t => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ella-no-config-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const installed = path.join(directory, 'PicoData/node.js');
+  fs.cpSync(path.join(__dirname, '..'), installed, { recursive: true,
+    filter: source => path.basename(source) !== 'node_modules' });
+  const result = spawnSync(process.execPath, [path.join(installed, 'bin/pico.js')], { cwd: directory, encoding: 'utf8' });
+  assert.equal(result.status, 1); assert.equal(result.stdout, '');
+  assert.ok(result.stderr.includes('Check PicoData/mqtt'));
+  const conflict = spawnSync(process.execPath, [path.join(installed, 'bin/pico.js'), '--no-mqtt', '--mqtt-config', 'mqtt'], {
+    cwd: directory, encoding: 'utf8',
+  });
+  assert.equal(conflict.status, 2); assert.ok(conflict.stderr.includes('Usage:'));
 });
