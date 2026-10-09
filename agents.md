@@ -4,13 +4,43 @@ These instructions apply throughout `colonel-lp/PicoData`, branch `main`. Read t
 
 ## Communication and scope
 
-- Keep answers concise and specific. Follow the owner's latest instructions and corrections.
-- Ask when the meaning or scope is unclear. Do not assume target Android versions, devices, screen layouts or background requirements from the Joying project.
-- Preserve all existing functionality, output fields, calculations, units, names and signs unless the owner explicitly requests a change. A shorter rewrite is not evidence of functional equivalence.
-- Record feature requests, fixes and proposed application changes in `android/NEXT-BUILD-CHANGES.md` once development starts. Keep corrections and exclusions current.
-- Only change application source when the owner explicitly requests implementation or a build. Questions, investigations and planning requests authorize investigation/documentation, not an app build.
-- Explicitly requested documentation changes may proceed independently. Do not increment versions, build APKs or publish releases during planning alone.
-- Complete authorized work without repeatedly asking for the same permission. Do not expand its scope.
+- Keep answers short and focused.
+- Reference the latest JavaScript and Android documentation when needed. Prefer official documentation and distinguish confirmed facts from assumptions.
+- Follow requests carefully. Ask if the meaning or scope is unclear; do not assume something that was not said.
+- Always add listed feature requests, bug fixes and proposed code changes to `android/NEXT-BUILD-CHANGES.md` for the next build.
+- Only change application source code when the owner explicitly asks to create a build from the current list of changes. A question, investigation, feature request or request to fix an issue alone is not build authorization.
+- Before an authorized build, read the current pending list and the owner's latest corrections and exclusions.
+- Read-only investigations and updates to the pending list may proceed without a build request. Explicitly requested documentation or instruction-file changes may also proceed; they do not authorize application changes.
+- Do not implement unrelated changes, increment the app version, or publish a build while only recording or investigating requests.
+
+## Repository workflow
+
+- Application source, Pi collector and project documents: `colonel-lp/PicoData`, branch `main`. Android project: `android/source/`. Android documents: `android/`. Pi collector and operational documents: `node.js/`.
+- The Android production release/signing location is not yet established. Do not copy the EQ project's private-source/public-release split or enable self-updates until the owner settles this project's production identity and release location.
+- Use the latest GitHub source. Verify the branch head before editing and before pushing; do not rely on an old workspace or overwrite newer owner changes.
+- Use the connected GitHub tools when available. When a build is authorized, commit and push the agreed changes and verify the resulting GitHub files.
+- For each new Android build, advance versionName and versionCode beyond the previous build and update the README changelog. Do not reuse a previous build's version. For an authorized Pi collector release, update its package version and corresponding documentation; keep collector and Android versions separate.
+- Maintain the complete Android changelog in `android/CHANGELOG.md`; when an in-app changelog and production release repository are established, publish identical complete notes there. Preserve existing entries. Release titles or empty descriptions must not replace full notes. Keep Pi collector changes in `node.js/CHANGELOG.md`.
+- When Android updates are implemented, keep Download & Install as the update action, with the agreed installer and confirmed-install cleanup behavior.
+- Update the build validation file: `android/BUILD-VALIDATION.md`.
+- Do not modify related repositories or relocate their contents without a request.
+
+## Documentation
+
+- Where changes are made in core app functionality, keep files in `android/functionality/` updated with the latest changes, or create a new file where needed. Update each file with the build version where changes were made. Do not create files with the build number in the name.
+- Where changes affect how to use the Android app, keep `android/README.md` up to date. For Pi collector changes, update the relevant guides under `node.js/`.
+- Do not generate source ZIPs unless requested.
+
+## Implementation and validation
+
+- Preserve agreed dashboard layouts, indicator appearance, themes, data calculations, source bindings and state behavior unless changes are included in the authorized list.
+- Processing edits must work consistently with live display, independent source freshness, history, summaries, graph ranges, saved labels and exports. Preserve existing MQTT/Node-RED behavior and the agreed logging schema/retention; do not change source signs, units or calculations without an authorized request.
+- Account for Android 8.1 through current Android versions and the declared minimum SDK. Guard newer APIs, retain supported legacy paths and detected FYT screen handling. Do not change SDK targets merely to silence warnings.
+- Run checks appropriate to the actual changes. Distinguish source tests, stand-ins and syntax checks from Android compilation and real phone/head-unit/Pi verification.
+- Never claim an APK was built, installed or hardware-tested unless it actually was. If SDK/Gradle is unavailable, report that limitation and identify the source version delivered.
+- Preserve the existing signing key for update compatibility. Do not commit signing keys, credentials, local SDK paths or generated build output.
+- Preserve upstream attribution and applicable licence notices when reusing code. The archived fork has an MIT LICENSE but `package.json` says UNLICENSED; resolve the discrepancy before distributing reused code. Vendor APK/decompiled reference is not blanket permission to copy implementation or assets.
+- The owner authorizes publishing functional project/test results but excludes system details. Do not publish runtime/process/resource snapshots, account details, actual device/network addresses, private inventory, captures or measurements. Use generic account/path placeholders in service templates; provide owner-specific commands only in chat.
 
 ## Repository map and evidence
 
@@ -60,13 +90,3 @@ These identify the reviewed baseline, not permanently pinned development version
 - Recover from Pico reboot, Wi-Fi loss, changed IPs, MQTT disconnect and app lifecycle changes. Close sockets, listeners, retry jobs and any Wi-Fi locks on shutdown.
 - Use replay fixtures to compare the port with the existing Python and Node-RED outputs. Test negative values, pitch/roll, battery/tank calculations and malformed/truncated messages.
 - Distinguish source inspection, replay/syntax tests, Android compilation and hardware verification. Never claim a working connection, APK or device test without evidence.
-
-## Documentation and delivery
-
-- Keep the Android process outline, pending changes and build validation under `android/`, and Pi operational guidance/changelog/service templates under `node.js/`; create those development records when they become needed.
-- For authorized builds, read the agreed pending list first, keep version identifiers consistent and update the complete changelog. Respect explicit instructions to retain a version for a correction.
-- Preserve signing identity once established. Never commit credentials, signing keys, local SDK paths or generated build output.
-- Preserve upstream attribution and applicable licence notices when reusing code. The fork has an MIT LICENSE but `package.json` says UNLICENSED; resolve the discrepancy before distributing reused code. Vendor APK/decompiled reference is not blanket permission to copy implementation or assets.
-- Report changed files, validation and remaining device checks concisely. Do not generate source ZIPs unless requested.
-- The owner authorizes publishing functional project/test results but excludes system details. Do not publish runtime/process/resource snapshots, account details, actual device/network addresses or private inventory. Use generic account/path placeholders in service templates; provide owner-specific commands only in chat.
-
