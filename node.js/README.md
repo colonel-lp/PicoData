@@ -1,12 +1,12 @@
-# Ella Pico base — 0.4.0
+# Ella Pico base — 0.5.0
 
 Standalone Node.js starting point for the Android Pico reader. It uses the updated acquisition code preserved in [`../_old/pico2signalk/`](../_old/pico2signalk/), with the owner's [`../python/pico-mqtt.py`](../python/pico-mqtt.py) sensor mappings, calculations and Ella JSON format carried over. MQTT publishing is enabled by default using `PicoData/mqtt` and the existing Ella JSON contract; `--no-mqtt` selects reader-only operation. SignalK remains excluded.
 
-**Status:** version 0.4.0 adds ElectroDacus MQTT reception on the existing broker connection. SQLite logging and the history API are the next stages. On 2026-10-07 the owner reported a successful real Pi/Pico capture: all 108 TCP replies and 1,096 UDP packets passed length/CRC checks; all 1,096 decoded outputs matched the original Python, with zero differences. The owner also reports successful Pico reboot/Wi-Fi recovery, service restart and correct-looking MQTT output in the existing Node-RED webpage. The new SBMS receiver still needs testing on the Pi. Detailed per-field checks, changed-IP/broker-restart tests and long unattended stability checks remain pending. See [build validation](../android/BUILD-VALIDATION.md) for automated evidence and remaining checks.
+**Status:** version 0.5.0 adds selected Pico/SBMS SQLite history with UTC summaries, retention, checkpoints and private sensor selection. MQTT payloads and quiet service operation are preserved. See [logging setup and inspection](LOGGING.md). The history API and Android viewer are subsequent stages. Earlier owner-reported Pico/Python capture and dashboard/recovery checks passed; the SBMS receiver has also received live data on the Pi. New logging needs live Pi testing. See [build validation](../android/BUILD-VALIDATION.md) for automated/replay evidence and pending checks.
 
 ## Run on the Pi
 
-Use Node.js 18 or later. Run `npm ci --omit=dev` to install the pinned MQTT.js dependency. Reader-only operation with `--no-mqtt` needs no installed npm packages. Python 3 is needed only for comparison tests. The repository's root `node.js/` folder is the self-contained collector and can be installed directly in `~/PicoData/node.js`; the original repository folders are not required. For that installation:
+Use Node.js 22.13+ with built-in SQLite for logging; Node.js 18+ remains sufficient without logging. Run `npm ci --omit=dev` to install the pinned MQTT.js dependency. Reader-only operation with `--no-mqtt` needs no installed npm packages. Python 3 is needed only for comparison tests. The complete test suite, including SQLite tests, requires Node 22.13+. The repository's root `node.js/` folder is the self-contained collector and can be installed directly in `~/PicoData/node.js`; the original repository folders are not required. For that installation:
 
 ```bash
 node --version
@@ -159,3 +159,8 @@ Packet fields are bounds-checked. Unknown field types, broken separators and unt
 | `test/` | Synthetic fixtures, Python reference extraction and automated tests. |
 
 `npm ci` followed by `npm test` runs all tests. [CHANGELOG.md](CHANGELOG.md) records the complete base history. See [build validation](../android/BUILD-VALIDATION.md) for their results and remaining hardware checks. Preserve the upstream MIT notice in `LICENSE`; this baseline has not been published as a package or release. Use this validated acquisition base for the proposed Pi collector/logger; review the Android viewer/direct-connection role before porting and repeat device testing there.
+
+
+## Continuous history
+
+Follow [LOGGING.md](LOGGING.md) to create private `PicoData/logging.json`, start logging with the existing service, inspect saved summaries and replay a local capture. The default persistent database is `PicoData/history/history.sqlite`, outside `node.js/` so source updates preserve history. [logging.example.json](logging.example.json) uses fictional IDs; generate your real selection from the private configuration capture.

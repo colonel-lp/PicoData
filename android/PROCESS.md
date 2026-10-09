@@ -1,6 +1,6 @@
 # Proposed Android process
 
-Current step: [Pi collector 0.4.0](../node.js/README.md) receives ElectroDacus data using the existing MQTT connection, with Pi receipt timestamps, explicit private cell-channel settings and independent freshness. It preserves Pico publishing, silent readings and the systemd entry point. The owner reported 1,096 earlier Pico outputs matching Python, successful service restart/reboot/Wi-Fi recovery and correct-looking MQTT output through the existing Node-RED webpage. The new SBMS reception needs a Pi check; SQLite logging/history API, changed-IP/broker-restart and long unattended checks remain pending. See [BUILD-VALIDATION.md](BUILD-VALIDATION.md) and [NEXT-BUILD-CHANGES.md](NEXT-BUILD-CHANGES.md).
+Current step: [Pi collector 0.5.0](../node.js/README.md) adds selected continuous SQLite history to existing Pico/MQTT/SBMS acquisition. Use [logging setup](../node.js/LOGGING.md) for private sensor selection, UTC summaries, retention and read-only inspection. Validate live Pi logging, gaps/restarts and directional totals next, then implement the local history API and Android/browser viewer. See [BUILD-VALIDATION.md](BUILD-VALIDATION.md) and [NEXT-BUILD-CHANGES.md](NEXT-BUILD-CHANGES.md).
 
 Direction discussed on 2026-10-08: continuous logging belongs on the headless Pi Zero 2 W because the Android head unit is not powered 24/7. Prefer a lightweight collector with persistent history and a small API; SQLite and a browser/Android viewer are the current proposal. Keep history outside zram-managed folders. The original direct Android/embedded-broker route below is a future option to reassess, not the selected logging architecture.
 
@@ -17,3 +17,4 @@ Direction discussed on 2026-10-08: continuous logging belongs on the headless Pi
 An embedded broker is a feasibility candidate, not yet a selected library or proven Android implementation. ElectroDacus must publish to that broker's address; an MQTT subscriber cannot receive a publisher directly without a broker.
 
 Reference guidance: [Android foreground-service types](https://developer.android.com/develop/background-work/services/fgs/service-types), [background-start restrictions](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start), [local-network permissions](https://developer.android.com/privacy-and-security/local-network-permission), and [Moquette broker project](https://github.com/moquette-io/moquette). Moquette's Android embedding notes are old; verify current compatibility rather than following their old SDK workaround.
+

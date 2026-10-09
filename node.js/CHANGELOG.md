@@ -1,5 +1,15 @@
 # Pico base changelog
 
+## 0.5.0 — 2026-10-09
+
+- Add optional persistent SQLite logging using Node's built-in module and a private parent `PicoData/logging.json` selection. Keep MQTT fields/values, units, names, sign handling, wire settings and silent default unchanged.
+- Use every validated ID-based Pico snapshot before legacy filtering/throttling. Log the selected battery instance once, selected load shunts, raw secondary voltage, pressure/outside temperature, and SBMS battery/PV1/PV2/external-load channels. Do not automatically select the duplicate physical main-shunt alias, Pico internal voltage or other sensors.
+- Accumulate duration-weighted instantaneous watts, raw signed amps/volts, relevant-device last SOC, additive Wh/Ah, verified directional totals and separate coverage into UTC minute/hour/day/month summaries. Track last pressure/hourly temperature and daily temperature extrema. Use fresh SBMS pack voltage for both PV channels following confirmation that their current is supplied to the battery. Keep unverified directional classifications unavailable.
+- Apply requested retention, checkpoint partial summaries every minute, flush normal shutdown, prevent overlapping writers and recover saved sums without bridging downtime. Invalidate missing/stale inputs, handle clock steps and pause logging visibly on storage failure while retaining MQTT acquisition.
+- Separate stable metric IDs, source/display names and configuration fingerprints. Preserve rename history and reject implicit rebinding of existing metrics.
+- Add private selection generation, read-only history inspection and offline capture replay; document configuration, storage outside zram, the uncommitted-minute power-loss window, sign/voltage limitations and live Pi checks. The API/Android viewer is not included in this logging step.
+- Validate calculations, freshness, UTC/calendar boundaries, retention, restart/crash recovery, single-writer/read-only access, mapping safety, silent combined collection and unchanged MQTT/Python output. Private capture replay passes with the duplicate main shunt and Pico internal voltage excluded. Raw recordings, inventory and system details remain private.
+
 ## 0.4.0 — 2026-10-08
 
 - Receive ElectroDacus JSON from `/Ella/sbms` using the existing MQTT connection and credentials, independently of Pico acquisition. Retry subscription refusal and resubscribe after broker reconnection.
@@ -37,3 +47,4 @@
 - Provide raw capture recording, offline verification/replay and Python comparison.
 - Make flat installation self-contained by bundling the unchanged Python comparison source; 16 automated tests pass.
 - Record the owner's real Pico verification: 108 TCP replies and 1,096 UDP packets pass length/CRC checks; all 1,096 outputs match Python with zero differences. Real reconnect testing remains pending.
+

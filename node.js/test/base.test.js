@@ -342,16 +342,24 @@ test('missing default config fails visibly without readings or credentials', t =
   assert.equal(conflict.status, 2); assert.ok(conflict.stderr.includes('Usage:'));
 });
 
-test('simultaneous SBMS reception preserves live Pico MQTT JSON and its capture verification', async t => {
+for (const logging of [false, true]) test(`simultaneous SBMS/Pico preserves MQTT and capture: logging ${logging}`, async t => {
   const sim = await simulator(t), broker = await mqttBroker(t);
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ella-combined-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   const config = path.join(directory, 'mqtt'), capture = path.join(directory, 'capture.jsonl');
   fs.writeFileSync(config, `server=127.0.0.1\nport=${broker.port}\nprefix=/Ella/Pico/\nusername=test-user\npassword=test-pass=extra\nsbms_cells=1,2,3,4\n`);
   const packets = []; broker.events.on('publish', packet => packets.push(packet));
+  const loggingFile = path.join(directory, 'logging.json');
+  if (logging) fs.writeFileSync(loggingFile, JSON.stringify({ database: 'history.sqlite', commitSeconds: 1, metrics: [
+    { id: 'battery', source: 'pico', sensorId: 15, sensorType: 'battery', kind: 'electrical', role: 'battery', polarity: 1, voltage: 'sbms' },
+    { id: 'secondary', source: 'pico', sensorId: 20, sensorType: 'volt', kind: 'voltage' },
+    { id: 'sbms-battery', source: 'sbms', field: 'battery', kind: 'electrical', role: 'battery', polarity: 1, voltage: 'self' },
+    { id: 'pv2', source: 'sbms', field: 'pv2', kind: 'electrical', role: 'supply', polarity: null, voltage: 'self' },
+    { id: 'pv1', source: 'sbms', field: 'pv1', kind: 'electrical', role: 'supply', polarity: null, voltage: 'self' },
+  ] }));
   const child = spawn(process.execPath, [path.join(__dirname, '../bin/pico.js'), '--mqtt-config', config,
     '--ip', '127.0.0.1', '--udp-port', String(sim.port), '--tcp-port', String(sim.port),
-    '--duration', '1.2', '--record', capture, '--stdout', '--sbms-stdout']);
+    '--duration', '1.8', '--record', capture, ...(logging ? ['--logging-config', loggingFile] : ['--stdout', '--sbms-stdout'])]);
   t.after(() => { if (child.exitCode === null) child.kill(); });
   let stdout = '', stderr = '', second = 1;
   child.stdout.on('data', data => { stdout += data; }); child.stderr.on('data', data => { stderr += data; });
@@ -362,8 +370,24 @@ test('simultaneous SBMS reception preserves live Pico MQTT JSON and its capture 
   t.after(() => clearInterval(timer));
   const code = await new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
   clearInterval(timer); assert.equal(code, 0, stderr);
-  const lines = stdout.trim().split('\n').map(line => JSON.parse(line));
-  const pico = lines.filter(line => line.source !== 'sbms'), sbms = lines.filter(line => line.source === 'sbms');
+  const lines = logging ? [] : stdout.trim().split('\n').map(line => JSON.parse(line));
+  const pico = logging ? packets.map(p => JSON.parse(p.payload.toString())) : lines.filter(line => line.source !== 'sbms');
+  const sbms = logging ? fs.readFileSync(capture, 'utf8').trim().split('\n').map(JSON.parse).filter(r => r.kind === 'sbms').map(r => r.reading) : lines.filter(line => line.source === 'sbms');
+  if (logging) {
+    assert.equal(stdout, ''); assert.ok(stderr.includes('\"source\":\"logging\",\"state\":\"started\"'));
+    assert.equal(stderr.includes('\"state\":\"failed\"'), false);
+    const { readLoggingConfig } = require('../lib/history-config'), { inspect } = require('../bin/history');
+    const history = inspect(readLoggingConfig(loggingFile));
+    assert.equal(history.integrity, 'ok'); assert.ok(history.savedAt);
+    const battery = history.metrics.find(m => m.id === 'battery').rows[0];
+    assert.ok(battery.samples > packets.length); assert.ok(battery.powerCoverageSeconds > 0);
+    assert.equal(battery.values[3], 83);
+    assert.equal(history.metrics.find(m => m.id === 'sbms-battery').rows[0].soc, 62);
+    assert.ok(Math.abs(history.metrics.find(m => m.id === 'secondary').rows[0].value - 9.999) < 1e-9);
+    assert.equal(history.metrics.find(m => m.id === 'pv2').rows[0].values[1], 0);
+    assert.equal(history.metrics.find(m => m.id === 'pv2').rows[0].values[0], 0);
+    assert.ok(Math.abs(history.metrics.find(m => m.id === 'pv1').rows[0].values[0] - 13.4) < 1e-9);
+  }
   assert.ok(pico.length > 0); assert.ok(sbms.length > 0); assert.ok(packets.length > 0);
   assert.equal(sbms[0].voltage, 13.4); assert.equal(sbms[0].current.pv2, 0);
   for (const packet of packets) {

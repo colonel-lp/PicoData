@@ -1,6 +1,17 @@
 # Next build changes
 
-## Current authorized step: ElectroDacus reception in collector 0.4.0
+## Current authorized step: SQLite logging in collector 0.5.0
+
+- [x] Implement optional SQLite history and private sensor selection alongside unchanged Pico MQTT publishing and SBMS reception.
+- [x] Log the main battery through its selected battery instance; exclude the duplicate physical main-shunt alias. Keep selected secondary voltage raw and exclude Pico internal voltage from history.
+- [x] Use fresh SBMS voltage for derived Pico battery/load watts; retain raw signed current, source/display names, relevant-device SOC and stable database IDs. Check configuration fingerprints before using a selected sensor.
+- [x] Implement UTC duration-aware electrical summaries, additive energy/directional totals, coverage, environmental summaries and requested retention. Use fresh SBMS pack voltage for PV1/PV2 battery-side power; leave unverified directional classifications unavailable.
+- [x] Save partial summaries every minute, flush graceful stops, resume saved sums without extending over downtime, prevent concurrent writers and report storage failures/clock steps.
+- [x] Add configuration generation, read-only inspection and private offline replay. Keep capture/configuration/database/system details out of published source.
+- [ ] Install private configuration on the Pi; confirm saved rows, live value/energy comparisons, sign/voltage settings, reboot/network/broker recovery, storage use and long unattended operation.
+- [ ] Implement the local history API after live logging checks, then build the Android/browser history display. Neither is included in 0.5.0.
+
+## Previous authorized step: ElectroDacus reception in collector 0.4.0
 
 - [x] Receive `/Ella/sbms` on the existing MQTT connection independently of Pico availability; resubscribe after reconnection and retry denied subscription without stopping publishing.
 - [x] Decode all four mA current fields to amps, SOC and pack voltage from a private configured cell map; include PV2 and preserve valid zeros/current signs.
@@ -8,7 +19,7 @@
 - [x] Preserve original Pico MQTT output and quiet service operation; add `--sbms-stdout`, `--no-sbms` and local SBMS capture records for diagnostics.
 - [x] Owner supplied a short real Pi run showing simultaneous Pico/SBMS connection, approximately one SBMS sample per second, valid derived pack voltage and normal timed shutdown. Keep raw readings/timestamps/runtime details private.
 - [ ] Check actual broker restart, stale/repeated/retained behaviour and long unattended SBMS collection. Confirm charging polarity under known conditions before directional integration.
-- [ ] Implement selected SQLite history, rollups/retention and restart recovery next, followed by the local history API. No database/API is added in 0.4.0.
+- [x] Selected SQLite history, retention and restart recovery are added in 0.5.0 above. No database/API was part of 0.4.0; the API remains pending.
 
 ## Previous Pico base and service work
 
@@ -111,7 +122,7 @@
 - [x] Confirm the active cells in the supplied example and that its negative battery current is discharge. Keep the actual cell map and present installation inventory private.
 - [x] Convert PV1/PV2 mA to A with division by 1000 in reception, preserving valid zero readings.
 - [ ] Include both solar channels in electrical history; log valid zeros distinctly from unavailable readings.
-- [ ] Include PV2 for future use, with its directional verification performed when connected. This confirmation does not establish its charging polarity from the current zero sample.
+- [x] Include PV2 for future use, with its directional verification performed when connected. This confirmation does not establish its charging polarity from the current zero sample.
 
 ## Agreed logging choices and voltage review — 2026-10-09
 
@@ -143,3 +154,9 @@
 - [ ] Record the selected secondary voltage unchanged. Any later calibration/fallback requires explicit validation under different operating conditions, not a fixed offset inferred from one sample.
 - [ ] Keep extra current-field counter candidates diagnostic-only until scale, deadband, signs, rollover and resets are established. Continue with sample/time-based integration for primary history.
 - [ ] Consume raw decoded ID-keyed Pico snapshots before public filtering/throttling, while preserving the original MQTT contract and keeping cross-source timing/freshness explicit.
+
+
+## PV voltage confirmation — 2026-10-09
+
+- [x] Owner confirms both PV currents are charge supplied to the battery; use fresh SBMS pack voltage for their watts/Wh, not an assumed panel voltage.
+- [x] Log current, battery-side power/energy, coverage and valid zeros for both PV channels with the agreed electrical periods/retention. Preserve raw signs; polarity verification remains separate.

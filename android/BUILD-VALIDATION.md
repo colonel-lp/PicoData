@@ -1,5 +1,21 @@
 # Build validation
 
+## Pi collector 0.5.0 — SQLite history, 2026-10-09
+
+Source parent: `6511c297dbed0bbb4fd1415e4cb7758c4d944c3b`. No npm database dependency is added; SQLite support is loaded only when history is used.
+
+The complete **57-test suite passes under Node 22, with no failures**, including 17 logger tests. Syntax, private generator/replay and read-only inspection checks pass. New fixtures use synthetic configuration/measurements. Version identifiers are 0.5.0 in package metadata and documentation.
+
+- Check duration-weighted instantaneous watts versus the product of averages, raw signed current and independent directional energy/coverage. Keep Pico and SBMS SOC separate, preserve valid zeros, and derive battery-side PV watts/Wh from fresh SBMS pack voltage while keeping unverified directional classifications null.
+- Check independent current/voltage freshness, immediate source disconnect invalidation, no fallback voltage, no integration across outages/restarts, and invalid SOC handling.
+- Split electrical integrals over UTC minute/hour/day/month boundaries, including a calendar-month transition and leap-February boundaries. Preserve parent totals after short-record pruning; verify calendar-month expiry and indefinite environmental days/electrical months.
+- Check last hourly/daily pressure and all-sample outside-temperature extrema, empty-period behaviour, partial checkpoint resume, exclusive writer/read-only access, private permissions and rollback/lock release after SIGKILL.
+- Verify name changes preserve series identity, physical-binding/type mismatches disable only the affected measurement, existing series cannot be silently rebound, and forward/backward clock corrections skip unsafe intervals and remain visible in inspection.
+- Simultaneously receive Pico/SBMS and log through the actual collector CLI while checking silence, valid coverage, hidden ID-based secondary voltage, relevant SOC, PV2 zero and exact MQTT/Python payload agreement. The wire broker is a loopback fixture, not a production Mosquitto hardware test.
+- Privately replay the reviewed capture: all 2,957 Pico packets and 300 SBMS receipt records are accepted, database integrity passes, the canonical battery-instance selection excludes its physical-shunt alias, and Pico internal voltage is not selected. PV1/PV2 use the owner-confirmed battery-voltage reference; PV2 zero power remains covered and no voltage correction is introduced. Raw data, IDs/names and system details are excluded from publication.
+
+**Remaining Pi checks:** create the private selection, compare saved averages/energy/coverage with controlled loads and source displays, verify charge/PV signs and compare the confirmed battery-side voltage/power readings, confirm checkpoints/reboots/network/broker recovery, and assess storage growth and long unattended performance. Automated/replay checks do not prove live SD-card durability or calibration. The API/Android viewer is not implemented in this version.
+
 ## Independently reviewed private Pico/SBMS capture — 2026-10-09
 
 The owner supplied a collector 0.4.0 local recording. Independent `verify-capture.js` execution returned **54/54 TCP length matches and CRC matches**, **2,957/2,957 UDP length matches and CRC matches**, one configuration and `ok: true`. The recording also includes 300 normalized SBMS receipt records. The configured sensor map reconstructed from raw configuration exactly matches the recorder's map.
@@ -109,3 +125,4 @@ This is owner-reported hardware evidence; the raw capture has not been supplied 
 Incoming framing/CRC interpretation was derived from upstream request layouts and passed every recorded response/packet in the owner's reported capture. This validates that capture, not every firmware or failure condition. The recorder includes raw TCP data to diagnose failures. The live receiver currently bounds-checks fields but does not enforce receive CRCs.
 
 No real Pico, SBMS0, Pi or Android hardware test has been performed by the agent. The original 0.1.0 step built no MQTT transport; 0.2.0 adds the optional publisher described above. No APK, production broker or SignalK integration has been built.
+

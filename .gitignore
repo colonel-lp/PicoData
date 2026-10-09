@@ -2,3 +2,17 @@
 # Platform files
 .DS_Store
 Thumbs.db
+
+
+# Private collector settings and history
+/mqtt
+/mqtt.local
+/logging.json
+/history/
+*.jsonl
+*.sqlite
+*.sqlite-*
+*.sqlite.writer-lock
+*.db
+*.db-*
+*.db.writer-lock

@@ -1,6 +1,6 @@
 # Database and logging plan
 
-Updated discussion draft, 2026-10-09. The owner's logging/retention requests below supersede the initial broad candidate list and retention proposal. Collector 0.4.0 now implements ElectroDacus subscription/decoding as the first acquisition step; see [README.md](README.md). SQLite logging, rollups and the history API remain unimplemented. Calculation/storage refinements and the remaining decisions require agreement.
+Updated 2026-10-09. Collector 0.5.0 implements selected SQLite logging, UTC summaries, retention, checkpoints and inspection following the owner's request to start testing. See [LOGGING.md](LOGGING.md) for the implemented contract and setup. The history API remains pending. Earlier proposals/reviews below record design history; the implementation decisions here and LOGGING.md supersede unresolved alternatives.
 
 ## Owner-requested measurements and retention
 
@@ -118,12 +118,12 @@ Access credentials, network transport/TLS choice, API bind address/port and Pi a
 
 References: [SQLite server-side application pattern](https://sqlite.org/whentouse.html), [Node.js HTTP server](https://nodejs.org/api/http.html).
 
-## Decisions still needed
+## Remaining verification and API decisions
 
 - Finalize directional Wh/Ah/coverage storage and verification; time-weighted instantaneous watts and last valid device-specific SOC are agreed.
-- Hourly pressure/outside temperature: last valid reading or an average? Daily pressure is explicitly the last valid reading; daily temperature is explicitly minimum/maximum.
-- Precise retention cutoffs; UTC boundaries and identical electrical retention for ElectroDacus are agreed.
-- Verify current polarity, PV current measurement point, freshness/alignment rules and acceptable power-loss window. All Pico load shunts are owner-confirmed on the main battery supply; other battery entries still require their own voltage association.
+- Implemented hourly environmental choice: last valid reading. Daily pressure is the last valid reading; daily temperature records extrema over all valid samples.
+- Implemented retention expires completed intervals by their end timestamp; calendar-month subtraction clamps the day when needed. UTC boundaries and identical electrical retention for ElectroDacus are applied.
+- Verify current polarity and live freshness/alignment; the owner has confirmed PV current is battery-side and the initial checkpoint interval is 60 seconds. All Pico load shunts are owner-confirmed on the main battery supply; other battery entries still require their own voltage association.
 
 Reference: [SQLite appropriate uses](https://sqlite.org/whentouse.html).
 
@@ -165,3 +165,16 @@ The owner supplied a local acquisition recording for independent analysis. Keep 
 - The existing Pico collector receives about ten raw packets per second in this recording, while SBMS receipt is about once per second. The logger should use timestamped internal snapshots before legacy output throttling/filtering, with bounded work and appropriate source alignment. Receipt timestamps identify arrival, not necessarily simultaneous physical measurement; preserve this limitation in cross-source calibration/integration.
 
 The source/version remain unchanged. Logging/API implementation is still the next authorized implementation step when requested; this review provides acquisition/mapping evidence rather than a completed database or sensor calibration.
+
+
+## Authorized logging implementation — 0.5.0
+
+The owner requested code to start logging. The canonical Pico main-battery measurement is its configured battery instance, which provides current and SOC; its separate physical main-shunt display alias is excluded from history. The selection is private, ID-based and generated from the acquisition capture rather than hard-coded into public source. Pico internal voltage is excluded; only the selected raw secondary voltage is logged independently. No constant voltage correction is applied.
+
+`lib/logger.js` accumulates bounded last-valid-reading integrals at UTC boundaries. `lib/history-store.js` persists atomic checkpoints, source/display names and selected metric definitions in SQLite; higher periods accumulate additive integrals independently so pruning child records cannot lose parent totals. Last valid SOC is device-specific. Retained/repeated SBMS messages remain filtered upstream. Freshness defaults are 2 seconds for Pico and 3 for SBMS, with immediate disconnect invalidation. Current, voltage and power coverage are independent, and cross-source Pico watts use fresh SBMS pack voltage only.
+
+Electrical arrays preserve signed source current/net watts; confirmed per-channel polarity separately classifies directional totals. SBMS external-load current is kept distinct from battery current without inferring a gross-load balance. The owner confirms both PV currents are supplied to the battery, so each PV input uses its own fresh SBMS pack voltage for battery-side watts/Wh alongside current/Ah. Missing voltage leaves a power gap; valid zero current produces zero watts. Only unverified directional classification remains null. This confirmation supersedes the earlier PV voltage-domain uncertainty; these values describe battery charging power rather than panel-terminal power.
+
+Hourly environmental values use the last valid sample; daily pressure uses the last sample and outside temperature uses all-sample extrema. The implemented retention and calendar cutoffs are listed in LOGGING.md. A 60-second checkpoint allows up to one uncommitted minute of loss after an abrupt shutdown; graceful stop flushes. SQLite remains outside zram-managed folders, single-writer, and safe to inspect through a separate read-only connection. Source selection/fingerprints and real recordings remain private. Database IDs are stable within the configured mapping; hardware identity persistence after reconfiguration still needs verification.
+
+The local history API, access policy and Android request/chart implementation remain the next stage after live Pi checks. Read-only `bin/history.js` is available now for initial testing; it is not a network API. No Android APK is created.

@@ -1,0 +1,87 @@
+{
+  "database": "history/history.sqlite",
+  "commitSeconds": 60,
+  "maxGapSeconds": {
+    "pico": 2,
+    "sbms": 3
+  },
+  "metrics": [
+    {
+      "id": "pico-battery",
+      "source": "pico",
+      "sensorId": 101,
+      "sensorType": "battery",
+      "kind": "electrical",
+      "role": "battery",
+      "polarity": 1,
+      "voltage": "sbms"
+    },
+    {
+      "id": "pico-load-102",
+      "source": "pico",
+      "sensorId": 102,
+      "sensorType": "current",
+      "kind": "electrical",
+      "role": "load",
+      "polarity": -1,
+      "voltage": "sbms"
+    },
+    {
+      "id": "secondary-voltage",
+      "source": "pico",
+      "sensorId": 103,
+      "sensorType": "volt",
+      "kind": "voltage"
+    },
+    {
+      "id": "outside-temperature",
+      "source": "pico",
+      "sensorId": 104,
+      "sensorType": "thermometer",
+      "kind": "temperature"
+    },
+    {
+      "id": "barometer",
+      "source": "pico",
+      "sensorId": 105,
+      "sensorType": "barometer",
+      "kind": "barometer"
+    },
+    {
+      "id": "sbms-battery",
+      "source": "sbms",
+      "field": "battery",
+      "kind": "electrical",
+      "role": "battery",
+      "polarity": 1,
+      "voltage": "self"
+    },
+    {
+      "id": "sbms-pv1",
+      "source": "sbms",
+      "field": "pv1",
+      "kind": "electrical",
+      "role": "supply",
+      "polarity": null,
+      "voltage": "self"
+    },
+    {
+      "id": "sbms-pv2",
+      "source": "sbms",
+      "field": "pv2",
+      "kind": "electrical",
+      "role": "supply",
+      "polarity": null,
+      "voltage": "self"
+    },
+    {
+      "id": "sbms-externalLoad",
+      "source": "sbms",
+      "field": "externalLoad",
+      "kind": "electrical",
+      "role": "unknown",
+      "polarity": null,
+      "voltage": "self"
+    }
+  ]
+}
