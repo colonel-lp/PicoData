@@ -1,5 +1,20 @@
 # Build validation
 
+## Pi collector 0.6.0 — combined battery intervals, 2026-10-09
+
+Source parent: `7b492024ad2f645acf482815b284961b83dba3f3`. Package metadata/documentation are 0.6.0; npm dependencies and MQTT acquisition/publishing remain unchanged.
+
+**64 tests passed, 0 failed under Node 22**, including seven combined-history tests and the existing logger/MQTT/Python checks. Syntax checks also pass. All new public fixtures are synthetic.
+
+- Assert a single physical battery row contains all selected measurements with field-level source/unit references, distinct SOC/current, valid zero PV2, independent coverage and directional/net energy; other shunts/environmental rows remain separate.
+- Upgrade synthetic schema-1 databases across more than one migration batch, including committed data still in WAL. Compare every saved statistic, preserve name/checkpoint/clock metadata and verify a private schema-1 backup with SQLite integrity checks.
+- Force a migration error after transfer begins; verify original rows/schema version remain intact, retry succeeds and later opens do not repeat migration or overwrite the first backup.
+- Check partial updates/restarts do not overwrite other members, missing-device fields remain null, UTC retention applies to the combined row and implicit group rebinding is rejected.
+- Check read-only `--battery`, existing per-metric compatibility views and simultaneous real-CLI Pico/SBMS logging with exact MQTT/Python payload parity and silent normal readings.
+- Privately migrate the earlier capture-derived database and compare every original statistic against its destination. Database integrity passes; no separate battery-channel history rows remain. Actual readings/identities, raw files and system details remain excluded from publication.
+
+Owner has inspected an initial live minute record from 0.5.0. The new 0.6.0 migration/combined output still needs a Pi update/restart check; live energy calibration, storage performance and long-run recovery remain pending. No network API or Android app is added.
+
 ## Pi collector 0.5.0 — SQLite history, 2026-10-09
 
 Source parent: `6511c297dbed0bbb4fd1415e4cb7758c4d944c3b`. No npm database dependency is added; SQLite support is loaded only when history is used.

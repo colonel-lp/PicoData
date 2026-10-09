@@ -1,5 +1,14 @@
 # Pico base changelog
 
+## 0.6.0 — 2026-10-09
+
+- Store one combined battery record per UTC minute/hour/day/month interval. Keep Pico/SBMS current and relevant-device SOC, primary/secondary voltage, both PV channels and external-load measurements distinct within the record, with stable source references.
+- Present named values, per-field coverage, per-measurement energy/sample totals and input receipt timestamps. Preserve all numerical calculations, raw signs, freshness rules, retention and independent source availability.
+- Automatically back up and migrate schema-1 battery rows to schema 2 in a transaction using bounded batches. Preserve all existing statistics/name metadata and remove duplicate per-channel battery storage. Keep other shunt/environmental records unchanged; retain the first pre-upgrade backup.
+- Add `history.js --battery`; default inspection displays the combined battery alongside other sensors. Existing per-metric commands remain read-only views into combined storage. Existing generated private configurations work without edits; new selections record explicit group bindings.
+- All 64 tests pass under Node 22, covering migration/WAL backup, rollback and retry, idempotence, partial checkpoints, missing-versus-zero values, retention, source references and group rebinding protection. Retain full MQTT/Python compatibility and silent collection tests; privately compare migrated recorded statistics without publishing raw data or system inventory.
+- No network API or Android app is added in this storage update.
+
 ## 0.5.0 — 2026-10-09
 
 - Add optional persistent SQLite logging using Node's built-in module and a private parent `PicoData/logging.json` selection. Keep MQTT fields/values, units, names, sign handling, wire settings and silent default unchanged.

@@ -1,6 +1,7 @@
 'use strict';
 const fs = require('node:fs');
 const path = require('node:path');
+const { resolveBatteryGroup } = require('./battery-history');
 const TYPES = { electrical: ['battery', 'current'], voltage: ['volt'], temperature: ['thermometer'], barometer: ['barometer'] };
 function validateConfig(input, filename = path.resolve('logging.json')) {
   if (!input || !Array.isArray(input.metrics) || !input.metrics.length || input.metrics.length > 64) throw Error('Logging needs 1–64 selected metrics');
@@ -22,6 +23,7 @@ function validateConfig(input, filename = path.resolve('logging.json')) {
     if (bindings.has(binding)) throw Error('Duplicate source selection');
     bindings.add(binding); return { ...m };
   });
+  config.batteryGroup = resolveBatteryGroup(config.metrics, input.batteryGroup);
   return config;
 }
 function readLoggingConfig(filename) { return validateConfig(JSON.parse(fs.readFileSync(filename, 'utf8')), filename); }

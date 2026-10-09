@@ -83,5 +83,13 @@
       "polarity": null,
       "voltage": "self"
     }
-  ]
+  ],
+  "batteryGroup": {
+    "picoBattery": "pico-battery",
+    "sbmsBattery": "sbms-battery",
+    "secondaryVoltage": "secondary-voltage",
+    "pv1": "sbms-pv1",
+    "pv2": "sbms-pv2",
+    "externalLoad": "sbms-externalLoad"
+  }
 }

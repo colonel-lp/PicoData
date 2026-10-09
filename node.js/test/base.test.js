@@ -350,7 +350,7 @@ for (const logging of [false, true]) test(`simultaneous SBMS/Pico preserves MQTT
   fs.writeFileSync(config, `server=127.0.0.1\nport=${broker.port}\nprefix=/Ella/Pico/\nusername=test-user\npassword=test-pass=extra\nsbms_cells=1,2,3,4\n`);
   const packets = []; broker.events.on('publish', packet => packets.push(packet));
   const loggingFile = path.join(directory, 'logging.json');
-  if (logging) fs.writeFileSync(loggingFile, JSON.stringify({ database: 'history.sqlite', commitSeconds: 1, metrics: [
+  if (logging) fs.writeFileSync(loggingFile, JSON.stringify({ database: 'history.sqlite', commitSeconds: 1, batteryGroup: {picoBattery:'battery',sbmsBattery:'sbms-battery',secondaryVoltage:'secondary',pv1:'pv1',pv2:'pv2'}, metrics: [
     { id: 'battery', source: 'pico', sensorId: 15, sensorType: 'battery', kind: 'electrical', role: 'battery', polarity: 1, voltage: 'sbms' },
     { id: 'secondary', source: 'pico', sensorId: 20, sensorType: 'volt', kind: 'voltage' },
     { id: 'sbms-battery', source: 'sbms', field: 'battery', kind: 'electrical', role: 'battery', polarity: 1, voltage: 'self' },
@@ -379,14 +379,19 @@ for (const logging of [false, true]) test(`simultaneous SBMS/Pico preserves MQTT
     const { readLoggingConfig } = require('../lib/history-config'), { inspect } = require('../bin/history');
     const history = inspect(readLoggingConfig(loggingFile));
     assert.equal(history.integrity, 'ok'); assert.ok(history.savedAt);
-    const battery = history.metrics.find(m => m.id === 'battery').rows[0];
-    assert.ok(battery.samples > packets.length); assert.ok(battery.powerCoverageSeconds > 0);
-    assert.equal(battery.values[3], 83);
-    assert.equal(history.metrics.find(m => m.id === 'sbms-battery').rows[0].soc, 62);
-    assert.ok(Math.abs(history.metrics.find(m => m.id === 'secondary').rows[0].value - 9.999) < 1e-9);
-    assert.equal(history.metrics.find(m => m.id === 'pv2').rows[0].values[1], 0);
-    assert.equal(history.metrics.find(m => m.id === 'pv2').rows[0].values[0], 0);
-    assert.ok(Math.abs(history.metrics.find(m => m.id === 'pv1').rows[0].values[0] - 13.4) < 1e-9);
+    const battery = history.battery.rows[0];
+    assert.equal(history.schemaVersion,2);
+    assert.equal(history.metrics.length,0); // The configured channels share one record.
+    assert.ok(battery.samples.picoBattery > packets.length); assert.ok(battery.coverageSeconds.picoWatts > 0);
+    assert.equal(battery.values.picoSoc,83); assert.equal(battery.values.sbmsSoc,62);
+    assert.ok(Math.abs(battery.values.secondaryVoltage - 9.999) < 1e-9);
+    assert.equal(battery.values.pv2Current,0); assert.equal(battery.values.pv2Watts,0);
+    assert.ok(Math.abs(battery.values.pv1Watts - 13.4) < 1e-9);
+    assert.equal(history.battery.sources.picoCurrent.sensorId,15);
+    assert.equal(history.battery.sources.sbmsCurrent.source,'sbms');
+    const {sqlite}=require('../lib/history-store'), db=new (sqlite())(path.join(directory,'history.sqlite'),{readOnly:true});
+    try { assert.equal(db.prepare('SELECT COUNT(*) AS n FROM history').get().n,0); }
+    finally {db.close();}
   }
   assert.ok(pico.length > 0); assert.ok(sbms.length > 0); assert.ok(packets.length > 0);
   assert.equal(sbms[0].voltage, 13.4); assert.equal(sbms[0].current.pv2, 0);

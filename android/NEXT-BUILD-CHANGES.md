@@ -1,6 +1,15 @@
 # Next build changes
 
-## Current authorized step: SQLite logging in collector 0.5.0
+## Current authorized step: combined battery history in collector 0.6.0
+
+- [x] Owner requests one combined battery record per interval with field-level source references, instead of separate battery/SBMS history rows.
+- [x] Include primary/secondary voltage, distinct Pico/SBMS current and SOC, PV1/PV2 and external load, retaining independent coverage and energy/statistics.
+- [x] Back up and migrate existing history atomically without recalculating/discarding saved values; keep other shunts, pressure and outside temperature in their current records and periods.
+- [x] Add combined inspection and preserve existing per-metric commands as views; support existing private configuration without regeneration.
+- [ ] Update/restart the Pi collector and compare combined values/coverage with the existing live setup. Preserve the pre-upgrade backup and report any migration issues.
+- [ ] History API and Android/browser display remain subsequent stages.
+
+## Previous authorized step: SQLite logging in collector 0.5.0
 
 - [x] Implement optional SQLite history and private sensor selection alongside unchanged Pico MQTT publishing and SBMS reception.
 - [x] Log the main battery through its selected battery instance; exclude the duplicate physical main-shunt alias. Keep selected secondary voltage raw and exclude Pico internal voltage from history.
@@ -160,3 +169,7 @@
 
 - [x] Owner confirms both PV currents are charge supplied to the battery; use fresh SBMS pack voltage for their watts/Wh, not an assumed panel voltage.
 - [x] Log current, battery-side power/energy, coverage and valid zeros for both PV channels with the agreed electrical periods/retention. Preserve raw signs; polarity verification remains separate.
+
+## Owner-reported initial history check — 2026-10-09
+
+- [x] Owner inspected an actual saved minute electrical record and could identify voltage/SOC. Keep the posted values/timestamps private. This verifies initial live history visibility, not all channels, energy accuracy, retention or long-run recovery.

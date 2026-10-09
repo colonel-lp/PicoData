@@ -1,8 +1,8 @@
-# Ella Pico base — 0.5.0
+# Ella Pico base — 0.6.0
 
 Standalone Node.js starting point for the Android Pico reader. It uses the updated acquisition code preserved in [`../_old/pico2signalk/`](../_old/pico2signalk/), with the owner's [`../python/pico-mqtt.py`](../python/pico-mqtt.py) sensor mappings, calculations and Ella JSON format carried over. MQTT publishing is enabled by default using `PicoData/mqtt` and the existing Ella JSON contract; `--no-mqtt` selects reader-only operation. SignalK remains excluded.
 
-**Status:** version 0.5.0 adds selected Pico/SBMS SQLite history with UTC summaries, retention, checkpoints and private sensor selection. MQTT payloads and quiet service operation are preserved. See [logging setup and inspection](LOGGING.md). The history API and Android viewer are subsequent stages. Earlier owner-reported Pico/Python capture and dashboard/recovery checks passed; the SBMS receiver has also received live data on the Pi. New logging needs live Pi testing. See [build validation](../android/BUILD-VALIDATION.md) for automated/replay evidence and pending checks.
+**Status:** version 0.6.0 stores one combined battery record per UTC interval, with named Pico/SBMS/solar values and field-level source references. It automatically migrates and backs up 0.5.0 history; other shunts and environmental records retain their existing layout, calculations and retention. MQTT payloads and quiet service operation are preserved. See [logging setup and inspection](LOGGING.md). The history API and Android viewer are subsequent stages. Earlier owner-reported Pico/Python capture and dashboard/recovery checks passed; the SBMS receiver has also received live data on the Pi. New logging needs live Pi testing. See [build validation](../android/BUILD-VALIDATION.md) for automated/replay evidence and pending checks.
 
 ## Run on the Pi
 
@@ -164,3 +164,5 @@ Packet fields are bounds-checked. Unknown field types, broken separators and unt
 ## Continuous history
 
 Follow [LOGGING.md](LOGGING.md) to create private `PicoData/logging.json`, start logging with the existing service, inspect saved summaries and replay a local capture. The default persistent database is `PicoData/history/history.sqlite`, outside `node.js/` so source updates preserve history. [logging.example.json](logging.example.json) uses fictional IDs; generate your real selection from the private configuration capture.
+
+For the combined battery record use `node bin/history.js --battery --limit 3`. Keep the existing private configuration/database during an upgrade; the collector performs the schema migration on startup.

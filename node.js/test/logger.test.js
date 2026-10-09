@@ -112,7 +112,8 @@ test('retention prunes short summaries but retains electrical months and environ
     const [start,end]=bounds(Date.parse('2026-01-01T00:00:00Z'),resolution); rows.push({id,resolution,start,end,data:{}});
   }
   logger.store.save(rows,time);
-  assert.deepEqual(logger.store.db.prepare('SELECT metric_id,resolution FROM history ORDER BY metric_id,resolution').all().map(r=>[r.metric_id,r.resolution]),[['battery','month'],['outside','day'],['outside','month']]);
+  assert.deepEqual(logger.store.db.prepare('SELECT metric_id,resolution FROM history ORDER BY metric_id,resolution').all().map(r=>[r.metric_id,r.resolution]),[['outside','day'],['outside','month']]);
+  assert.deepEqual(logger.store.db.prepare('SELECT resolution FROM battery_history').all().map(r=>r.resolution),['month']);
   assert.equal(new Date(monthBefore(time)).toISOString(),'2026-02-28T12:00:00.000Z'); assert.equal(new Date(monthBefore(Date.parse('2024-03-31T12:00:00Z'))).toISOString(),'2024-02-29T12:00:00.000Z');
   const [start,end]=bounds(time-10*86400000,'hour'); logger.store.save(['battery','outside'].map(id=>({id,resolution:'hour',start,end,data:{}})),time);
   assert.equal(row(config,'battery','hour'),undefined); assert.ok(row(config,'outside','hour'));
@@ -160,7 +161,7 @@ test('crash releases the writer lock and rolls back the uncommitted tail', async
   const {logger,config,directory}=setup(t); logger.close({advance:false}); const script=path.join(directory,'crash.cjs');
   fs.writeFileSync(script,`const {HistoryLogger}=require(${JSON.stringify(path.join(__dirname,'../lib/logger'))}); const l=new HistoryLogger(${JSON.stringify(config)},{automatic:false});
     l.store.save([{id:'battery',resolution:'hour',start:${BASE},end:${BASE+3600000},data:{ampSeconds:5}}],${BASE});
-    l.store.db.exec('BEGIN IMMEDIATE');l.store.db.prepare('UPDATE history SET data=?').run('{"ampSeconds":99}');process.stdout.write('ready\\n');setInterval(()=>{},1000);`);
+    l.store.db.exec('BEGIN IMMEDIATE');l.store.db.prepare('UPDATE battery_history SET data=?').run('{"picoBattery":{"ampSeconds":99}}');process.stdout.write('ready\\n');setInterval(()=>{},1000);`);
   const child=spawn(process.execPath,[script]); t.after(()=>{if(child.exitCode===null)child.kill('SIGKILL');});
   await new Promise((resolve,reject)=>{child.stdout.once('data',resolve);child.once('error',reject);child.once('exit',code=>{if(code!==null)reject(Error('Child exited before ready'));});});
   const closed=new Promise(resolve=>child.once('close',resolve)); child.kill('SIGKILL'); await closed;

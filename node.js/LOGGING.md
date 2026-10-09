@@ -1,6 +1,21 @@
-# Pi history logging — 0.5.0
+# Pi history logging — 0.6.0
 
 The collector writes selected measurements to SQLite when `PicoData/logging.json` exists. MQTT publishing and its existing JSON contract remain unchanged. No separate database server or npm database package is needed. Logging requires Node 22.13+ with built-in `node:sqlite`; reader-only/MQTT operation remains compatible with Node 18+. Node 22 can print one SQLite experimental-feature warning at startup.
+
+## Upgrade from 0.5.0
+
+Update the collector and restart the service using the existing configuration. **Do not delete the database or rerun configuration generation.** On startup, schema 1 is backed up to `history.sqlite.v1-backup.sqlite`, then upgraded to schema 2 in one transaction. The first pre-upgrade backup is retained and never overwritten. Interrupted backup staging can be retried; a failed migration rolls back the transfer and version change.
+
+Existing battery/SBMS/selected-secondary rows become one `battery_history` row per UTC interval. Values, integrals, SOC, timestamps, coverage and sample counts are copied without recalculation. Shunt/environmental rows stay in `history`; source/name metadata remains available. The migration uses bounded batches. The default generated 0.5.0 selection needs no edits. Do not run an older collector against schema 2; retain the pre-upgrade backup if a deliberate rollback is needed.
+
+Inspect the combined record:
+
+```bash
+cd ~/PicoData/node.js
+node bin/history.js --battery --resolution minute --limit 3
+```
+
+The default command also displays combined battery records plus other selected measurements. Older `--metric pico-battery`/`--metric sbms-pv1` commands still work as views into that same stored record; they do not create separate battery history. Read-only inspection of an older schema-1 copy remains available with `--metric`; `--battery` requires the collector to have migrated it first.
 
 ## Enable logging
 
@@ -30,8 +45,8 @@ After two minutes, read the database while the service is running:
 
 ```bash
 node bin/history.js
-node bin/history.js --metric pico-battery --resolution minute --limit 5
-node bin/history.js --metric sbms-battery --resolution hour --limit 24
+node bin/history.js --battery --resolution minute --limit 5
+node bin/history.js --battery --resolution hour --limit 24
 ```
 
 `integrity` should be `ok`, `savedAt` should advance and valid electrical rows should show positive coverage. This command is read-only. It reports the most recent checkpoint, so readings can be up to a minute behind live MQTT. `--config FILE` selects another private configuration. The history API and Android charts are a subsequent step.
@@ -66,7 +81,28 @@ Retention expires **completed buckets by their end timestamp**. One month means 
 
 ## Values and accuracy
 
-Electrical `values` are `[averageWatts, averageAmps, averageVolts]`; batteries add the last valid SOC from that device as element four. Missing values are `null`; a valid zero remains zero. SOC is not borrowed from another device or carried into an empty period. Raw current and derived net watts retain source signs. The secondary voltage is stored independently, without a calibration offset.
+Battery `values` is one object with named fields, not a positional array. `battery.sources` identifies each field's source, stable metric ID, exact source/display names, units and applicable voltage reference. Each interval includes independent `coverageSeconds`, `energy`, `samples` and last received timestamps. Power timestamps identify its current and voltage inputs separately; these are receipt times, not a claim of simultaneous physical sampling.
+
+| Combined battery field | Meaning/source |
+| --- | --- |
+| `voltage` | Average SBMS pack voltage |
+| `secondaryVoltage` | Average selected raw Pico voltage |
+| `picoCurrent`, `picoWatts`, `picoSoc` | Pico battery current, derived battery-bus watts, last valid Pico SOC |
+| `sbmsCurrent`, `sbmsWatts`, `sbmsSoc` | SBMS battery current/power, last valid SBMS SOC |
+| `pv1Current`, `pv1Watts` | PV1 charge current and battery-side power |
+| `pv2Current`, `pv2Watts` | PV2 charge current and battery-side power |
+| `externalLoadCurrent`, `externalLoadWatts` | SBMS external-load measurement, excluding monitor consumption |
+
+Current/voltage/power are interval averages; SOC is the last valid reading from its device. Missing measurements are `null`, with zero observed coverage; an explicit valid zero stays zero. A shared interval does not substitute one device's current/SOC for another or extend it over gaps. Neither battery current measurement is added to the other. Secondary voltage is retained without an offset.
+
+Other shunts retain `[averageWatts, averageAmps, averageVolts]` arrays. Their values are under `metrics`, separate from the single battery record. Pressure/temperature retain hourly/day rows. To inspect them:
+
+```bash
+node bin/history.js --metric barometer --resolution hour --limit 3
+node bin/history.js --metric outside-temperature --resolution day --limit 3
+```
+
+`batteryGroup` optionally maps `picoBattery`, `sbmsBattery`, `secondaryVoltage`, `pv1`, `pv2`, `externalLoad` to configured metric IDs. New generated selections record this mapping explicitly. Existing generated selections automatically choose their single Pico battery, four SBMS fields and `secondary-voltage`. For custom selections, identify the secondary explicitly; multiple Pico batteries require an explicit main-battery mapping. Unselected/other battery channels are not automatically merged. Existing group bindings cannot be changed silently.
 
 Averages use monotonic elapsed seconds, holding the latest valid reading only until the configured freshness deadline. Defaults are 2 seconds for Pico and 3 seconds for SBMS; source disconnects invalidate inputs immediately. Every validated Pico snapshot is used before legacy name filtering/output throttling. SBMS retained/exact repeated messages remain excluded by its receiver.
 
@@ -84,7 +120,7 @@ With confirmed `polarity`:
 | Load | Consumption | Reverse flow |
 | Supply | Generation | Reverse flow |
 
-Directional `Wh`/`Ah` split each observed sample before aggregation, so charging and discharging do not cancel. Battery totals describe **net battery flow**, not simultaneous gross charging/load. Preserve Pico and SBMS battery histories separately for comparison; they describe the same physical battery and must not be summed. An unverified polarity is `null`, never guessed from a zero reading.
+Directional `Wh`/`Ah` split each observed sample before aggregation, so charging and discharging do not cancel. Battery totals describe **net battery flow**, not simultaneous gross charging/load. Preserve Pico and SBMS current/SOC/energy as distinct fields within the same battery interval for comparison; they describe the same physical battery and must not be summed. An unverified polarity is `null`, never guessed from a zero reading.
 
 Stable metric IDs are separate from sensor IDs, exact source names, display names and packet positions. Configuration refresh updates names without creating a new series; the database keeps time-effective source/display name changes. Changing an existing metric's binding, role, voltage reference or polarity is rejected to avoid mixing incompatible history. Use a deliberate migration or a new metric ID for a verified mapping change; do not discard the database to work around it. Source IDs are not proven permanent across firmware/reconfiguration.
 
@@ -105,6 +141,6 @@ node bin/replay-logging.js --capture capture.jsonl \
 
 The replay reconstructs configuration/sensors from raw Pico records and uses recorded Pi UTC receipt order for elapsed time. Captures with receipt timestamps out of order are rejected. It cannot recover monotonic Pico timestamps absent from older captures or prove sensor calibration.
 
-The schema consists of `metrics` (definitions/latest names), `names` (rename history), `history` (metric/resolution/UTC interval plus additive statistics), and `meta` (checkpoint/clock information), at schema version 1. Statistics are stored as named JSON fields; arrays are a presentation format. Backup after stopping the service by copying the entire history directory; never copy just the main SQLite file from a running WAL database.
+Schema version 2 consists of `metrics` (measurement definitions/latest names), `names` (rename history), `battery_fields` (source bindings), `battery_history` (one combined battery interval with per-measurement statistics), `history` (other shunts/environmental intervals), and `meta` (checkpoint/clock information). Statistics are named JSON fields; inspection produces the combined named values. No duplicate per-channel battery rows are stored. Backup after stopping the service by copying the entire history directory; never copy just the main SQLite file from a running WAL database.
 
-Official references: [Node 22.13 SQLite module availability](https://nodejs.org/en/blog/release/v22.13.0), [SQLite WAL](https://sqlite.org/wal.html), [SQLite synchronous settings](https://sqlite.org/pragma.html#pragma_synchronous).
+Official references: [SQLite consistent snapshot backup](https://sqlite.org/lang_vacuum.html#vacuum_with_an_into_clause), [Node 22.13 SQLite module availability](https://nodejs.org/en/blog/release/v22.13.0), [SQLite WAL](https://sqlite.org/wal.html), [SQLite synchronous settings](https://sqlite.org/pragma.html#pragma_synchronous).

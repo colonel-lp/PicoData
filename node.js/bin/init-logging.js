@@ -51,7 +51,7 @@ async function main() {
     voltage: 'self',
   });
   const result = { database: 'history/history.sqlite', commitSeconds: 60, maxGapSeconds: { pico: 2, sbms: 3 }, metrics };
-  validateConfig(result, filename);
+  result.batteryGroup = validateConfig(result, filename).batteryGroup;
   fs.writeFileSync(filename, JSON.stringify(result, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
   console.log('Private logging configuration created. Review selected IDs and polarity before starting the service.');
 }

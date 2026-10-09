@@ -1,6 +1,6 @@
 # Database and logging plan
 
-Updated 2026-10-09. Collector 0.5.0 implements selected SQLite logging, UTC summaries, retention, checkpoints and inspection following the owner's request to start testing. See [LOGGING.md](LOGGING.md) for the implemented contract and setup. The history API remains pending. Earlier proposals/reviews below record design history; the implementation decisions here and LOGGING.md supersede unresolved alternatives.
+Updated 2026-10-09. Collector 0.6.0 implements combined battery interval storage alongside selected SQLite logging, UTC summaries, retention, checkpoints and inspection following the owner's request to start testing. See [LOGGING.md](LOGGING.md) for the implemented contract and setup. The history API remains pending. Earlier proposals/reviews below record design history; the implementation decisions here and LOGGING.md supersede unresolved alternatives.
 
 ## Owner-requested measurements and retention
 
@@ -178,3 +178,11 @@ Electrical arrays preserve signed source current/net watts; confirmed per-channe
 Hourly environmental values use the last valid sample; daily pressure uses the last sample and outside temperature uses all-sample extrema. The implemented retention and calendar cutoffs are listed in LOGGING.md. A 60-second checkpoint allows up to one uncommitted minute of loss after an abrupt shutdown; graceful stop flushes. SQLite remains outside zram-managed folders, single-writer, and safe to inspect through a separate read-only connection. Source selection/fingerprints and real recordings remain private. Database IDs are stable within the configured mapping; hardware identity persistence after reconfiguration still needs verification.
 
 The local history API, access policy and Android request/chart implementation remain the next stage after live Pi checks. Read-only `bin/history.js` is available now for initial testing; it is not a network API. No Android APK is created.
+
+## Combined battery records — authorized in 0.6.0
+
+The owner requests one battery record per interval with references to each measurement's source. Battery history now physically stores one row per UTC resolution/start in `battery_history`. Its named measurement statistics preserve Pico/SBMS current and relevant-device SOC, SBMS primary voltage, the selected secondary voltage, PV1/PV2 and external load. Field-level source/voltage references are available through inspection. Independent coverage/energy remain necessary: shared intervals do not mean simultaneous physical sampling or allow missing-device substitution.
+
+The named `values` object is documented in LOGGING.md. Other load shunts stay in `history` with their existing electrical periods. Pressure/outside temperature retain hourly/day records and their agreed retention. The main physical-shunt alias and Pico internal voltage remain excluded. No source readings, raw signs, numerical integration or MQTT wire/payload behaviour changes.
+
+Existing schema-1 databases receive a consistent pre-upgrade backup, then migration in a single transaction with bounded batches. Statistics move without recalculation; standalone battery-channel rows are removed after merging, and saved name/source metadata remains. A failed transfer rolls back. Existing generated selections work without edits; group bindings are explicit in newly generated selections. Per-metric inspection commands are compatibility views into the combined record, not additional stored histories. The history API remains pending.

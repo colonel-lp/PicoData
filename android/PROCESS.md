@@ -1,6 +1,6 @@
 # Proposed Android process
 
-Current step: [Pi collector 0.5.0](../node.js/README.md) adds selected continuous SQLite history to existing Pico/MQTT/SBMS acquisition. Use [logging setup](../node.js/LOGGING.md) for private sensor selection, UTC summaries, retention and read-only inspection. Validate live Pi logging, gaps/restarts and directional totals next, then implement the local history API and Android/browser viewer. See [BUILD-VALIDATION.md](BUILD-VALIDATION.md) and [NEXT-BUILD-CHANGES.md](NEXT-BUILD-CHANGES.md).
+Current step: [Pi collector 0.6.0](../node.js/README.md) stores one combined battery record per interval with source references, alongside other selected sensor history. Existing history is backed up and migrated automatically. Use [logging setup](../node.js/LOGGING.md) for private sensor selection, UTC summaries, retention and read-only inspection. Validate live Pi logging, gaps/restarts and directional totals next, then implement the local history API and Android/browser viewer. See [BUILD-VALIDATION.md](BUILD-VALIDATION.md) and [NEXT-BUILD-CHANGES.md](NEXT-BUILD-CHANGES.md).
 
 Direction discussed on 2026-10-08: continuous logging belongs on the headless Pi Zero 2 W because the Android head unit is not powered 24/7. Prefer a lightweight collector with persistent history and a small API; SQLite and a browser/Android viewer are the current proposal. Keep history outside zram-managed folders. The original direct Android/embedded-broker route below is a future option to reassess, not the selected logging architecture.
 
