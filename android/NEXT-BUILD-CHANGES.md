@@ -128,8 +128,18 @@
 
 - [x] Record selected secondary shunt-module voltage for comparison and exclude Pico internal voltage from regular history/reference selection; keep private sensor selection outside published source/documents.
 - [x] Choose database identity separate from name, packet position and dashboard instance: permanent metric ID with source/device, sensor ID and measurement kind; preserve exact source name plus editable display name and time-effective mapping/name history.
-- [ ] Obtain a short local raw Pico/SBMS capture with changing loads; map actual configured sensor IDs/names and inspect unexposed fields without guessing their meanings. Do not publish runtime/device inventory or raw recordings.
+- [x] Independently inspect the owner's supplied raw Pico/SBMS capture, validate framing and map actual configured IDs/names privately. Secondary voltage is present; main virtual-battery voltage/current duplicate configured source measurements.
+- [x] Identify load-dependent primary/secondary voltage differences; avoid a fixed correction. Extra current fields appear counter-like rather than voltage, with meaning/units still unverified.
 - [ ] Verify sensor-ID persistence through rename/reboot/reconfiguration and handle ID reuse/physical channel changes explicitly.
 - [ ] Add an internal timestamped, ID-keyed decoded Pico snapshot for the future logger, before legacy filtering/name collisions; preserve all current MQTT output.
 - [ ] Log the selected secondary voltage with original readings preserved; evaluate paired voltage/current differences before approving any correction or fallback.
 - [ ] Implement the agreed SQLite history/API when requested. This planning/source review changes no application version or runtime code.
+
+## Capture findings for the logger — 2026-10-09
+
+- [x] Pass length/CRC checks for all recorded complete TCP replies and live packets; reconstruct the recorded sensor metadata from configuration. Raw capture/statistics/actual ID-to-name map remain private.
+- [ ] Bind the private confirmed sensor map to permanent database metric IDs and editable names; retain versioned mapping metadata and check identity across later configuration changes.
+- [ ] Treat duplicate main-battery current/voltage paths as aliases of one measurement; attach the relevant battery SOC without double counting currents/energy.
+- [ ] Record the selected secondary voltage unchanged. Any later calibration/fallback requires explicit validation under different operating conditions, not a fixed offset inferred from one sample.
+- [ ] Keep extra current-field counter candidates diagnostic-only until scale, deadband, signs, rollover and resets are established. Continue with sample/time-based integration for primary history.
+- [ ] Consume raw decoded ID-keyed Pico snapshots before public filtering/throttling, while preserving the original MQTT contract and keeping cross-source timing/freshness explicit.

@@ -1,5 +1,13 @@
 # Build validation
 
+## Independently reviewed private Pico/SBMS capture — 2026-10-09
+
+The owner supplied a collector 0.4.0 local recording. Independent `verify-capture.js` execution returned **54/54 TCP length matches and CRC matches**, **2,957/2,957 UDP length matches and CRC matches**, one configuration and `ok: true`. The recording also includes 300 normalized SBMS receipt records. The configured sensor map reconstructed from raw configuration exactly matches the recorder's map.
+
+This run verifies raw framing and concurrent acquisition evidence, not SBMS electrical calibration, per-field Python parity or restart recovery. The private sensor mapping supports selecting the secondary voltage and detecting duplicate source/virtual-battery voltage/current measurements. Extra current fields exhibit counter-like behaviour whose units/deadband/reset rules remain unverified. Cross-source voltage differences vary with load, so no fixed correction is approved. Only receipt timing is available for cross-source pairing, and a single configuration does not establish ID persistence.
+
+The raw recording, runtime/session details, actual network/device/channel identities, readings, fitted coefficients and inventory are excluded from the repository. No runtime code, application version or API/database was changed for this investigation.
+
 ## Pi collector 0.4.0 — ElectroDacus reception, 2026-10-08
 
 Source parent: `6eb9c5fab6f1fcf6a8f39b70c152a4d344961fcd`. MQTT dependencies are unchanged.
