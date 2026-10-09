@@ -1,12 +1,21 @@
 # Next build changes
 
-## Current authorized step: local API in collector 0.7.0
+## Current authorized correction: live SBMS states in collector 0.7.1
+
+- [x] Expose the complete accepted SBMS broadcast through the live API; preserve existing normalized battery values and original raw field names/units.
+- [x] Provide live boolean CFET, DFET, OVLK, UVLK, EOC, IOT, LVC and CELF states for On/Off display. Missing/invalid flags and stale/disconnected readings are unavailable, never silently Off.
+- [x] Deliver flag/auxiliary-only changes within a source-clock second while continuing to ignore retained and complete repeated broadcasts, including reordered object keys.
+- [x] Keep flags/auxiliary values out of database history; preserve schema, selected measurements, calculations, retention and Pico MQTT output.
+- [ ] Update the Pi and confirm live flags match the SBMS/dashboard. Android display remains pending.
+
+## Previous authorized step: local API in collector 0.7.0
 
 - [x] Owner requests the API before Android implementation. Add authenticated, read-only status, measurement catalogue, live Pico/SBMS freshness and bounded combined/per-metric history.
 - [x] Reuse the existing service and schema 2 without changing collection, selected statistics, retention, source references, units, signs or MQTT output. Add independent private credentials, optional HTTPS, pagination and explicit partial/gap semantics.
 - [x] Generate/check private parent API settings, document setup/routes/limits, test denied access, safe errors, read-only database access and simultaneous collector/API/MQTT operation.
 - [x] Inspect the owner's live schema-2 database and migration backup privately: integrity passes, completed history/metadata preserved, active buckets extended consistently. Other shunts/environmental history and primary/secondary voltage references are present.
-- [ ] Enable and test API requests/restarts on the Pi; privately assess latency/memory while logging continues. Finish long-run retention/midnight and charge-polarity checks.
+- [x] Owner enabled the API and confirmed local status/live/history requests; supplied responses pass private freshness/calculation/source-reference review.
+- [ ] Test LAN/TLS requests and restarts; privately assess latency/memory while logging continues. Finish long-run retention/midnight and charge-polarity checks.
 - [ ] Agree Android targets, screens, charts, discovery, credential storage and offline behaviour before the app build.
 - [ ] Keep history on its current persistent storage for now. Plan USB migration with consistent backups; SD/Android/Google Drive destinations, backup schedule and retention remain undecided. No automatic backup/cloud access is included in this API build.
 

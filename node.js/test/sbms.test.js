@@ -16,7 +16,8 @@ const { mqttBroker } = require('./mqtt-broker');
 const fixture = (second = 1) => ({ time: { year: 1, month: 2, day: 3, hour: 4, minute: 5, second },
   soc: 63, cellsMV: [3200, 3300, 3400, 3500, 0, 0, 0, 0],
   currentMA: { battery: -4200, pv1: 1700, pv2: 0, extLoad: 4500 },
-  flags: { CFET: true }, ad2: 0 });
+  flags: { CFET: true, DFET: false, OVLK: false, UVLK: true, EOC: false, IOT: true, LVC: false, CELF: true, delta: 7 },
+  tempInt: 21.5, tempExt: 18.25, ad2: 0, ad3: 12, ad4: 34, heat1: 0, heat2: 567 });
 const bytes = data => Buffer.from(JSON.stringify(data));
 const configFor = broker => ({ server: '127.0.0.1', port: broker.port, prefix: '/Ella/Pico/', username: 'test-user', password: 'test-pass=extra' });
 function event(emitter, name, predicate = () => true, timeoutMs = 3000) {
@@ -54,7 +55,17 @@ test('SBMS converts all mA channels, preserves signs/zero PV2 and uses Pi receip
   const charging = fixture(); charging.currentMA.battery = 2800; charging.currentMA.pv2 = 750;
   assert.equal(decodeSbms(bytes(charging)).current.battery, 2.8);
   assert.equal(decodeSbms(bytes(charging)).current.pv2, 0.75);
-  assert.equal(Object.hasOwn(output, 'flags'), false);
+  assert.deepEqual(output.broadcast, fixture());
+  for (const key of ['CFET', 'DFET', 'OVLK', 'UVLK', 'EOC', 'IOT', 'LVC', 'CELF']) {
+    assert.equal(output.flags[key], fixture().flags[key]);
+  }
+  assert.equal(output.flags.OV, null);
+  const unavailable = fixture(); unavailable.flags.CFET = 'false'; unavailable.flags.DFET = 0;
+  const decoded = decodeSbms(bytes(unavailable));
+  assert.equal(decoded.flags.CFET, null); assert.equal(decoded.flags.DFET, null);
+  assert.equal(decoded.broadcast.flags.CFET, 'false');
+  delete unavailable.flags;
+  assert.ok(Object.values(decodeSbms(bytes(unavailable)).flags).every(value => value === null));
 });
 
 test('SBMS voltage requires configured cells and does not silently discard a failed active cell', () => {
@@ -129,6 +140,27 @@ test('SBMS accepts changed electrical readings within the same source-clock seco
   client.emit('message', '/Ella/sbms', bytes(changed), {});
   client.emit('message', '/Ella/sbms', bytes(changed), {});
   assert.equal(count, 2); assert.equal(receiver.latest.current.battery, -4.3);
+});
+
+test('SBMS delivers flag/auxiliary-only changes but ignores reordered repeats and retained states', t => {
+  const client = fakeClient(), receiver = new SbmsReceiver(); t.after(() => receiver.stop());
+  const readings = []; receiver.on('readings', value => readings.push(value)); receiver.start(client);
+  const data = fixture();
+  client.emit('message', '/Ella/sbms', bytes(data), {});
+  data.flags.CFET = false;
+  client.emit('message', '/Ella/sbms', bytes(data), { retain: true });
+  assert.equal(readings.length, 1); assert.equal(receiver.latest.flags.CFET, true);
+  client.emit('message', '/Ella/sbms', bytes(data), {});
+  assert.equal(readings.length, 2); assert.equal(receiver.latest.flags.CFET, false);
+  const reordered = Object.fromEntries(Object.entries(data).reverse());
+  reordered.flags = Object.fromEntries(Object.entries(data.flags).reverse());
+  client.emit('message', '/Ella/sbms', bytes(reordered), {});
+  assert.equal(readings.length, 2);
+  data.tempExt = 19;
+  data.futureField = { available: true };
+  client.emit('message', '/Ella/sbms', bytes(data), {});
+  assert.equal(readings.length, 3); assert.deepEqual(receiver.latest.broadcast.futureField, { available: true });
+  client.connected = false; client.emit('close'); assert.equal(receiver.latest, null);
 });
 
 test('SBMS closes listeners/timers and ignores late subscription callbacks', () => {

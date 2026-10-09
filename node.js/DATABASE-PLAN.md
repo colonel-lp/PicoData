@@ -1,6 +1,6 @@
 # Database and logging plan
 
-Updated 2026-10-09. Collector 0.7.0 implements combined battery interval storage alongside selected SQLite logging, UTC summaries, retention, checkpoints and inspection following the owner's request to start testing. See [LOGGING.md](LOGGING.md) for the implemented contract and setup. The optional authenticated local API is implemented; see [API.md](API.md). Earlier proposals/reviews below record design history; the implementation decisions here and LOGGING.md supersede unresolved alternatives.
+Updated 2026-10-09. Collector 0.7.1 implements combined battery interval storage alongside selected SQLite logging, UTC summaries, retention, checkpoints and inspection following the owner's request to start testing. See [LOGGING.md](LOGGING.md) for the implemented contract and setup. The optional authenticated local API is implemented, including live-only SBMS boolean flags/full broadcast without adding history fields; see [API.md](API.md). Earlier proposals/reviews below record design history; the implementation decisions here and LOGGING.md supersede unresolved alternatives.
 
 ## Owner-requested measurements and retention
 

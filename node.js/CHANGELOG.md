@@ -1,5 +1,12 @@
 # Pico base changelog
 
+## 0.7.1 — 2026-10-09
+
+- Expose the complete accepted SBMS MQTT broadcast through the live API in original names/units, alongside existing normalized battery values.
+- Add live boolean monitor flags, including CFET, DFET, OVLK, UVLK, EOC, IOT, LVC and CELF. True/false represent On/Off; missing/invalid flags are null and stale/disconnected readings unavailable. No flag or auxiliary-field history is added.
+- Deliver flag/auxiliary changes within a source-clock second, while ignoring retained snapshots and complete repeats regardless of object-key ordering. Preserve existing electrical calculations, database schema/selection/retention and Pico MQTT output.
+- All 76 tests pass under Node 22, including synthetic checks for live flags, full-field preservation, state changes, unavailable values, repeat/retained filtering and unchanged history, plus collector/MQTT/Python parity. Pi flag verification remains pending.
+
 ## 0.7.0 — 2026-10-09
 
 - Add an optional authenticated read-only HTTP/HTTPS API inside the existing collector, with status, selected metadata, fresh live Pico/SBMS measurements, combined battery history and per-metric compatibility views. No new npm dependency or SQLite schema change.

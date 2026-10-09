@@ -30,7 +30,8 @@ class ReadingApi {
     const fresh = s.state==='connected' && age !== null && age>=0 && age<=this.logger.config.maxGapSeconds[source];
     return {state:s.state,fresh,receivedAt:s.receivedAt,ageSeconds:age===null ? null : Math.max(0,age),
       ...(source==='pico' ? {readings:fresh ? s.latest.readings : null} : {reading:fresh ? {
-        voltage:s.latest.voltage,voltageStatus:s.latest.voltageStatus,stateOfCharge:s.latest.stateOfCharge,current:s.latest.current,sourceTime:s.latest.sourceTime
+        voltage:s.latest.voltage,voltageStatus:s.latest.voltageStatus,stateOfCharge:s.latest.stateOfCharge,current:s.latest.current,sourceTime:s.latest.sourceTime,
+        flags:s.latest.flags ?? null,broadcast:s.latest.broadcast ?? null
       } : null})};
   }
   live() {

@@ -1,5 +1,18 @@
 # Build validation
 
+## Pi collector 0.7.1 — live SBMS flags/full broadcast, 2026-10-09
+
+Source parent: `686ffb7279dcaf4b4dd1c591d52c2f627a2a9e64`. Package metadata/documentation are 0.7.1; schema 2 and npm dependencies remain unchanged.
+
+**76 tests passed, 0 failed under Node 22**, including 23 targeted SBMS/API checks and the existing collector/MQTT/Python/logging regression suite. Syntax checks pass.
+
+- Preserve the full accepted JSON broadcast, original names/units and optional/future fields alongside existing normalized values. Check all eight requested flags as true/false and missing/nonboolean values as null.
+- Deliver flag/auxiliary-only changes within the same source-clock second; reject retained changes and complete repeats with reordered keys. Keep reconnect/stale behaviour and default silent output.
+- Exercise authenticated live HTTP responses with SBMS decoder and logger: On/Off states change, stale/disconnected values disappear, existing normalized currents remain correct, and no flags/auxiliary fields or metrics enter history.
+- Keep public fixtures synthetic and all owner readings, network details and system inventory private.
+
+The owner has confirmed local Pi API status/live/history requests in 0.7.0; supplied responses pass private freshness, arithmetic and source-reference review. **Remaining device checks:** update to 0.7.1 and compare live flags with the monitor/dashboard; LAN/TLS access, restart/resource assessment and unattended midnight/retention/charging checks remain pending. Android/automatic backups are not included.
+
 ## Pi collector 0.7.0 — authenticated local API, 2026-10-09
 
 Source parent: `3976bc202f47a326be779f59b50300b81bbb08f0`. Package metadata/documentation are 0.7.0; database schema remains 2. No new npm dependencies or MQTT/collector calculation changes.

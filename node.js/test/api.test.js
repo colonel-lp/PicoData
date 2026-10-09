@@ -13,6 +13,7 @@ const { readApiConfig } = require('../lib/api-config');
 const { init } = require('../bin/init-api');
 const { check } = require('../bin/api-check');
 const { range } = require('../lib/history-reader');
+const { decodeSbms } = require('../lib/sbms');
 const BASE = Date.parse('2026-01-15T12:00:00Z'), TOKEN = 'a'.repeat(64);
 async function setup(t, {tls}={}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(),'pico-api-'));
@@ -123,6 +124,35 @@ test('live freshness is monotonic and source-specific; derived watts require fre
   logger.active.delete('pico-battery');live=(await get('/api/v1/live')).body;assert.equal(live.measurements.find(m=>m.id==='pico-battery').mappingValid,false);
   assert.equal(live.measurements.find(m=>m.id==='pico-battery').values.current,null);
   api.status('pico','retrying');assert.equal((await get('/api/v1/live')).body.pico.readings,null);
+});
+
+test('live SBMS exposes complete broadcast and boolean flags without adding flag history', async t=> {
+  const {get,api,logger,clock}=await setup(t);
+  const data={time:{year:1,month:2,day:3,hour:4,minute:5,second:6},soc:65,
+    cellsMV:[3000,3000,3000,3000,0,0,0,0],currentMA:{battery:-3000,pv1:1000,pv2:0,extLoad:2900},
+    tempInt:21,tempExt:18,ad2:0,ad3:12,ad4:34,heat1:0,heat2:567,
+    flags:{CFET:true,DFET:false,OVLK:false,UVLK:true,EOC:false,IOT:true,LVC:false,CELF:true,delta:7},
+    futureField:{available:true}};
+  const accept=()=> {
+    const reading=decodeSbms(Buffer.from(JSON.stringify(data)),{activeCells:[0,1,2,3],receivedAt:new Date(clock.time),monotonicMs:clock.mono});
+    logger.acceptSbms(reading);api.accept('sbms',reading);api.status('sbms','connected');
+  };
+  accept();
+  let live=(await get('/api/v1/live')).body;
+  assert.deepEqual(live.sbms.reading.broadcast,data);
+  for(const key of ['CFET','DFET','OVLK','UVLK','EOC','IOT','LVC','CELF']) assert.equal(live.sbms.reading.flags[key],data.flags[key]);
+  assert.equal(live.sbms.reading.flags.OV,null);assert.equal(live.sbms.reading.current.battery,-3);
+  clock.time+=1000;clock.mono+=1000;data.flags.CFET=false;data.flags.DFET=true;accept();
+  live=(await get('/api/v1/live')).body;
+  assert.equal(live.sbms.reading.flags.CFET,false);assert.equal(live.sbms.reading.flags.DFET,true);
+  logger.flush(clock.time,clock.mono);
+  const history=(await get('/api/v1/history/battery')).body;
+  assert.ok(history.rows.length>0);
+  for(const key of ['flags','broadcast','CFET','tempInt','futureField']) assert.equal(JSON.stringify(history).includes('"'+key+'"'),false);
+  assert.equal((await get('/api/v1/metrics')).body.metrics.length,9);
+  assert.equal((await get('/api/v1/history/metrics/CFET')).status,404);
+  clock.mono+=3100;assert.equal((await get('/api/v1/live')).body.sbms.reading,null);
+  accept();api.status('sbms','disconnected');assert.equal((await get('/api/v1/live')).body.sbms.reading,null);
 });
 
 test('invalid dates, duplicate parameters, large limits, unknown metrics and SQL/path input are rejected', async t=> {

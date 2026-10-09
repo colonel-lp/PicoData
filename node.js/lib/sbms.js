@@ -2,9 +2,11 @@
 
 const { EventEmitter } = require('node:events');
 const { performance } = require('node:perf_hooks');
+const { isDeepStrictEqual } = require('node:util');
 
 const DEFAULT_TOPIC = '/Ella/sbms';
 const MAX_PAYLOAD_BYTES = 65536;
+const BOOLEAN_FLAGS = ['OV', 'OVLK', 'UV', 'UVLK', 'IOT', 'COC', 'DOC', 'DSC', 'CELF', 'OPEN', 'LVC', 'ECCF', 'CFET', 'EOC', 'DFET'];
 function parseSbmsOptions(config) {
   const topic = config.sbms_topic ?? DEFAULT_TOPIC;
   if (!topic || /[\0+#]/.test(topic) || Buffer.byteLength(topic) > 65535 || topic === config.prefix) {
@@ -53,6 +55,11 @@ function decodeSbms(payload, { activeCells = null, receivedAt = new Date(), mono
     stateOfCharge: data.soc,
     current: { battery: currents.battery / 1000, pv1: currents.pv1 / 1000,
       pv2: currents.pv2 / 1000, externalLoad: currents.extLoad / 1000 },
+    // Keep every original field and unit for live consumers. Invalid/missing
+    // boolean flags are unavailable, never coerced into an Off state.
+    broadcast: data,
+    flags: Object.fromEntries(BOOLEAN_FLAGS.map(key => [key,
+      typeof data.flags?.[key] === 'boolean' ? data.flags[key] : null])),
   };
 }
 
@@ -119,10 +126,10 @@ class SbmsReceiver extends EventEmitter {
     let reading;
     try { reading = decodeSbms(payload, { activeCells: this.activeCells, receivedAt: this.now(), monotonicMs: this.monotonic() }); }
     catch { this.status('invalid-message'); return; }
-    const identity = JSON.stringify([reading.sourceTime, reading.voltage, reading.voltageStatus, reading.stateOfCharge, reading.current]);
-    // An exact repeat of source time and measurements is not a new sample.
-    // Progressing time or changed readings within the same second are accepted.
-    if (identity === this.sourceIdentity) return;
+    const identity = reading.broadcast;
+    // Include live flags/auxiliary values so changes within one source-clock
+    // second are delivered. Reordered object keys are still an exact repeat.
+    if (isDeepStrictEqual(identity, this.sourceIdentity)) return;
     this.sourceIdentity = identity; this.latest = reading;
     this.armStale(); this.status('connected'); this.emit('readings', reading);
   }
