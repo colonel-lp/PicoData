@@ -1,0 +1,6 @@
+<network-security-config>
+    <!-- Explicit manual LAN HTTP is supported; the client never follows redirects. -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors><certificates src="system" /><certificates src="user" /></trust-anchors>
+    </base-config>
+</network-security-config>

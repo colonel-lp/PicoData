@@ -2,6 +2,7 @@
 
 // Discovery/configuration sequence derives from _old/pico2signalk/lib/get-pico-config.js.
 const dgram = require('node:dgram');
+const { performance } = require('node:perf_hooks');
 const { EventEmitter } = require('node:events');
 const { abortError, delay, getPicoConfigTcp, isPicoPacket, isLivePacket, parseResponse } = require('./pico-protocol');
 const { createSensorList } = require('./sensor-list');
@@ -128,7 +129,13 @@ class PicoClient extends EventEmitter {
         // An unrelated/empty message cannot keep the connection looking fresh.
         if (!Object.values(sensorList).some(s => Array.isArray(element[s.pos]))) return;
         resetTimer();
-        this.emit('packet', { picoIp: ip, receivedAt: new Date().toISOString(), hex: msg.toString('hex') });
+        const receivedAt = new Date().toISOString(), receivedMonotonicMs = performance.now();
+        this.emit('packet', { picoIp: ip, receivedAt, hex: msg.toString('hex') });
+        // History sees every validated packet, including ID-based sensors hidden
+        // by the legacy display-name filter. Public MQTT decoding stays unchanged.
+        if (this.listenerCount('snapshot')) this.emit('snapshot', {
+          receivedAt, receivedMonotonicMs, readings: decodeReadings(sensorList, element),
+        });
         if (!active) { active = true; this.status('connected', { ip }); }
         if (Date.now() - lastOutput < this.options.updateIntervalMs) return;
         let readings;

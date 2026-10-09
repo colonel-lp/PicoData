@@ -3,3 +3,17 @@ __pycache__/
 node_modules/
 /mqtt
 /mqtt.local
+
+/logging.json
+/logging.local.json
+/api.json
+/api.local.json
+/tls/
+/history/
+*.sqlite
+*.sqlite-*
+*.sqlite.writer-lock
+*.db
+*.db-*
+*.db.writer-lock
+*.sqlite.pending

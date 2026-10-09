@@ -24,14 +24,14 @@ function readMqttConfig(filename) {
 }
 
 class MqttPublisher extends EventEmitter {
-  constructor(config, { connect, reconnectPeriod = 5000, connectTimeout = 10000 } = {}) {
+  constructor(config, { connect, reconnectPeriod = 5000, connectTimeout = 10000, resubscribe = true } = {}) {
     super();
     this.config = config;
     this.connect = connect || (options => require('mqtt').connect(options));
     this.options = { host: config.server, port: config.port, protocol: 'mqtt',
       username: config.username, password: config.password, protocolVersion: 4,
       keepalive: 60, clean: true, reconnectPeriod, connectTimeout,
-      reconnectOnConnackError: true, queueQoSZero: false };
+      reconnectOnConnackError: true, queueQoSZero: false, resubscribe };
     this.client = null; this.stopped = false; this.pending = null; this.stopTask = null;
   }
   status(state) { this.emit('status', { source: 'mqtt', state }); }

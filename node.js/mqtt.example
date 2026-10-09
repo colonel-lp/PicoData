@@ -3,3 +3,8 @@ port=1883
 prefix=/Ella/Pico/
 username=YOUR_EXISTING_USERNAME
 password=YOUR_EXISTING_PASSWORD
+
+# Optional SBMS reception settings. Leave sbms_cells unset until configured;
+# use your actual enabled channel numbers (1 through 8), comma-separated.
+sbms_topic=/Ella/sbms
+sbms_stale_seconds=30

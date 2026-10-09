@@ -4,3 +4,32 @@
 Thumbs.db
 .DS_Store
 android/.DS_Store
+
+# Private collector settings and history
+/mqtt
+/mqtt.local
+/logging.json
+/api.json
+/api.local.json
+/tls/
+/history/
+*.jsonl
+*.sqlite
+*.sqlite-*
+*.sqlite.writer-lock
+*.db
+*.db-*
+*.db.writer-lock
+*.sqlite.pending
+
+# Android local configuration, credentials and generated output
+/android/source/.gradle/
+/android/source/build/
+/android/source/app/build/
+/android/source/local.properties
+*.apk
+*.aab
+*.jks
+*.keystore
+/android/source/signing.properties
+

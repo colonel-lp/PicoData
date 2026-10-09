@@ -1,5 +1,49 @@
 # Pico base changelog
 
+## 0.7.1 — 2026-10-09
+
+- Expose the complete accepted SBMS MQTT broadcast through the live API in original names/units, alongside existing normalized battery values.
+- Add live boolean monitor flags, including CFET, DFET, OVLK, UVLK, EOC, IOT, LVC and CELF. True/false represent On/Off; missing/invalid flags are null and stale/disconnected readings unavailable. No flag or auxiliary-field history is added.
+- Deliver flag/auxiliary changes within a source-clock second, while ignoring retained snapshots and complete repeats regardless of object-key ordering. Preserve existing electrical calculations, database schema/selection/retention and Pico MQTT output.
+- All 76 tests pass under Node 22, including synthetic checks for live flags, full-field preservation, state changes, unavailable values, repeat/retained filtering and unchanged history, plus collector/MQTT/Python parity. Pi flag verification remains pending.
+
+## 0.7.0 — 2026-10-09
+
+- Add an optional authenticated read-only HTTP/HTTPS API inside the existing collector, with status, selected metadata, fresh live Pico/SBMS measurements, combined battery history and per-metric compatibility views. No new npm dependency or SQLite schema change.
+- Preserve acquisition, MQTT JSON/wire output, source-specific calculations, private selections, UTC retention and quiet service operation. Live API watts follow fresh configured voltage references; stale/missing inputs remain null and valid zero currents remain zero.
+- Use indexed bounded history queries, consistent per-response database snapshots, UTC range validation, pagination, partial intervals and existing source/coverage/energy references. Protect access with header tokens, optional TLS, request/connection/response limits and generic errors.
+- Add private API configuration generation and authenticated checks, optional/disable CLI flags, operational/API documentation and pending Android/backup decisions.
+- All 74 tests pass under Node 22, including authenticated HTTP/HTTPS, read-only simultaneous writer access, pagination/gaps, source-specific freshness and actual collector/API/MQTT/Python parity. Existing private history is served read-only with inspection-equivalent statistics/source references. Raw data, credentials and system details remain excluded.
+- Actual Pi API access/performance testing and Android/automatic backups remain later stages.
+
+## 0.6.0 — 2026-10-09
+
+- Store one combined battery record per UTC minute/hour/day/month interval. Keep Pico/SBMS current and relevant-device SOC, primary/secondary voltage, both PV channels and external-load measurements distinct within the record, with stable source references.
+- Present named values, per-field coverage, per-measurement energy/sample totals and input receipt timestamps. Preserve all numerical calculations, raw signs, freshness rules, retention and independent source availability.
+- Automatically back up and migrate schema-1 battery rows to schema 2 in a transaction using bounded batches. Preserve all existing statistics/name metadata and remove duplicate per-channel battery storage. Keep other shunt/environmental records unchanged; retain the first pre-upgrade backup.
+- Add `history.js --battery`; default inspection displays the combined battery alongside other sensors. Existing per-metric commands remain read-only views into combined storage. Existing generated private configurations work without edits; new selections record explicit group bindings.
+- All 64 tests pass under Node 22, covering migration/WAL backup, rollback and retry, idempotence, partial checkpoints, missing-versus-zero values, retention, source references and group rebinding protection. Retain full MQTT/Python compatibility and silent collection tests; privately compare migrated recorded statistics without publishing raw data or system inventory.
+- No network API or Android app is added in this storage update.
+
+## 0.5.0 — 2026-10-09
+
+- Add optional persistent SQLite logging using Node's built-in module and a private parent `PicoData/logging.json` selection. Keep MQTT fields/values, units, names, sign handling, wire settings and silent default unchanged.
+- Use every validated ID-based Pico snapshot before legacy filtering/throttling. Log the selected battery instance once, selected load shunts, raw secondary voltage, pressure/outside temperature, and SBMS battery/PV1/PV2/external-load channels. Do not automatically select the duplicate physical main-shunt alias, Pico internal voltage or other sensors.
+- Accumulate duration-weighted instantaneous watts, raw signed amps/volts, relevant-device last SOC, additive Wh/Ah, verified directional totals and separate coverage into UTC minute/hour/day/month summaries. Track last pressure/hourly temperature and daily temperature extrema. Use fresh SBMS pack voltage for both PV channels following confirmation that their current is supplied to the battery. Keep unverified directional classifications unavailable.
+- Apply requested retention, checkpoint partial summaries every minute, flush normal shutdown, prevent overlapping writers and recover saved sums without bridging downtime. Invalidate missing/stale inputs, handle clock steps and pause logging visibly on storage failure while retaining MQTT acquisition.
+- Separate stable metric IDs, source/display names and configuration fingerprints. Preserve rename history and reject implicit rebinding of existing metrics.
+- Add private selection generation, read-only history inspection and offline capture replay; document configuration, storage outside zram, the uncommitted-minute power-loss window, sign/voltage limitations and live Pi checks. The API/Android viewer is not included in this logging step.
+- Validate calculations, freshness, UTC/calendar boundaries, retention, restart/crash recovery, single-writer/read-only access, mapping safety, silent combined collection and unchanged MQTT/Python output. Private capture replay passes with the duplicate main shunt and Pico internal voltage excluded. Raw recordings, inventory and system details remain private.
+
+## 0.4.0 — 2026-10-08
+
+- Receive ElectroDacus JSON from `/Ella/sbms` using the existing MQTT connection and credentials, independently of Pico acquisition. Retry subscription refusal and resubscribe after broker reconnection.
+- Decode battery, PV1, PV2 and external-load currents from mA to A, SOC and pack voltage from privately configured active-cell channels. Preserve reported signs/valid zero readings and make unavailable voltage explicit.
+- Timestamp reception using Pi UTC and monotonic time; retain source time separately. Ignore retained snapshots and exact repeats of source time/measurements, reject malformed input, and clear current state on timeout/disconnection.
+- Keep Pico MQTT fields/values, topic/wire settings, service paths and quiet default unchanged. Add optional `--sbms-stdout`, `--no-sbms`, SBMS config keys and local normalized capture records; capture verification still checks Pico only.
+- All 39 automated tests pass, including simultaneous reception/Python payload parity, wire subscription/refusal/reconnection and CLI operation without a Pico. Increase older CLI test startup windows to accommodate concurrent test processes.
+- Document private configuration and pending Pi checks. SQLite logging, rollups, directional totals, history API and Android implementation are not included in this acquisition step.
+
 ## Repository layout — 2026-10-08 (version unchanged)
 
 - Place the standalone collector in the repository root `node.js/`, matching the Pi installation layout. Update checkout/update commands, documentation links and source provenance.
@@ -28,3 +72,4 @@
 - Provide raw capture recording, offline verification/replay and Python comparison.
 - Make flat installation self-contained by bundling the unchanged Python comparison source; 16 automated tests pass.
 - Record the owner's real Pico verification: 108 TCP replies and 1,096 UDP packets pass length/CRC checks; all 1,096 outputs match Python with zero differences. Real reconnect testing remains pending.
+

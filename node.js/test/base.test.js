@@ -219,12 +219,13 @@ for (const mqttMode of ['disabled', 'online', 'denied']) test(`real CLI publishe
   }
   const child = spawn(process.execPath, [path.join(__dirname, '../bin/pico.js'),
     '--ip', '127.0.0.1', '--udp-port', String(sim.port), '--tcp-port', String(sim.port),
-    '--duration', '1.5', '--record', capture, '--stdout', ...mqttArgs]);
+    '--duration', '3', '--record', capture, '--stdout', ...mqttArgs]);
   t.after(() => { if (child.exitCode === null) child.kill(); });
   let stdout = '', stderr = '';
   child.stdout.on('data', b => { stdout += b; }); child.stderr.on('data', b => { stderr += b; });
   const code = await new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
   assert.equal(code, 0, stderr);
+  assert.ok(stdout.trim(), 'No Pico output before test duration expired: ' + stderr);
   const lines = stdout.trim().split('\n').map(line => JSON.parse(line));
   assert.ok(lines.length > 0); assert.equal(lines[0].inclinometer.pitch, 2.3);
   assert.equal(lines[0].battery['Ella  '].voltage, 13.24);
@@ -339,4 +340,105 @@ test('missing default config fails visibly without readings or credentials', t =
     cwd: directory, encoding: 'utf8',
   });
   assert.equal(conflict.status, 2); assert.ok(conflict.stderr.includes('Usage:'));
+});
+
+for (const logging of [false, true, 'api']) test(`simultaneous SBMS/Pico preserves MQTT and capture: logging ${logging}`, async t => {
+  const sim = await simulator(t), broker = await mqttBroker(t);
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ella-combined-'));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const config = path.join(directory, 'mqtt'), capture = path.join(directory, 'capture.jsonl');
+  fs.writeFileSync(config, `server=127.0.0.1\nport=${broker.port}\nprefix=/Ella/Pico/\nusername=test-user\npassword=test-pass=extra\nsbms_cells=1,2,3,4\n`);
+  const packets = []; broker.events.on('publish', packet => packets.push(packet));
+  const loggingFile = path.join(directory, 'logging.json');
+  if (logging) fs.writeFileSync(loggingFile, JSON.stringify({ database: 'history.sqlite', commitSeconds: 1, batteryGroup: {picoBattery:'battery',sbmsBattery:'sbms-battery',secondaryVoltage:'secondary',pv1:'pv1',pv2:'pv2'}, metrics: [
+    { id: 'battery', source: 'pico', sensorId: 15, sensorType: 'battery', kind: 'electrical', role: 'battery', polarity: 1, voltage: 'sbms' },
+    { id: 'secondary', source: 'pico', sensorId: 20, sensorType: 'volt', kind: 'voltage' },
+    { id: 'sbms-battery', source: 'sbms', field: 'battery', kind: 'electrical', role: 'battery', polarity: 1, voltage: 'self' },
+    { id: 'pv2', source: 'sbms', field: 'pv2', kind: 'electrical', role: 'supply', polarity: null, voltage: 'self' },
+    { id: 'pv1', source: 'sbms', field: 'pv1', kind: 'electrical', role: 'supply', polarity: null, voltage: 'self' },
+  ] }));
+  let apiUrl, apiFile;
+  const apiToken = 'c'.repeat(64);
+  if (logging === 'api') {
+    const reserve = net.createServer(); await new Promise(resolve=>reserve.listen(0,'127.0.0.1',resolve));
+    const port = reserve.address().port; await new Promise(resolve=>reserve.close(resolve));
+    apiUrl = 'http://127.0.0.1:'+port; apiFile = path.join(directory,'api.json');
+    fs.writeFileSync(apiFile,JSON.stringify({host:'127.0.0.1',port,token:apiToken}));
+  }
+  const child = spawn(process.execPath, [path.join(__dirname, '../bin/pico.js'), '--mqtt-config', config,
+    '--ip', '127.0.0.1', '--udp-port', String(sim.port), '--tcp-port', String(sim.port),
+    '--duration', logging === 'api' ? '3.2' : '1.8', '--record', capture, ...(logging ? ['--logging-config', loggingFile] : ['--stdout', '--sbms-stdout']),
+    ...(apiFile ? ['--api-config',apiFile] : [])]);
+  t.after(() => { if (child.exitCode === null) child.kill(); });
+  let stdout = '', stderr = '', second = 1;
+  child.stdout.on('data', data => { stdout += data; }); child.stderr.on('data', data => { stderr += data; });
+  const timer = setInterval(() => broker.send('/Ella/sbms', {
+    time: { year: 1, month: 2, day: 3, hour: 4, minute: 5, second: second++ % 60 }, soc: 62,
+    cellsMV: [3200, 3300, 3400, 3500, 0, 0, 0, 0], currentMA: { battery: -3000, pv1: 1000, pv2: 0, extLoad: 4000 },
+  }), 50);
+  t.after(() => clearInterval(timer));
+  const exited = new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
+  if (apiFile) {
+    let response;
+    const deadline = Date.now()+6000;
+    while (Date.now()<deadline) {
+      try {
+        const r=await fetch(apiUrl+'/api/v1/live',{headers:{Authorization:'Bearer '+apiToken}});
+        response=await r.json();
+        if(response.pico?.fresh && response.sbms?.fresh) break;
+      } catch {}
+      await new Promise(resolve=>setTimeout(resolve,50));
+    }
+    assert.equal(response?.pico?.fresh,true,stderr);assert.equal(response?.sbms?.fresh,true,stderr);
+    assert.equal(response.measurements.find(m=>m.id==='battery').values.stateOfCharge,83);
+    assert.equal(response.measurements.find(m=>m.id==='pv2').values.watts,0);
+    assert.equal((await fetch(apiUrl+'/api/v1/status')).status,401);
+    let history;
+    while(Date.now()<deadline) {
+      const r=await fetch(apiUrl+'/api/v1/history/battery',{headers:{Authorization:'Bearer '+apiToken}});history=await r.json();
+      if(history.rows?.some(row=>row.coverageSeconds.picoWatts>0)) break;
+      await new Promise(resolve=>setTimeout(resolve,100));
+    }
+    assert.ok(history.rows?.some(row=>row.values.pv2Watts===0 && row.coverageSeconds.picoWatts>0),stderr);
+    assert.equal(stderr.includes(apiToken),false);
+  }
+  const code = await exited;
+  clearInterval(timer); assert.equal(code, 0, stderr);
+  const lines = logging ? [] : stdout.trim().split('\n').map(line => JSON.parse(line));
+  const pico = logging ? packets.map(p => JSON.parse(p.payload.toString())) : lines.filter(line => line.source !== 'sbms');
+  const sbms = logging ? fs.readFileSync(capture, 'utf8').trim().split('\n').map(JSON.parse).filter(r => r.kind === 'sbms').map(r => r.reading) : lines.filter(line => line.source === 'sbms');
+  if (logging) {
+    assert.equal(stdout, ''); assert.ok(stderr.includes('\"source\":\"logging\",\"state\":\"started\"'));
+    assert.equal(stderr.includes('\"state\":\"failed\"'), false);
+    const { readLoggingConfig } = require('../lib/history-config'), { inspect } = require('../bin/history');
+    const history = inspect(readLoggingConfig(loggingFile));
+    assert.equal(history.integrity, 'ok'); assert.ok(history.savedAt);
+    const battery = history.battery.rows[0];
+    assert.equal(history.schemaVersion,2);
+    assert.equal(history.metrics.length,0); // The configured channels share one record.
+    assert.ok(battery.samples.picoBattery > packets.length); assert.ok(battery.coverageSeconds.picoWatts > 0);
+    assert.equal(battery.values.picoSoc,83); assert.equal(battery.values.sbmsSoc,62);
+    assert.ok(Math.abs(battery.values.secondaryVoltage - 9.999) < 1e-9);
+    assert.equal(battery.values.pv2Current,0); assert.equal(battery.values.pv2Watts,0);
+    assert.ok(Math.abs(battery.values.pv1Watts - 13.4) < 1e-9);
+    assert.equal(history.battery.sources.picoCurrent.sensorId,15);
+    assert.equal(history.battery.sources.sbmsCurrent.source,'sbms');
+    const {sqlite}=require('../lib/history-store'), db=new (sqlite())(path.join(directory,'history.sqlite'),{readOnly:true});
+    try { assert.equal(db.prepare('SELECT COUNT(*) AS n FROM history').get().n,0); }
+    finally {db.close();}
+  }
+  assert.ok(pico.length > 0); assert.ok(sbms.length > 0); assert.ok(packets.length > 0);
+  assert.equal(sbms[0].voltage, 13.4); assert.equal(sbms[0].current.pv2, 0);
+  for (const packet of packets) {
+    assert.equal(packet.topic, '/Ella/Pico/'); assert.equal(packet.qos, 0); assert.equal(packet.retain, false);
+    const output = JSON.parse(packet.payload.toString());
+    assert.ok(pico.some(value => JSON.stringify(value) === JSON.stringify(output)));
+    const now = output.time;
+    const oracle = spawnSync('python3', [path.join(__dirname, 'python-oracle.py'), baseline], {
+      input: JSON.stringify({ ...sim.data, time: { ...now, year: now.year + 2000 } }), encoding: 'utf8',
+    });
+    assert.equal(oracle.status, 0, oracle.stderr); assert.deepEqual(output, JSON.parse(oracle.stdout).output);
+  }
+  assert.equal((await verifyCapture(capture, { comparePython: true })).ok, true);
+  assert.equal(stderr.includes('test-pass'), false);
 });
