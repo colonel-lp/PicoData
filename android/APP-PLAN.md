@@ -21,6 +21,7 @@ Planning draft, 2026-10-09. This records the owner's requirements and proposals 
 - Check GitHub releases and offer downloading/installing updates from this project; retain a changelog and stable signing identity. Exact release repository/package identity and update policy still need agreement.
 - Preserve the special Joying/FYT keep-screen handling and detect compatible devices/services, with ordinary Android handling on phones.
 - If alerts are included, they must work with the Android UI backgrounded, including screen-off use. Do not implement alerts restricted to the visible dashboard. Alert rules, thresholds, notification delivery and enabled/disabled behaviour still need agreement.
+- Investigate optional internet-relayed alerts and remote read-only data display as a future feature. The Pi should initiate outbound connections only, with no internet listener/port forwarding or incoming application commands/settings. Provider and implementation are not selected.
 - Investigate Simarine settings backup/restore/editing as a later feature, separate from the first monitoring/history viewer.
 
 ## Display labels
@@ -86,6 +87,21 @@ Recommend evaluating alert conditions on the always-on Pi, with Android providin
 For local background Android delivery, evaluate a user-enabled ongoing monitoring service with an appropriate foreground-service type, notification permissions, reconnect/backoff and screen-off/device tests. Keep the screen-on setting separate: background alerts must not require lighting the display. Do not promise alerts while off-network, powered off or explicitly stopped; remote delivery/recovery policy would be a separate design decision.
 
 Current official [foreground-service types](https://developer.android.com/develop/background-work/services/fgs/service-types), [background-start restrictions](https://developer.android.com/develop/background-work/services/fgs/restrictions-bg-start), [timeouts](https://developer.android.com/develop/background-work/services/fgs/timeout) and [user-initiated stopping](https://developer.android.com/develop/background-work/services/fgs/handle-user-stopping) must guide the implementation. Generic dataSync foreground services have background time limits on recent Android; do not assume arbitrary polling can run indefinitely or bypass limits with an older target SDK. Investigate whether connectedDevice accurately applies to the external Pi/monitor interaction and its prerequisites before choosing it.
+
+## Future remote read-only monitoring and alerts
+
+The owner asks whether alerts/readings can reach a phone away from the local Wi-Fi, with data served outward and no incoming controls. This is a future feasibility/design item, not an instruction to enable a cloud service or publish private readings.
+
+Proposed direction:
+
+- Pi initiates authenticated HTTPS uploads of selected readings/intervals and alert events to an internet relay; local acquisition/logging continues independently. The phone reads the relay through authenticated read-only access on mobile data or another Wi-Fi network.
+- Keep the Pi's API LAN-only, with no router port forwarding, internet listener, remote tunnel into the API or inbound command subscription. Pi upload credentials and phone read credentials are separate and narrowly scoped. The collector must not consume relay responses as configuration/control commands; normal TLS/HTTP acknowledgements remain necessary protocol traffic.
+- Evaluate conditions on the Pi, then relay event notifications to the phone. The relay is a data/alert delivery service, not a control plane for the Pi/Pico/SBMS. Remote threshold/configuration changes are outside the requested read-only scope.
+- Select upload cadence, measurements and remote history retention later; avoid mirroring every high-frequency sample by default. Alert events can be sent promptly while routine readings use a lower configurable cadence. Bound offline queues/retries and expose last acquisition/upload times and gaps. Delayed uploads or internet loss must not make old readings look live.
+- Live remote display needs internet access at both ends. A phone with no internet can only show explicitly timestamped cached data; cached graphs are a separate agreed feature. An internet-loss status can be detected by the relay from missing uploads if later requested.
+- [ntfy](https://docs.ntfy.sh/) is an alerts-only candidate: HTTP publishing and a phone notification app, with authenticated topics and distinct read/write access where configured ([access control](https://ntfy.sh/docs/config/)). Do not treat an unguessable public topic name as authentication. It does not replace the live/history data API.
+- [Firebase Cloud Messaging](https://firebase.google.com/docs/cloud-messaging/fcm-architecture) is a candidate for integrated Android push delivery from a trusted relay; [Android background notification handling](https://firebase.google.com/docs/cloud-messaging/android/receive-messages) is documented. Verify Google Play services/device compatibility and notification permissions before choosing it; do not assume identical phone/head-unit support or immediate guaranteed delivery.
+- Choose hosting/provider, credentials, privacy/data retention, costs/quotas, delivery expectations and outage behaviour before implementation. Automatic Google Drive database backups remain a separate unimplemented storage proposal.
 
 ## Simarine configuration investigation
 
