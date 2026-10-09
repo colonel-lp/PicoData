@@ -1,5 +1,23 @@
 # Build validation
 
+## Pi collector 0.7.0 — authenticated local API, 2026-10-09
+
+Source parent: `3976bc202f47a326be779f59b50300b81bbb08f0`. Package metadata/documentation are 0.7.0; database schema remains 2. No new npm dependencies or MQTT/collector calculation changes.
+
+**74 tests passed, 0 failed under Node 22**, including nine API tests and actual collector/API/MQTT integration. Syntax checks pass. Public API fixtures/certificates/credentials are synthetic; TLS test certificates are generated temporarily through OpenSSL.
+
+- Check private random-token generation, owner-only files, no overwrite, host/port/TLS validation, default/disable/conflicting collector configuration and authenticated local checks without URL tokens.
+- Exercise real HTTP and HTTPS requests: all routes require header authentication, non-GET operations are rejected, no wildcard CORS/cache exposure, no credentials/database paths in status/errors, read-only SQLite enforces no writes and the collector writer continues operating.
+- Check source references, selected units/exact labels, range validation/calendar cutoffs, indexed pagination without duplicate rows, missing periods/null members, valid zero PV2, partial checkpoints, environmental values/extrema and battery-member compatibility views.
+- Check monotonic independent source freshness, disconnected/stale snapshot suppression, safe mapping selection, fresh configured cross-source voltage for live watts and current/SOC preservation when voltage is unavailable.
+- Check global request-rate and response-size caps, generic storage failures, logging health and shutdown cleanup. Listener/header/request/socket/connection bounds are configured; their real Pi resource effect remains unmeasured.
+- Run the actual collector CLI with simulated Pico and MQTT transports while issuing authenticated/denied requests and reading checkpointed history. Normal stdout stays silent and every published Pico JSON is still compared with the Python oracle; capture checks remain valid.
+- Privately serve the owner's uploaded schema-2 history through the read-only API reader. Existing combined statistics and field-level source references match inspection; uploaded files are not changed or published.
+
+The owner's main/history-backup pair passes integrity and migration-preservation review. Completed intervals remain unchanged; active intervals continue accumulating consistently, selected sensors/zero values remain present and larger electrical totals match minute sums. This verifies the supplied recording, not physical sensor calibration or long-run durability. Keep raw measurements, actual inventory and system details private.
+
+**Remaining device checks:** enable API access on the Pi, issue LAN requests from a client, check private credentials/TLS trust if selected, restart with collection/logging, privately measure memory/latency under history queries and finish long-run midnight/retention/charging verification. No Android application, automated backup or Google Drive authorization/upload is implemented.
+
 ## Pi collector 0.6.0 — combined battery intervals, 2026-10-09
 
 Source parent: `7b492024ad2f645acf482815b284961b83dba3f3`. Package metadata/documentation are 0.6.0; npm dependencies and MQTT acquisition/publishing remain unchanged.
@@ -13,7 +31,7 @@ Source parent: `7b492024ad2f645acf482815b284961b83dba3f3`. Package metadata/docu
 - Check read-only `--battery`, existing per-metric compatibility views and simultaneous real-CLI Pico/SBMS logging with exact MQTT/Python payload parity and silent normal readings.
 - Privately migrate the earlier capture-derived database and compare every original statistic against its destination. Database integrity passes; no separate battery-channel history rows remain. Actual readings/identities, raw files and system details remain excluded from publication.
 
-Owner has inspected an initial live minute record from 0.5.0. The new 0.6.0 migration/combined output still needs a Pi update/restart check; live energy calibration, storage performance and long-run recovery remain pending. No network API or Android app is added.
+Owner has inspected an initial live minute record from 0.5.0. The owner subsequently supplied live 0.6.0 history and its pre-upgrade backup; both pass integrity/preservation checks as recorded above. Live energy calibration, storage performance and long-run recovery remain pending. No network API or Android app is added.
 
 ## Pi collector 0.5.0 — SQLite history, 2026-10-09
 

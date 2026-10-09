@@ -6,6 +6,9 @@ node_modules/
 
 /logging.json
 /logging.local.json
+/api.json
+/api.local.json
+/tls/
 /history/
 *.sqlite
 *.sqlite-*

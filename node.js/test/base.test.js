@@ -342,7 +342,7 @@ test('missing default config fails visibly without readings or credentials', t =
   assert.equal(conflict.status, 2); assert.ok(conflict.stderr.includes('Usage:'));
 });
 
-for (const logging of [false, true]) test(`simultaneous SBMS/Pico preserves MQTT and capture: logging ${logging}`, async t => {
+for (const logging of [false, true, 'api']) test(`simultaneous SBMS/Pico preserves MQTT and capture: logging ${logging}`, async t => {
   const sim = await simulator(t), broker = await mqttBroker(t);
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'ella-combined-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
@@ -357,9 +357,18 @@ for (const logging of [false, true]) test(`simultaneous SBMS/Pico preserves MQTT
     { id: 'pv2', source: 'sbms', field: 'pv2', kind: 'electrical', role: 'supply', polarity: null, voltage: 'self' },
     { id: 'pv1', source: 'sbms', field: 'pv1', kind: 'electrical', role: 'supply', polarity: null, voltage: 'self' },
   ] }));
+  let apiUrl, apiFile;
+  const apiToken = 'c'.repeat(64);
+  if (logging === 'api') {
+    const reserve = net.createServer(); await new Promise(resolve=>reserve.listen(0,'127.0.0.1',resolve));
+    const port = reserve.address().port; await new Promise(resolve=>reserve.close(resolve));
+    apiUrl = 'http://127.0.0.1:'+port; apiFile = path.join(directory,'api.json');
+    fs.writeFileSync(apiFile,JSON.stringify({host:'127.0.0.1',port,token:apiToken}));
+  }
   const child = spawn(process.execPath, [path.join(__dirname, '../bin/pico.js'), '--mqtt-config', config,
     '--ip', '127.0.0.1', '--udp-port', String(sim.port), '--tcp-port', String(sim.port),
-    '--duration', '1.8', '--record', capture, ...(logging ? ['--logging-config', loggingFile] : ['--stdout', '--sbms-stdout'])]);
+    '--duration', logging === 'api' ? '3.2' : '1.8', '--record', capture, ...(logging ? ['--logging-config', loggingFile] : ['--stdout', '--sbms-stdout']),
+    ...(apiFile ? ['--api-config',apiFile] : [])]);
   t.after(() => { if (child.exitCode === null) child.kill(); });
   let stdout = '', stderr = '', second = 1;
   child.stdout.on('data', data => { stdout += data; }); child.stderr.on('data', data => { stderr += data; });
@@ -368,7 +377,32 @@ for (const logging of [false, true]) test(`simultaneous SBMS/Pico preserves MQTT
     cellsMV: [3200, 3300, 3400, 3500, 0, 0, 0, 0], currentMA: { battery: -3000, pv1: 1000, pv2: 0, extLoad: 4000 },
   }), 50);
   t.after(() => clearInterval(timer));
-  const code = await new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
+  const exited = new Promise((resolve, reject) => { child.on('error', reject); child.on('close', resolve); });
+  if (apiFile) {
+    let response;
+    const deadline = Date.now()+6000;
+    while (Date.now()<deadline) {
+      try {
+        const r=await fetch(apiUrl+'/api/v1/live',{headers:{Authorization:'Bearer '+apiToken}});
+        response=await r.json();
+        if(response.pico?.fresh && response.sbms?.fresh) break;
+      } catch {}
+      await new Promise(resolve=>setTimeout(resolve,50));
+    }
+    assert.equal(response?.pico?.fresh,true,stderr);assert.equal(response?.sbms?.fresh,true,stderr);
+    assert.equal(response.measurements.find(m=>m.id==='battery').values.stateOfCharge,83);
+    assert.equal(response.measurements.find(m=>m.id==='pv2').values.watts,0);
+    assert.equal((await fetch(apiUrl+'/api/v1/status')).status,401);
+    let history;
+    while(Date.now()<deadline) {
+      const r=await fetch(apiUrl+'/api/v1/history/battery',{headers:{Authorization:'Bearer '+apiToken}});history=await r.json();
+      if(history.rows?.some(row=>row.coverageSeconds.picoWatts>0)) break;
+      await new Promise(resolve=>setTimeout(resolve,100));
+    }
+    assert.ok(history.rows?.some(row=>row.values.pv2Watts===0 && row.coverageSeconds.picoWatts>0),stderr);
+    assert.equal(stderr.includes(apiToken),false);
+  }
+  const code = await exited;
   clearInterval(timer); assert.equal(code, 0, stderr);
   const lines = logging ? [] : stdout.trim().split('\n').map(line => JSON.parse(line));
   const pico = logging ? packets.map(p => JSON.parse(p.payload.toString())) : lines.filter(line => line.source !== 'sbms');

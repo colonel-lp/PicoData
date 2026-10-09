@@ -1,12 +1,12 @@
-# Ella Pico base — 0.6.0
+# Ella Pico base — 0.7.0
 
 Standalone Node.js starting point for the Android Pico reader. It uses the updated acquisition code preserved in [`../_old/pico2signalk/`](../_old/pico2signalk/), with the owner's [`../python/pico-mqtt.py`](../python/pico-mqtt.py) sensor mappings, calculations and Ella JSON format carried over. MQTT publishing is enabled by default using `PicoData/mqtt` and the existing Ella JSON contract; `--no-mqtt` selects reader-only operation. SignalK remains excluded.
 
-**Status:** version 0.6.0 stores one combined battery record per UTC interval, with named Pico/SBMS/solar values and field-level source references. It automatically migrates and backs up 0.5.0 history; other shunts and environmental records retain their existing layout, calculations and retention. MQTT payloads and quiet service operation are preserved. See [logging setup and inspection](LOGGING.md). The history API and Android viewer are subsequent stages. Earlier owner-reported Pico/Python capture and dashboard/recovery checks passed; the SBMS receiver has also received live data on the Pi. New logging needs live Pi testing. See [build validation](../android/BUILD-VALIDATION.md) for automated/replay evidence and pending checks.
+**Status:** version 0.7.0 adds an optional authenticated local API for live Pico/SBMS readings, source/measurement metadata and selected history. It uses the existing Node.js service and SQLite schema 2; MQTT payloads, acquisition, combined battery history and retention are unchanged. See [API setup and contract](API.md) and [logging setup](LOGGING.md). The owner's uploaded live history and migration backup passed integrity/preservation checks; API hardware/network performance still needs Pi testing. Android implementation remains next. See [build validation](../android/BUILD-VALIDATION.md) for automated evidence and pending checks.
 
 ## Run on the Pi
 
-Use Node.js 22.13+ with built-in SQLite for logging; Node.js 18+ remains sufficient without logging. Run `npm ci --omit=dev` to install the pinned MQTT.js dependency. Reader-only operation with `--no-mqtt` needs no installed npm packages. Python 3 is needed only for comparison tests. The complete test suite, including SQLite tests, requires Node 22.13+. The repository's root `node.js/` folder is the self-contained collector and can be installed directly in `~/PicoData/node.js`; the original repository folders are not required. For that installation:
+Use Node.js 22.13+ with built-in SQLite for logging; Node.js 18+ remains sufficient without logging. Run `npm ci --omit=dev` to install the pinned MQTT.js dependency. Reader-only operation with `--no-mqtt` needs no installed npm packages. Python 3 is needed only for comparison tests. The complete test suite, including SQLite tests, requires Node 22.13+ and Python 3; its HTTPS test also uses OpenSSL. The repository's root `node.js/` folder is the self-contained collector and can be installed directly in `~/PicoData/node.js`; the original repository folders are not required. For that installation:
 
 ```bash
 node --version
@@ -153,6 +153,10 @@ Packet fields are bounds-checked. Unknown field types, broken separators and unt
 | `lib/mqtt-publisher.js` | Existing config parser, optional MQTT publisher, reconnect and bounded buffering. |
 | `mqtt.example` | Configuration layout with placeholder credentials. |
 | `lib/sbms.js` | SBMS config, decoding, subscription/reconnect and independent sample freshness. |
+| `lib/api.js`, `lib/api-config.js` | Optional authenticated HTTP/HTTPS API and private listener configuration. |
+| `lib/history-reader.js` | Read-only catalogue, indexed range queries, pagination and source-referenced history. |
+| `bin/init-api.js`, `bin/api-check.js` | Generate private API credentials and make authenticated local checks. |
+| `API.md` | API setup, routes, data contract, limits and pending Pi checks. |
 | `bin/pico.js` | MQTT reader with silent readings by default, optional stdout and evidence recording. |
 | `service/pico-mqtt.service` | Generic systemd unit template for a flat installation. |
 | `bin/verify-capture.js` | Real capture checks, Python comparison and replay. |
@@ -166,3 +170,7 @@ Packet fields are bounds-checked. Unknown field types, broken separators and unt
 Follow [LOGGING.md](LOGGING.md) to create private `PicoData/logging.json`, start logging with the existing service, inspect saved summaries and replay a local capture. The default persistent database is `PicoData/history/history.sqlite`, outside `node.js/` so source updates preserve history. [logging.example.json](logging.example.json) uses fictional IDs; generate your real selection from the private configuration capture.
 
 For the combined battery record use `node bin/history.js --battery --limit 3`. Keep the existing private configuration/database during an upgrade; the collector performs the schema migration on startup.
+
+## Local API
+
+Follow [API.md](API.md) to create private parent `PicoData/api.json` and access status, live readings, measurement metadata and selected history. The API is disabled when that file is absent. It requires configured logging; `--api-config FILE` selects a different file and `--no-api` disables it. It uses the same service, without changing the MQTT dashboard or adding npm dependencies. Android remains a subsequent stage.

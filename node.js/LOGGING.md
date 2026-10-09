@@ -49,7 +49,7 @@ node bin/history.js --battery --resolution minute --limit 5
 node bin/history.js --battery --resolution hour --limit 24
 ```
 
-`integrity` should be `ok`, `savedAt` should advance and valid electrical rows should show positive coverage. This command is read-only. It reports the most recent checkpoint, so readings can be up to a minute behind live MQTT. `--config FILE` selects another private configuration. The history API and Android charts are a subsequent step.
+`integrity` should be `ok`, `savedAt` should advance and valid electrical rows should show positive coverage. This command is read-only. It reports the most recent checkpoint, so readings can be up to a minute behind live MQTT. `--config FILE` selects another private configuration. The optional authenticated [local API](API.md) is implemented in 0.7.0; Android charts are a subsequent step.
 
 For a foreground test, stop the service first; the database permits only one writer:
 
@@ -144,3 +144,7 @@ The replay reconstructs configuration/sensors from raw Pico records and uses rec
 Schema version 2 consists of `metrics` (measurement definitions/latest names), `names` (rename history), `battery_fields` (source bindings), `battery_history` (one combined battery interval with per-measurement statistics), `history` (other shunts/environmental intervals), and `meta` (checkpoint/clock information). Statistics are named JSON fields; inspection produces the combined named values. No duplicate per-channel battery rows are stored. Backup after stopping the service by copying the entire history directory; never copy just the main SQLite file from a running WAL database.
 
 Official references: [SQLite consistent snapshot backup](https://sqlite.org/lang_vacuum.html#vacuum_with_an_into_clause), [Node 22.13 SQLite module availability](https://nodejs.org/en/blog/release/v22.13.0), [SQLite WAL](https://sqlite.org/wal.html), [SQLite synchronous settings](https://sqlite.org/pragma.html#pragma_synchronous).
+
+## API access
+
+Collector 0.7.0 can expose this existing history through the authenticated, read-only [API](API.md). It keeps schema 2, calculations and retention unchanged and uses a separate read-only connection in the same service. Keep the existing persistent location during testing; moving the whole history directory to USB and adding consistent backups are later work, with backup destinations still undecided.

@@ -1,5 +1,14 @@
 # Pico base changelog
 
+## 0.7.0 — 2026-10-09
+
+- Add an optional authenticated read-only HTTP/HTTPS API inside the existing collector, with status, selected metadata, fresh live Pico/SBMS measurements, combined battery history and per-metric compatibility views. No new npm dependency or SQLite schema change.
+- Preserve acquisition, MQTT JSON/wire output, source-specific calculations, private selections, UTC retention and quiet service operation. Live API watts follow fresh configured voltage references; stale/missing inputs remain null and valid zero currents remain zero.
+- Use indexed bounded history queries, consistent per-response database snapshots, UTC range validation, pagination, partial intervals and existing source/coverage/energy references. Protect access with header tokens, optional TLS, request/connection/response limits and generic errors.
+- Add private API configuration generation and authenticated checks, optional/disable CLI flags, operational/API documentation and pending Android/backup decisions.
+- All 74 tests pass under Node 22, including authenticated HTTP/HTTPS, read-only simultaneous writer access, pagination/gaps, source-specific freshness and actual collector/API/MQTT/Python parity. Existing private history is served read-only with inspection-equivalent statistics/source references. Raw data, credentials and system details remain excluded.
+- Actual Pi API access/performance testing and Android/automatic backups remain later stages.
+
 ## 0.6.0 — 2026-10-09
 
 - Store one combined battery record per UTC minute/hour/day/month interval. Keep Pico/SBMS current and relevant-device SOC, primary/secondary voltage, both PV channels and external-load measurements distinct within the record, with stable source references.

@@ -1,6 +1,6 @@
 # Database and logging plan
 
-Updated 2026-10-09. Collector 0.6.0 implements combined battery interval storage alongside selected SQLite logging, UTC summaries, retention, checkpoints and inspection following the owner's request to start testing. See [LOGGING.md](LOGGING.md) for the implemented contract and setup. The history API remains pending. Earlier proposals/reviews below record design history; the implementation decisions here and LOGGING.md supersede unresolved alternatives.
+Updated 2026-10-09. Collector 0.7.0 implements combined battery interval storage alongside selected SQLite logging, UTC summaries, retention, checkpoints and inspection following the owner's request to start testing. See [LOGGING.md](LOGGING.md) for the implemented contract and setup. The optional authenticated local API is implemented; see [API.md](API.md). Earlier proposals/reviews below record design history; the implementation decisions here and LOGGING.md supersede unresolved alternatives.
 
 ## Owner-requested measurements and retention
 
@@ -186,3 +186,11 @@ The owner requests one battery record per interval with references to each measu
 The named `values` object is documented in LOGGING.md. Other load shunts stay in `history` with their existing electrical periods. Pressure/outside temperature retain hourly/day records and their agreed retention. The main physical-shunt alias and Pico internal voltage remain excluded. No source readings, raw signs, numerical integration or MQTT wire/payload behaviour changes.
 
 Existing schema-1 databases receive a consistent pre-upgrade backup, then migration in a single transaction with bounded batches. Statistics move without recalculation; standalone battery-channel rows are removed after merging, and saved name/source metadata remains. A failed transfer rolls back. Existing generated selections work without edits; group bindings are explicit in newly generated selections. Per-metric inspection commands are compatibility views into the combined record, not additional stored histories. The history API remains pending.
+
+## Authorized API implementation — 0.7.0
+
+The owner requested implementation after the live history review. The existing Node.js collector now optionally starts an authenticated read-only HTTP/HTTPS listener when private parent `api.json` exists. It serves independent source status/freshness, selected measurement metadata and safe live values, combined battery history and per-metric compatibility views with indexed bounded queries. UTC ranges, pagination, coverage, source references and partial intervals are explicit. It uses existing SQLite schema 2 with no recalculation/migration, new npm dependencies, MQTT changes or separate service.
+
+The owner's supplied main/history-backup pair passed integrity checks; completed records and metadata were preserved and active intervals continued accumulating after migration. No private readings, inventory or runtime information is published. API serving of that database was compared read-only with existing inspection. Real Pi API request performance and long-term clock/retention/recovery checks remain pending.
+
+Keep the current persistent history location for testing. A future USB move should include consistent SQLite snapshots; local SD, Android and optional Google Drive destinations are candidates, not selected or implemented. Android is next after API device validation and agreement on its target versions, screens, graph/timezone/connection and offline behaviour.

@@ -8,6 +8,9 @@ Thumbs.db
 /mqtt
 /mqtt.local
 /logging.json
+/api.json
+/api.local.json
+/tls/
 /history/
 *.jsonl
 *.sqlite

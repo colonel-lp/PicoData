@@ -1,13 +1,23 @@
 # Next build changes
 
-## Current authorized step: combined battery history in collector 0.6.0
+## Current authorized step: local API in collector 0.7.0
+
+- [x] Owner requests the API before Android implementation. Add authenticated, read-only status, measurement catalogue, live Pico/SBMS freshness and bounded combined/per-metric history.
+- [x] Reuse the existing service and schema 2 without changing collection, selected statistics, retention, source references, units, signs or MQTT output. Add independent private credentials, optional HTTPS, pagination and explicit partial/gap semantics.
+- [x] Generate/check private parent API settings, document setup/routes/limits, test denied access, safe errors, read-only database access and simultaneous collector/API/MQTT operation.
+- [x] Inspect the owner's live schema-2 database and migration backup privately: integrity passes, completed history/metadata preserved, active buckets extended consistently. Other shunts/environmental history and primary/secondary voltage references are present.
+- [ ] Enable and test API requests/restarts on the Pi; privately assess latency/memory while logging continues. Finish long-run retention/midnight and charge-polarity checks.
+- [ ] Agree Android targets, screens, charts, discovery, credential storage and offline behaviour before the app build.
+- [ ] Keep history on its current persistent storage for now. Plan USB migration with consistent backups; SD/Android/Google Drive destinations, backup schedule and retention remain undecided. No automatic backup/cloud access is included in this API build.
+
+## Previous authorized step: combined battery history in collector 0.6.0
 
 - [x] Owner requests one combined battery record per interval with field-level source references, instead of separate battery/SBMS history rows.
 - [x] Include primary/secondary voltage, distinct Pico/SBMS current and SOC, PV1/PV2 and external load, retaining independent coverage and energy/statistics.
 - [x] Back up and migrate existing history atomically without recalculating/discarding saved values; keep other shunts, pressure and outside temperature in their current records and periods.
 - [x] Add combined inspection and preserve existing per-metric commands as views; support existing private configuration without regeneration.
-- [ ] Update/restart the Pi collector and compare combined values/coverage with the existing live setup. Preserve the pre-upgrade backup and report any migration issues.
-- [ ] History API and Android/browser display remain subsequent stages.
+- [x] Owner updated the Pi and supplied live history plus pre-upgrade backup; read-only review confirms integrity, preserved completed records, source bindings, valid zeros and consistent rollups. Long-run hardware checks remain pending.
+- [x] History API is implemented in 0.7.0 above; Android/browser display remains a subsequent stage.
 
 ## Previous authorized step: SQLite logging in collector 0.5.0
 
