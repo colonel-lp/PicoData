@@ -11,7 +11,8 @@ Planning draft, 2026-10-09. This records the owner's requirements and proposals 
 
 ## Owner-requested interface and features
 
-- Similar look and feel to the EQ & DSP app: borders enclose related buttons, labels and indicators; retain a theme button.
+- Similar look and feel to the EQ & DSP app: borders enclose related buttons, labels and indicators; retain a theme button. The result should look stylish and cohesive with that app. Review other manufacturers' display designs for ideas while preserving the owner's dashboard arrangement.
+- All monitoring-element labels and group headings are renameable. Treat these as saved display aliases, separate from sensor/metric identity and original source names; renaming must not affect source binding, calculations or existing history, nor write names back to the monitors.
 - Persistent bottom bar: settings, full screen, keep screen on, main monitoring screen, theme and graph ranges Last 6 hours, Last 12 hours, Last 24 hours, Week and Month. Rolling ranges are the default; add a Rolling / Defined toggle for aligned named periods. Final sizing/overflow and defined-period boundary labels await agreement.
 - Preserve the existing dashboard arrangement shown in the owner's attached photo, with better use of space and more polished indicators. Keep the current list at left; flags above the central two-row load/PV/battery/SOC gauge block with both SBMS and Pico comparisons; pressure, tanks and pitch/roll to its right; the temperature column at far right; voltage/delta, remaining capacity/runtime, source voltage and cell readings along the bottom. The photo is a private visual reference: do not publish it, its measurements or inventory. Labels/readings come from configured sources, not hardcoded photographed values.
 - Tapping a relevant indicator opens a summary popup with its current and available hourly/daily/weekly/monthly information. Offer only statistics actually recorded/derivable for that measurement; flags remain live-only and unlogged values have no invented history.
@@ -21,6 +22,27 @@ Planning draft, 2026-10-09. This records the owner's requirements and proposals 
 - Preserve the special Joying/FYT keep-screen handling and detect compatible devices/services, with ordinary Android handling on phones.
 - If alerts are included, they must work with the Android UI backgrounded, including screen-off use. Do not implement alerts restricted to the visible dashboard. Alert rules, thresholds, notification delivery and enabled/disabled behaviour still need agreement.
 - Investigate Simarine settings backup/restore/editing as a later feature, separate from the first monitoring/history viewer.
+
+## Display labels
+
+Provide a label editor in settings for monitoring elements and group headings, with saved overrides and a Restore original/default action. Use the same element label consistently in the dashboard, related popup, graph legend/selection and data export; exports retain source identifiers and original names alongside the chosen label. Preserve technical units independently of editable text.
+
+Bind aliases to stable metric/widget identity, not the label string. For unselected raw Pico sensors, validate source/type/configuration binding before reusing an alias; a sensor position alone is not proof of unchanged hardware. Keep original source references available in details for troubleshooting. Support longer labels without overlap/clipping other controls; truncation on a compact tile should leave the full label accessible.
+
+Renaming is an Android display feature, not a Simarine/SBMS settings write or a database rebind. Cross-device alias synchronisation and renaming monitor settings are separate unselected features. Settings editing is agreed; a long-press shortcut can be proposed in the wireframe without replacing the tap-to-summary action.
+
+## Manufacturer design references and proposed direction
+
+Reviewed public manufacturer guidance on 2026-10-09:
+
+| Reference | Ideas relevant to this viewer |
+| --- | --- |
+| [Victron GX user interface](https://www.victronenergy.com/media/pg/Venus_GX/en/the-new-user-interface.html) | Dark/light modes, ring-style summary indicators, grouping by source/storage/load, and outlined tappable items opening details. |
+| [Mastervolt EasyView 5](https://www.mastervolt.com/products/masterbus-displays/easyview-5/) | Readable system summaries, customisable favourite pages and clearly accessible warnings/alarms. |
+
+Proposed styling: retain the EQ app's themed group borders, button states and bottom controls; apply consistent spacing, aligned labels, prominent numbers with smaller units, clean gauge arcs/rings and restrained accents within the owner's existing layout. Distinguish available/off, unavailable and fault states using text/icons as well as colour. Keep line weights, corner shapes, typography and colour roles consistent across dashboard, popups, charts and settings. Avoid hardcoding manufacturer branding, copying their assets or replacing the requested arrangement with a different overview layout.
+
+Wireframes and visual styling still need owner review before implementation. This research concerns interface design; it does not select those manufacturers' products, protocols or cloud services.
 
 ## Source references for reuse
 

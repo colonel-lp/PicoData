@@ -9,6 +9,8 @@
 - [x] Owner selects rolling Last 6 hours, Last 12 hours, Last 24 hours, Week and Month, with a Rolling / Defined period toggle.
 - [x] Owner provides the existing dashboard photo and asks to preserve its layout/grouping and both monitor comparisons. Record the arrangement without publishing the photo, readings or inventory.
 - [x] If alerts are included, they must work while the Android UI is backgrounded; implementation, thresholds/rules and delivery policy are not yet selected.
+- [x] Owner requests stylish design informed by other manufacturers while staying consistent with the EQ app and supplied dashboard arrangement. Record Victron GX and Mastervolt display guidance as design references; visual styling/wireframes remain to review.
+- [x] Make each monitoring-element label/group heading renameable, with persistent display aliases and original/default restoration. Keep stable source/metric bindings, units, calculations, history and monitor settings unchanged; apply labels consistently to related graphs/popups/exports.
 - [ ] Settle phone adaptation, indicator/summary fields, defined-period boundaries/rolling Month convention, graph interaction/edge coverage, offline/background alert delivery, export formats and package/signing/release location before an app build.
 - [ ] Investigate Simarine settings backup/restore/editing later; vendor-app capability does not prove our collector has a complete restorable backup or settings write path.
 - [ ] Implement the Android viewer only after an explicit implementation/build request. This step records requirements/proposals and does not change application source or versions.
