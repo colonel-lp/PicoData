@@ -1,12 +1,22 @@
 # Next build changes
 
-## Current authorized correction: live SBMS states in collector 0.7.1
+## Current planning: Android viewer requirements — 2026-10-09
+
+- [x] Owner targets both phones and the Joying/FYT head unit, supporting Android 8.1 (API 27) through current Android versions.
+- [x] Record the owner's requested EQ/DSP visual grouping, Node-RED dashboard reference, bottom bar, full-screen/keep-screen/theme controls, relevant summary popups, line/period bar graphs, data export and GitHub updates in [APP-PLAN.md](APP-PLAN.md).
+- [x] Inspect the separate EQ app's current screen/window/update source as a read-only reference; preserve FYT Main module 0 command 13 handling with Android foreground lifecycle and timeout restoration. Detect supported capability before head-unit-specific operations.
+- [x] Owner confirms live flag changes working; short local API load test completed without failed requests and collection/logging remained healthy. Publish only functional outcomes, excluding system/network details and numerical resource/timing snapshots.
+- [ ] Settle primary battery source, phone orientation/reflow, ranges/summary fields, graph interaction, offline/alert behaviour, export formats, package/signing/release location and final layout before an app build.
+- [ ] Investigate Simarine settings backup/restore/editing later; vendor-app capability does not prove our collector has a complete restorable backup or settings write path.
+- [ ] Implement the Android viewer only after an explicit implementation/build request. This step records requirements/proposals and does not change application source or versions.
+
+## Previous authorized correction: live SBMS states in collector 0.7.1
 
 - [x] Expose the complete accepted SBMS broadcast through the live API; preserve existing normalized battery values and original raw field names/units.
 - [x] Provide live boolean CFET, DFET, OVLK, UVLK, EOC, IOT, LVC and CELF states for On/Off display. Missing/invalid flags and stale/disconnected readings are unavailable, never silently Off.
 - [x] Deliver flag/auxiliary-only changes within a source-clock second while continuing to ignore retained and complete repeated broadcasts, including reordered object keys.
 - [x] Keep flags/auxiliary values out of database history; preserve schema, selected measurements, calculations, retention and Pico MQTT output.
-- [ ] Update the Pi and confirm live flags match the SBMS/dashboard. Android display remains pending.
+- [x] Owner updated the Pi and confirms the live flag changes work. Android display remains pending.
 
 ## Previous authorized step: local API in collector 0.7.0
 
@@ -15,8 +25,10 @@
 - [x] Generate/check private parent API settings, document setup/routes/limits, test denied access, safe errors, read-only database access and simultaneous collector/API/MQTT operation.
 - [x] Inspect the owner's live schema-2 database and migration backup privately: integrity passes, completed history/metadata preserved, active buckets extended consistently. Other shunts/environmental history and primary/secondary voltage references are present.
 - [x] Owner enabled the API and confirmed local status/live/history requests; supplied responses pass private freshness/calculation/source-reference review.
-- [ ] Test LAN/TLS requests and restarts; privately assess latency/memory while logging continues. Finish long-run retention/midnight and charge-polarity checks.
-- [ ] Agree Android targets, screens, charts, discovery, credential storage and offline behaviour before the app build.
+- [x] Owner completed a short local API load check with no request failures and healthy collection/logging; raw timing/resource data remains private.
+- [ ] Test LAN/TLS requests and restarts. Finish long-run retention/midnight and charge-polarity checks.
+- [x] Agree Android target range/device categories; draft screen/chart requirements are recorded in APP-PLAN.md.
+- [ ] Finalise layout, discovery, credential storage and offline/background behaviour before the app build.
 - [ ] Keep history on its current persistent storage for now. Plan USB migration with consistent backups; SD/Android/Google Drive destinations, backup schedule and retention remain undecided. No automatic backup/cloud access is included in this API build.
 
 ## Previous authorized step: combined battery history in collector 0.6.0

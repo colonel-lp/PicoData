@@ -11,7 +11,7 @@ Source parent: `686ffb7279dcaf4b4dd1c591d52c2f627a2a9e64`. Package metadata/docu
 - Exercise authenticated live HTTP responses with SBMS decoder and logger: On/Off states change, stale/disconnected values disappear, existing normalized currents remain correct, and no flags/auxiliary fields or metrics enter history.
 - Keep public fixtures synthetic and all owner readings, network details and system inventory private.
 
-The owner has confirmed local Pi API status/live/history requests in 0.7.0; supplied responses pass private freshness, arithmetic and source-reference review. **Remaining device checks:** update to 0.7.1 and compare live flags with the monitor/dashboard; LAN/TLS access, restart/resource assessment and unattended midnight/retention/charging checks remain pending. Android/automatic backups are not included.
+The owner has confirmed local Pi API status/live/history requests and working live flags in 0.7.1. Supplied history passes private interval/coverage/arithmetic/source-reference review. A short local live/history API load check completes without failed requests while collection/logging remains healthy; numerical timing/resource snapshots and actual system/network details remain private. **Remaining device checks:** LAN/TLS access, restart/recovery and unattended midnight/retention/charging checks. This is short local validation, not evidence of indefinite memory stability or client LAN performance. Android/automatic backups are not included.
 
 ## Pi collector 0.7.0 — authenticated local API, 2026-10-09
 
