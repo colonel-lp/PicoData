@@ -6,7 +6,10 @@
 - [x] Record the owner's requested EQ/DSP visual grouping, Node-RED dashboard reference, bottom bar, full-screen/keep-screen/theme controls, relevant summary popups, line/period bar graphs, data export and GitHub updates in [APP-PLAN.md](APP-PLAN.md).
 - [x] Inspect the separate EQ app's current screen/window/update source as a read-only reference; preserve FYT Main module 0 command 13 handling with Android foreground lifecycle and timeout restoration. Detect supported capability before head-unit-specific operations.
 - [x] Owner confirms live flag changes working; short local API load test completed without failed requests and collection/logging remained healthy. Publish only functional outcomes, excluding system/network details and numerical resource/timing snapshots.
-- [ ] Settle primary battery source, phone orientation/reflow, ranges/summary fields, graph interaction, offline/alert behaviour, export formats, package/signing/release location and final layout before an app build.
+- [x] Owner selects rolling Last 6 hours, Last 12 hours, Last 24 hours, Week and Month, with a Rolling / Defined period toggle.
+- [x] Owner provides the existing dashboard photo and asks to preserve its layout/grouping and both monitor comparisons. Record the arrangement without publishing the photo, readings or inventory.
+- [x] If alerts are included, they must work while the Android UI is backgrounded; implementation, thresholds/rules and delivery policy are not yet selected.
+- [ ] Settle phone adaptation, indicator/summary fields, defined-period boundaries/rolling Month convention, graph interaction/edge coverage, offline/background alert delivery, export formats and package/signing/release location before an app build.
 - [ ] Investigate Simarine settings backup/restore/editing later; vendor-app capability does not prove our collector has a complete restorable backup or settings write path.
 - [ ] Implement the Android viewer only after an explicit implementation/build request. This step records requirements/proposals and does not change application source or versions.
 
