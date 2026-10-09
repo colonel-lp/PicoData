@@ -1,5 +1,14 @@
 # Next build changes
 
+## Pending owner feedback — preview corrections, 2026-10-09
+
+These items are recorded for the next explicitly requested build; no application implementation is authorized by this feedback.
+
+- [x] Owner reports phone API connectivity: Pico readings arrive and SBMS readings eventually arrive. This is not full device/recovery validation.
+- [ ] Correct the dashboard arrangement to match the owner's supplied Node-RED reference and the agreed plan; the owner reports that the preview layout is wrong.
+- [ ] Match the EQ & DSP app's requested visual styling, group borders, controls and theme behavior rather than treating generic outlined cards and a dark/light switch as completion of the design requirement.
+- [ ] Give Load Σ · Pico retained summaries and graphs from the selected, individually logged Pico load shunts. The preview creates this aggregate with no history metric, so its popup incorrectly treats the total as an unlogged live-only element. Preserve each constituent's stable ID, verified consumption orientation, units, retention and independent coverage; exclude overlapping battery/SBMS channels and do not invent complete coverage or average a sum of differently covered channel averages. Review whether aggregate history can be derived accurately from the retained per-shunt data before choosing a collector/API change. Do not silently alter existing logging or schema.
+
 ## Authorized first Android preview — 0.1.0-preview, 2026-10-09
 
 - [x] Owner explicitly requests starting implementation and will monitor allowance warnings.
