@@ -1,6 +1,6 @@
 # Android monitoring app plan
 
-Planning draft, 2026-10-09. This records the owner's requirements and proposals to settle before an Android implementation. No app build or collector change is included.
+Requirements and staged implementation plan, 2026-10-09. The owner explicitly requested starting the Android build after the planning discussion. The first implementation is [0.1.0-preview](README.md), using the existing Pi API without a collector change. Remaining design/production decisions are kept below; preview defaults are documented for device review.
 
 ## Agreed foundation
 
@@ -43,7 +43,7 @@ Reviewed public manufacturer guidance on 2026-10-09:
 
 Proposed styling: retain the EQ app's themed group borders, button states and bottom controls; apply consistent spacing, aligned labels, prominent numbers with smaller units, clean gauge arcs/rings and restrained accents within the owner's existing layout. Distinguish available/off, unavailable and fault states using text/icons as well as colour. Keep line weights, corner shapes, typography and colour roles consistent across dashboard, popups, charts and settings. Avoid hardcoding manufacturer branding, copying their assets or replacing the requested arrangement with a different overview layout.
 
-Wireframes and visual styling still need owner review before implementation. This research concerns interface design; it does not select those manufacturers' products, protocols or cloud services.
+The first native preview provides a concrete layout for owner review; visual fit on actual phones/head units is pending. This research concerns interface design; it does not select those manufacturers' products, protocols or cloud services.
 
 ## Source references for reuse
 
@@ -109,9 +109,9 @@ The official [PICO manual, section 10](https://simarine.net/wp-content/uploads/2
 
 The repository's vendor app was identified as .NET MAUI/Mono. JADX Java wrappers may omit the managed protocol code. Future investigation should locate the actual protocol implementation and distinguish the collector's read configuration from a complete restorable backup, then verify backup/compare before any explicitly authorized settings writes. Do not promise backup compatibility, firmware support or a working write path before evidence.
 
-## Before implementation
+## First preview and remaining production decisions
 
-- Preserve the supplied landscape dashboard grouping in a refined wireframe; finalise phone adaptation, indicator/popup fields, summary source, defined-period boundaries/rolling Month convention, graph units/interactions and theme scope.
+- Preview preserves the landscape grouping at 800dp and wider, with stacked narrower layouts; the threshold/visual fit remain to review. Preview defaults: rolling Month = 30 days; defined 6/12-hour midnight-aligned UTC blocks, UTC calendar days, Monday weeks and calendar months; optional local timezone/BST labels preserve UTC buckets. Dark/light theme, selected metric/quantity popups/charts and source-referenced CSV export are implemented.
 - Agree alert scope and background delivery/lifecycle details, connection setup, app/package name, signing/release location and export formats. Background alerts are required if alerts are included.
-- Validate app LAN connectivity and Android-version requirements; build a small live-data viewer first, then summary popups, history/charts, export and update handling in agreed stages.
+- Native viewer, live freshness, popups, history/charts and CSV export are implemented in the preview. Validate app LAN connectivity, Android 17 local-network permission, certificate trust, display fit and FYT foreground screen handling before relying on device behaviour. Production identity/signing/releases and update handling remain next stages; no release updater is enabled yet.
 - Continue overnight UTC rollover/retention checks alongside planning. Record compilation, synthetic tests and actual phone/head-unit tests separately.

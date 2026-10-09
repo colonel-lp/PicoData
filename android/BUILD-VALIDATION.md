@@ -1,5 +1,22 @@
 # Build validation
 
+## Android 0.1.0-preview — first API viewer, 2026-10-09
+
+Source starts from PicoData `8069a778da17ebb1bec7dfe9846ab836ebc60174`. Collector 0.7.1 and history schema 2 are unchanged. App build 1 has minimum API 27 and compile/target API 37; AGP 9.4.0 / Gradle 9.6.0 / JDK 17.
+
+**Development APK compilation and all 24 tests pass, with zero test failures.** `:app:assembleDebug :app:testDebugUnitTest :app:lintDebug` completes successfully. Lint reports zero errors with 13 warnings: intentionally supported manual LAN HTTP/user-installed CA trust and English-only preview text/localisation work. These warnings are not silently disabled. APK metadata confirms the preview package/version/minimum/target, and APK signature verification succeeds for API 27 and newer using development v2 signing.
+
+- 13 model/contract tests cover original signed currents/power, distinct SOC sources, PV2 valid zero, three-state flags, no string coercion, independent monotonic staleness and cross-source voltage expiry, mapping rejection, verified per-channel load orientation/unknown signs, raw alias metadata, UTC/BST-independent/calendar ranges, environmental extrema, coverage/whole-bucket statistics and CSV escaping/UTC receipt times.
+- Four loopback HTTP tests exercise real authenticated GET requests with header-only credentials, rejected redirects, size/version rejection, complete 1,440-row 24-hour pagination over two pages and malformed continuation rejection. Fixtures use invented readings/identifiers, not owner data.
+- Six Robolectric activity checks exercise Android 8.1/API 27 and Android 15/API 35: offline launch, bottom controls/theme/history navigation, dynamic synthetic data/flags, clearing current readings on stop and narrower portrait grouping.
+- One native-renderer smoke check on API 35 checks label/text-layout dimensions and navigation outside the scrollable dashboard. A temporary synthetic render was visually inspected; a text-alignment issue was corrected. The reference photo and actual owner readings/inventory are not published.
+
+These are compilation, synthetic network/model checks and simulated Android framework/rendering tests. They do **not** establish physical-device Wi-Fi connectivity, Android 17 runtime permission behaviour, Keystore support on the FYT firmware, certificate trust, file-picker delivery, head-unit toolkit compatibility or unattended performance. No live Pi/phone/head-unit connection was performed by the agent.
+
+**Next owner checks:** install the preview; enter private Pi origin/token; compare live values/source signs/flags with Node-RED; verify stale/recovery and foreground/background/resume; test theme/full-screen/keep-screen/rotation/long labels; verify FYT timeout restoration and EQ app interaction; compare retained chart points/coverage with the API and export a CSV. Android 17 permission grant/denial and optional HTTPS need suitable devices/configuration. Existing Pi overnight UTC retention/midnight and controlled charging checks remain pending.
+
+No production signing/release or self-updater is established. Background alerts, remote relay/cache, direct Pico/broker mode, backups and monitor settings writes are not included in this preview. See [README.md](README.md) and [CHANGELOG.md](CHANGELOG.md).
+
 ## Pi collector 0.7.1 — live SBMS flags/full broadcast, 2026-10-09
 
 Source parent: `686ffb7279dcaf4b4dd1c591d52c2f627a2a9e64`. Package metadata/documentation are 0.7.1; schema 2 and npm dependencies remain unchanged.

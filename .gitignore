@@ -20,3 +20,14 @@ Thumbs.db
 *.db-*
 *.db.writer-lock
 *.sqlite.pending
+
+# Android local configuration, credentials and generated output
+/android/source/.gradle/
+/android/source/build/
+/android/source/app/build/
+/android/source/local.properties
+*.apk
+*.aab
+*.jks
+*.keystore
+/android/source/signing.properties

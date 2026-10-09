@@ -1,5 +1,20 @@
 # Next build changes
 
+## Authorized first Android preview — 0.1.0-preview, 2026-10-09
+
+- [x] Owner explicitly requests starting implementation and will monitor allowance warnings.
+- [x] Add native Java source under `android/source/`, minimum API 27 / target API 37, with pinned AGP/Gradle tooling. Keep Pi collector 0.7.1 and schema 2 unchanged.
+- [x] Add bounded GET-only local API transport, Wi-Fi/Ethernet routing, Android 17 LAN permission, encrypted private token storage and regular TLS validation. Independent source expiry clears values rather than substituting zero; polling stops in the background.
+- [x] Add the reference dashboard grouping and both source comparisons, live flags/environment/temperature/cell/capacity details, themes, bottom controls and detected FYT foreground screen handling. Use verified per-load signs for a selected-load consumption sum; leave it unavailable on unknown signs/values.
+- [x] Add persistent element/group label overrides and restoration, source-referenced details/retained summaries, paginated rolling/defined charts, explicit coverage/gaps/net direction, temperature extrema and selected-range CSV export.
+- [x] Record preview defaults for review: landscape grouping at 800dp or wider, stacked narrower screens; rolling Month 30 days; defined midnight-aligned UTC 6/12-hour blocks, calendar days, Monday weeks and calendar months; dark/light themes; manual Pi origin/token; development-only preview package/signing. Production identity/releases/updater remain unsettled.
+- [ ] Test actual phone/head-unit installation, Pi LAN/HTTPS, Android 17 permission grant/denial, source/API/Wi-Fi restart, rotation/visual fit/long labels, background/resume, FYT timeout/wake handling and interaction with the EQ app, chart values and CSV file-picker output.
+- [ ] Agree production app identity and persistent private signing/release location, then implement validated GitHub update checking/download/installer handoff.
+- [ ] Agree alert rules/delivery and implement them with background support in a subsequent authorized stage; no foreground-only alerts are introduced here.
+- [ ] Future remote outbound relay, offline cache, direct Pico/MQTT modes, database backups and Simarine settings remain separate stages.
+
+See [README.md](README.md), [CHANGELOG.md](CHANGELOG.md) and [BUILD-VALIDATION.md](BUILD-VALIDATION.md). This preview is a concrete first review/test build; compilation/synthetic tests do not establish hardware connectivity or production signing.
+
 ## Current planning: Android viewer requirements — 2026-10-09
 
 - [x] Owner targets both phones and the Joying/FYT head unit, supporting Android 8.1 (API 27) through current Android versions.
@@ -14,7 +29,7 @@
 - [ ] Settle phone adaptation, indicator/summary fields, defined-period boundaries/rolling Month convention, graph interaction/edge coverage, offline/background alert delivery, export formats and package/signing/release location before an app build.
 - [ ] Future option: internet-relayed alerts and remote data display using Pi-initiated outbound uploads and an authenticated phone read-only relay. No exposed Pi API/ports, incoming commands or remote monitor/settings changes. Investigate notification/provider choices later; no cloud service or private-data upload is enabled.
 - [ ] Investigate Simarine settings backup/restore/editing later; vendor-app capability does not prove our collector has a complete restorable backup or settings write path.
-- [ ] Implement the Android viewer only after an explicit implementation/build request. This step records requirements/proposals and does not change application source or versions.
+- [x] Owner subsequently authorizes starting implementation; the first Android preview is recorded above. This older planning entry is retained as history, not an outstanding implementation block.
 
 ## Previous authorized correction: live SBMS states in collector 0.7.1
 
