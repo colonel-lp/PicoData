@@ -6,7 +6,8 @@
 - [x] Decode all four mA current fields to amps, SOC and pack voltage from a private configured cell map; include PV2 and preserve valid zeros/current signs.
 - [x] Use Pi UTC receipt time and keep monitor time separately. Reject invalid payloads, ignore retained/exact repeated samples, and clear current readings on stale timeout or broker disconnect.
 - [x] Preserve original Pico MQTT output and quiet service operation; add `--sbms-stdout`, `--no-sbms` and local SBMS capture records for diagnostics.
-- [ ] Verify the new receiver on the Pi, including subscription permissions, configured pack voltage, reporting cadence and broker restart. Confirm charging polarity under known conditions before directional integration.
+- [x] Owner supplied a short real Pi run showing simultaneous Pico/SBMS connection, approximately one SBMS sample per second, valid derived pack voltage and normal timed shutdown. Keep raw readings/timestamps/runtime details private.
+- [ ] Check actual broker restart, stale/repeated/retained behaviour and long unattended SBMS collection. Confirm charging polarity under known conditions before directional integration.
 - [ ] Implement selected SQLite history, rollups/retention and restart recovery next, followed by the local history API. No database/API is added in 0.4.0.
 
 ## Previous Pico base and service work
@@ -111,3 +112,14 @@
 - [x] Convert PV1/PV2 mA to A with division by 1000 in reception, preserving valid zero readings.
 - [ ] Include both solar channels in electrical history; log valid zeros distinctly from unavailable readings.
 - [ ] Include PV2 for future use, with its directional verification performed when connected. This confirmation does not establish its charging polarity from the current zero sample.
+
+## Agreed logging choices and voltage review — 2026-10-09
+
+- [x] Select UTC timestamps and minute/hour/day/month aggregation boundaries; optional Europe/London chart display does not change UTC daily totals.
+- [x] Select the more accurate duration-aware average of instantaneous paired A × V measurements, with coverage and additive rollup integrals.
+- [x] Store last valid SOC from each relevant device and use identical electrical retention periods for Pico and SBMS0.
+- [x] Record owner-described SBMS battery/external-load consumption distinction without adding overlapping currents to totals.
+- [x] Inspect current sensor mappings: voltage sensors/battery voltage are decoded separately; extra current-record fields have no verified voltage interpretation, and bracketed sensor names are filtered from legacy public JSON.
+- [ ] Confirm battery supply versus converter/panel-side domain for each current channel before assigning the owner's preferred SBMS pack-voltage reference to Pico power calculations. Preserve original Pico MQTT output and label derived voltage provenance.
+- [ ] Pair only fresh valid current/voltage measurements; retain current/SOC during voltage gaps and avoid an automatic fallback to untrusted voltage.
+- [ ] Implement persistent logging and the authenticated read-only API when requested; this decision/source-inspection update changes no application version or source.

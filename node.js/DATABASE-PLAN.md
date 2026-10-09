@@ -1,6 +1,6 @@
 # Database and logging plan
 
-Updated discussion draft, 2026-10-08. The owner's logging/retention requests below supersede the initial broad candidate list and retention proposal. Collector 0.4.0 now implements ElectroDacus subscription/decoding as the first acquisition step; see [README.md](README.md). SQLite logging, rollups and the history API remain unimplemented. Calculation/storage refinements and the remaining decisions require agreement.
+Updated discussion draft, 2026-10-09. The owner's logging/retention requests below supersede the initial broad candidate list and retention proposal. Collector 0.4.0 now implements ElectroDacus subscription/decoding as the first acquisition step; see [README.md](README.md). SQLite logging, rollups and the history API remain unimplemented. Calculation/storage refinements and the remaining decisions require agreement.
 
 ## Owner-requested measurements and retention
 
@@ -14,11 +14,11 @@ Updated discussion draft, 2026-10-08. The owner's logging/retention requests bel
 | All Pico current shunts | Month array | Indefinitely |
 | Outside temperature | One reading each hour | 1 month |
 | Outside temperature | Daily minimum and maximum | Indefinitely |
-| ElectroDacus | Voltage, total/battery current, PV1/PV2 charge currents and SOC; analogous electrical summaries with the extra values | Confirm whether the same electrical retention rules apply |
+| ElectroDacus | Voltage, total/battery current, PV1/PV2 charge currents and SOC; analogous electrical summaries with the extra values | Same electrical retention: minute 1 day / hour 1 week / day 1 month / month indefinitely |
 
 Do not silently include other temperatures, tanks, tilt, cell voltages or flags in regular history. They were initial candidates, not selections in the owner's latest request. Connection/coverage tracking supports correct calculations; user-facing alarm/event history is a separate decision.
 
-The owner's proposed aggregation sums received current and voltage over each minute and divides each by 60, then multiplies their averages. The following refinements are recommendations for accurate power/energy reporting, not changes already agreed or implemented.
+The owner accepts the more accurate watts calculation: average paired instantaneous power over actual elapsed valid time instead of multiplying separate current/voltage averages or assuming exactly 60 samples. The duration-aware approach below is the selected calculation direction; directional calibration and storage details remain pending.
 
 ## Proposed calculation refinements
 
@@ -33,7 +33,7 @@ The owner's proposed aggregation sums received current and voltage over each min
 - Daily outside-temperature extrema should inspect all fresh received readings, not just the hourly stored readings.
 - Select the last valid barometer reading actually received within the day; do not carry yesterday's value into an empty day.
 
-A compact electrical representation can remain `[average_W, average_A, average_V]`, with the main battery adding SOC. Recommended timestamp/coverage and Wh/Ah totals belong in named database columns alongside that array. SOC aggregation is still to be chosen; last valid SOC is recommended for an end-of-period battery state. Per-shunt voltage association must be explicit and correct for the measurement point. Do not present battery-side estimated solar power as directly measured panel-side power.
+A compact electrical representation can remain `[average_W, average_A, average_V]`, with the main battery adding SOC. Recommended timestamp/coverage and Wh/Ah totals belong in named database columns alongside that array. SOC uses the last valid value for the relevant device in each interval; do not substitute SBMS SOC for Pico SOC or carry an old value into an empty interval. Per-shunt voltage association must be explicit and correct for the measurement point. Do not present battery-side estimated solar power as directly measured panel-side power.
 
 ## Current direction verification
 
@@ -60,7 +60,7 @@ Use a local SQLite database on persistent Pi storage outside zram-managed direct
 | `energy_totals` | Optional retained directional Wh/Ah totals, or store these alongside each electrical summary to avoid duplication. Final schema remains open. |
 | `events` | Proposed source/collector availability and clock-change records; additional monitor alarms/flags are not selected yet. |
 
-Minutes/hours/days/months identify non-overlapping buckets. Confirm the reporting timezone, calendar versus fixed-day retention, and incomplete-current-period display. Day lengths and calendar month lengths vary; never assume every day has 24 elapsed hours or every month has 30 days. Commit longer-term summaries before pruning shorter-term rows. Restart-safe checkpoints must prevent duplicate energy accumulation or loss of the in-progress bucket.
+Minutes/hours/days/months identify non-overlapping UTC buckets. The owner selected UTC acquisition timestamps and all aggregation boundaries, including midnight-to-midnight UTC days and calendar months. Chart display may convert timestamps to Europe/London using date-specific GMT/BST rules; this does not change stored interval boundaries. UTC daily totals cover 01:00-to-01:00 UK local time during BST and should remain labelled as UTC daily totals. Month lengths vary; never assume every month has 30 days. Precise calendar versus fixed-day retention cutoffs and incomplete-current-period display remain to define. Commit longer-term summaries before pruning shorter-term rows. Restart-safe checkpoints must prevent duplicate energy accumulation or loss of the in-progress bucket.
 
 Batch bounded writes into transactions; commit cadence and acceptable uncommitted-data loss are still open. Indefinite monthly/environmental history has no automatic expiry. Measure storage growth and range-query performance on the Pi before making resource claims.
 
@@ -120,10 +120,20 @@ References: [SQLite server-side application pattern](https://sqlite.org/whentous
 
 ## Decisions still needed
 
-- Agree averaging instantaneous power, duration-aware rollups and preservation of directional Wh/Ah/coverage alongside the requested arrays.
-- SOC: last valid value, average, or another representation?
+- Finalize directional Wh/Ah/coverage storage and verification; time-weighted instantaneous watts and last valid device-specific SOC are agreed.
 - Hourly pressure/outside temperature: last valid reading or an average? Daily pressure is explicitly the last valid reading; daily temperature is explicitly minimum/maximum.
-- Reporting timezone and precise retention cutoffs; same electrical retention for ElectroDacus?
-- Correct per-shunt voltages, SBMS payload/PV2 mapping and accepted power-loss window.
+- Precise retention cutoffs; UTC boundaries and identical electrical retention for ElectroDacus are agreed.
+- Confirm each shunt's physical voltage domain and current polarity, PV current measurement point, freshness/alignment rules and acceptable power-loss window.
 
 Reference: [SQLite appropriate uses](https://sqlite.org/whentouse.html).
+
+## Owner decisions and voltage review — 2026-10-09
+
+- Use UTC receipt timestamps and all interval boundaries. Keep optional GMT/BST conversion in chart presentation; no per-record BST flag or system timezone change is needed.
+- Use duration-aware averages of paired instantaneous watts, with valid coverage tracked independently from current/voltage coverage. Retain additive integrals for accurate longer-period rollups.
+- Store the last valid SOC from the relevant device. Apply the same electrical retention periods to Pico and SBMS0, including both solar channels.
+- The owner defines SBMS external-load current as excluding the monitor's own consumption; battery current includes it. Keep the channels distinct and avoid double counting their overlapping measurements.
+- The owner prefers SBMS0 pack voltage over the presently displayed Pico voltage readings. Actual readings and private installation inventory are excluded from this plan. A proposed SBMS voltage reference for Pico power must be assigned explicitly to channels confirmed on the same battery supply; do not apply it to unrelated batteries, converter outputs or panel-side current.
+- The inspected active/Python/upstream decoders expose voltage sensor entries and battery voltage separately from current shunts. Current sensor metadata reserves two live fields, but the decoder reads current from the first and does not identify the extra field as voltage. Names containing '[' are excluded from the legacy public JSON, even when their raw sensor entries are decoded. Raw configuration/packet evidence is needed to identify any further fields reliably; do not label unknown data as voltage by magnitude alone.
+- For a confirmed battery-bus mapping, pair Pico current with fresh valid SBMS pack voltage, retain both timestamps/source identities and describe watts as derived battery-bus power. Voltage drop can make device-terminal power different. Do not silently fall back to a distrusted Pico voltage or continue using stale SBMS voltage; current/SOC records may remain valid while power coverage has a gap.
+- This update records decisions and source inspection. It does not implement SQLite logging or an API, prove sensor calibration, or infer PV power from an unverified voltage/current measurement point.
