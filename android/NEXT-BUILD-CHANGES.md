@@ -120,6 +120,16 @@
 - [x] Store last valid SOC from each relevant device and use identical electrical retention periods for Pico and SBMS0.
 - [x] Record owner-described SBMS battery/external-load consumption distinction without adding overlapping currents to totals.
 - [x] Inspect current sensor mappings: voltage sensors/battery voltage are decoded separately; extra current-record fields have no verified voltage interpretation, and bracketed sensor names are filtered from legacy public JSON.
-- [ ] Confirm battery supply versus converter/panel-side domain for each current channel before assigning the owner's preferred SBMS pack-voltage reference to Pico power calculations. Preserve original Pico MQTT output and label derived voltage provenance.
+- [x] Owner confirms all Pico load shunts are on the main battery supply; use SBMS pack voltage as their preferred reference. Preserve original Pico MQTT output and label derived voltage provenance. Other battery/PV measurement points remain separate.
 - [ ] Pair only fresh valid current/voltage measurements; retain current/SOC during voltage gaps and avoid an automatic fallback to untrusted voltage.
 - [ ] Implement persistent logging and the authenticated read-only API when requested; this decision/source-inspection update changes no application version or source.
+
+## Secondary voltage and stable names — 2026-10-09
+
+- [x] Record selected secondary shunt-module voltage for comparison and exclude Pico internal voltage from regular history/reference selection; keep private sensor selection outside published source/documents.
+- [x] Choose database identity separate from name, packet position and dashboard instance: permanent metric ID with source/device, sensor ID and measurement kind; preserve exact source name plus editable display name and time-effective mapping/name history.
+- [ ] Obtain a short local raw Pico/SBMS capture with changing loads; map actual configured sensor IDs/names and inspect unexposed fields without guessing their meanings. Do not publish runtime/device inventory or raw recordings.
+- [ ] Verify sensor-ID persistence through rename/reboot/reconfiguration and handle ID reuse/physical channel changes explicitly.
+- [ ] Add an internal timestamped, ID-keyed decoded Pico snapshot for the future logger, before legacy filtering/name collisions; preserve all current MQTT output.
+- [ ] Log the selected secondary voltage with original readings preserved; evaluate paired voltage/current differences before approving any correction or fallback.
+- [ ] Implement the agreed SQLite history/API when requested. This planning/source review changes no application version or runtime code.
