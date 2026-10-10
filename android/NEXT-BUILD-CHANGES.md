@@ -2,6 +2,14 @@
 
 ## Owner device-review corrections — 2026-10-10
 
+### Runtime source correction and owner preference — 2026-10-10
+
+- [ ] **Prefer Simarine/Pico's own displayed time estimate if it is available in the received protocol data**, as requested by the owner. Investigate the actual packet/configuration field and its units, sign, unavailable sentinels and freshness before using it. The native estimate has not yet been identified in the existing decoder; the Node-RED calculation below is the confirmed alternative, not evidence that Pico transmits its own estimate.
+- [ ] Correct the misleading **Runtime · Pico estimate** description. The currently consumed `capacity.timeRemaining` is computed in `node.js/lib/readings.js`, inherited from `python/pico-mqtt.py` and the archived upstream code; it is **not a decoded native time value**. It explicitly changes negative calculated results to **604800 seconds (seven days)**, which the Android formatter renders as `7d:00h`. Do not present that fabricated fallback as Simarine's estimate.
+- [ ] Remove that seven-day substitute from the app's runtime source selection. Preserve the collector's existing MQTT compatibility contract during the investigation; any collector/protocol change must be explicitly included in an authorized build/release. If a valid native estimate cannot be obtained, use the verified owner Node-RED calculation below with correct unavailable handling.
+- The owner reports that Simarine displays an estimate while the app remains at seven days. Source inspection explains the app's fallback; agreement with Simarine's displayed estimate has not been tested on hardware.
+
+
 These corrections supersede conflicting earlier implementation claims and exclusions. The owner has supplied photos comparing the actual app with the Node-RED display. The previous checked-off layout/theme items do not establish acceptance. This records the next-build requirements; no new build is authorized by this review.
 
 ### Dashboard elements, layout and readings
