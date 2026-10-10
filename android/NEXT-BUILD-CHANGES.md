@@ -1,5 +1,10 @@
 # Next build changes
 
+## Future APK naming and versioning — 2026-10-10
+
+- [ ] On every future authorized Android build, deliver `Ella-monitoring-vX.XX.apk`, preserving this exact capitalization and two decimal places, with the version increasing by **0.01 per build**. Keep versionName consistent with the filename and increment versionCode. Do not append preview/build suffixes to the filename.
+- This is a standing requirement for future builds, also recorded in `agents.md`; it does not request a new build or change the current delivered version.
+
 ## Owner-requested next-build list — 2026-10-10
 
 The owner explicitly authorized this build with **"Ok. Do that build"**. Implemented in **0.2.0-preview / build 2**. Later additions/corrections take precedence. The requirements below supersede conflicting 0.1.0 layout/theme defaults. Device review remains pending; compilation/synthetic rendering does not establish exact physical-device fit.
