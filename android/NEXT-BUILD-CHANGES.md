@@ -41,6 +41,11 @@ Voltage clarification: the owner confirms that the voltage delivered with the ot
 
 - [ ] Add two independently selectable background colour roles to the theme editor: **Gauge panel 1** for the eight central gauges, and **Gauge panel 2** for the barometer, LPG, water, pitch and roll gauges. Apply each role to the individual gauge panels in its respective group. Keep these two group background colours separate from general panels, gauge borders and the optional background-highlight colour requested above; save/load them with the theme.
 
+### Gauge outlines and colour-picker ordering — 2026-10-10
+
+- [ ] Make the two gauge groups' outlines independently themeable: **Gauge panel 1 outline** for the eight central gauges and **Gauge panel 2 outline** for barometer, LPG, water, pitch and roll. This supersedes the earlier single shared Gauge borders colour request. Save/load both roles with the theme.
+- [ ] Order all theme colour pickers logically by the elements they control. Keep related background, text, outline and state colours together; place each gauge panel's background and outline next to each other. Group general app colours, titles, panels/gauges, buttons and their on/off/changed states, then chart-specific options where applicable. Preserve existing functionality while reorganising the editor.
+
 ## Completed authorized build 0.21 — 2026-10-10
 
 - Use Pico's reported nominal and remaining capacity with the verified Node-RED time-to-full/empty chain and raw battery current. Zero/missing/stale inputs are unavailable.
