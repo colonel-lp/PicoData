@@ -6,15 +6,15 @@ android {
         applicationId 'com.colonellp.ellamonitor.preview'
         minSdk 27
         targetSdk 37
-        versionCode 1
-        versionName '0.1.0-preview'
+        versionCode 2
+        versionName '0.2.0-preview'
     }
     buildFeatures { buildConfig true }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-    testOptions { unitTests.includeAndroidResources = true }
+    testOptions { unitTests.includeAndroidResources = true; unitTests.all { if (project.hasProperty("renderPath")) systemProperty "ella.render.path", project.property("renderPath") } }
     lint { abortOnError true }
 }
 dependencies {

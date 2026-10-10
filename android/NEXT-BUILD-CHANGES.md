@@ -2,42 +2,48 @@
 
 ## Owner-requested next-build list — 2026-10-10
 
-The owner asks to **record** this list. Application implementation, version changes, APK compilation and release publication wait for an explicit request to create a build from the current list. Later additions/corrections take precedence. The requirements below supersede conflicting preview layout/theme defaults.
+The owner explicitly authorized this build with **"Ok. Do that build"**. Implemented in **0.2.0-preview / build 2**. Later additions/corrections take precedence. The requirements below supersede conflicting 0.1.0 layout/theme defaults. Device review remains pending; compilation/synthetic rendering does not establish exact physical-device fit.
 
 ### Companion-app reference and theming
 
-- [ ] Treat the owner's **Joying EQ & DSP app as the companion-app reference** for screen size, appearance and the specified functionality. Inspect its current source and actual controls when implementing; do not approximate it with a generic Android dashboard.
-- [ ] Match the EQ & DSP button styles, icons, theme engine and colour picker, with the same ability to theme most elements. Respect **6px padding between elements where relevant**, using the same coordinate/scaling approach as the reference.
-- [ ] All dialogue/popup windows must follow the application's current theme and the reference app's styling. **For this next build, do not touch the existing summary popups or charts:** they require drastic changes separately. Apply global theming to the in-scope surfaces while respecting this exclusion; do not redesign, alter or restyle the excluded summary/chart surfaces as part of this list.
+- [x] Treat the owner's **Joying EQ & DSP app as the companion-app reference** for screen size, appearance and the specified functionality. Inspect its current source and actual controls when implementing; do not approximate it with a generic Android dashboard.
+- [x] Match the EQ & DSP button styles, icons, theme engine and colour picker, with the same ability to theme most elements. Respect **6px padding between elements where relevant**, using the same coordinate/scaling approach as the reference.
+- [x] All dialogue/popup windows must follow the application's current theme and the reference app's styling. **For this next build, do not touch the existing summary popups or charts:** they require drastic changes separately. Apply global theming to the in-scope surfaces while respecting this exclusion; do not redesign, alter or restyle the excluded summary/chart surfaces as part of this list.
 
 ### Screen size and orientation
 
-- [ ] Build pages around the **same reference screen resolution and scaling as EQ & DSP** (the owner's Joying is 1024×600); use the reference source to establish its actual layout/scaling behavior for other screen sizes.
-- [ ] **Force landscape on portrait screens.** This supersedes the preview's portrait/stacked dashboard behavior; do not use the old 800dp threshold to replace the reference layout with a portrait arrangement.
+- [x] Build pages around the **same reference screen resolution and scaling as EQ & DSP** (the owner's Joying is 1024×600); use the reference source to establish its actual layout/scaling behavior for other screen sizes.
+- [x] **Force landscape on portrait screens.** This supersedes the preview's portrait/stacked dashboard behavior; do not use the old 800dp threshold to replace the reference layout with a portrait arrangement.
 
 ### Bottom bar
 
-- [ ] Match the EQ & DSP bottom bar's **height, style, button/icon sizes, spacing and theme behavior**.
-- [ ] In the first bounding box, left to right: **preset dropdown button → Live data → Charts**. The dropdown must have the same look and options as the reference app; preserve the owner's term "preset dropdown" rather than silently choosing different functionality. Live data opens the main monitoring page; Charts opens the charts page. Adding its navigation button does not authorize changes to chart contents.
-- [ ] In another bounding box, use the same reference controls, left to right: **Keep screen on → Full screen → Lock → Settings**, matching their icons, size and style.
-- [ ] **Lock** disables gauge-click popups. Preserve current collection/display behavior while locked.
-- [ ] Theme these controls using the same type of colour picker/theme engine as EQ & DSP.
-- [ ] **Settings opens a settings page, not a popup.** Use the EQ & DSP settings page as the reference for separation, grouping and display of settings.
+- [x] Match the EQ & DSP bottom bar's **height, style, button/icon sizes, spacing and theme behavior**.
+- [x] In the first bounding box, left to right: **preset dropdown button → Live data → Charts**. The dropdown must have the same look and options as the reference app; preserve the owner's term "preset dropdown" rather than silently choosing different functionality. Live data opens the main monitoring page; Charts opens the charts page. Adding its navigation button does not authorize changes to chart contents.
+- [x] In another bounding box, use the same reference controls, left to right: **Keep screen on → Full screen → Lock → Settings**, matching their icons, size and style.
+- [x] **Lock** disables gauge-click popups. Preserve current collection/display behavior while locked.
+- [x] Theme these controls using the same type of colour picker/theme engine as EQ & DSP.
+- [x] **Settings opens a settings page, not a popup.** Use the EQ & DSP settings page as the reference for separation, grouping and display of settings.
 
 ### Main monitoring layout
 
-- [ ] Use the owner's supplied **Node-RED dashboard image** as the layout reference. Keep its arrangement and formatting; do not publish the private image or its readings/inventory.
-- [ ] **Current list at left:** each label and its value share one line. Remove the extra "current" text added to the displayed titles; preserve editable user labels.
-- [ ] **CFET, DFET and all other On/Off indicators:** put them together in **one bounding box**, each as a single-line indicator arranged as in the reference image. **CFET, DFET and EOC are green when On; all the others are red when On.** Preserve the distinction between Off and unavailable.
-- [ ] **Central gauges below the flags:** retain their current drawing for now; correct their padding and positioning to fit the reference arrangement.
-- [ ] **Barometer/LPG/water/pitch/roll box:** correct its layout to the reference image: barometer above, LPG/water paired below, pitch/roll paired below those.
-- [ ] **Temperature box at far right:** each label/value shares one line, following the same compact layout principle as the current list at left.
-- [ ] Fit and format the remaining **battery voltages, delta, SOC, remaining capacity and time remaining** according to the image/previous Node-RED display, preserving the requested central/bottom arrangement, units and source identities.
+- [x] Use the owner's supplied **Node-RED dashboard image** as the layout reference. Keep its arrangement and formatting; do not publish the private image or its readings/inventory.
+- [x] **Current list at left:** each label and its value share one line. Remove the extra "current" text added to the displayed titles; preserve editable user labels.
+- [x] **CFET, DFET and all other On/Off indicators:** put them together in **one bounding box**, each as a single-line indicator arranged as in the reference image. **CFET, DFET and EOC are green when On; all the others are red when On.** Preserve the distinction between Off and unavailable.
+- [x] **Central gauges below the flags:** retain their current drawing for now; correct their padding and positioning to fit the reference arrangement.
+- [x] **Barometer/LPG/water/pitch/roll box:** correct its layout to the reference image: barometer above, LPG/water paired below, pitch/roll paired below those.
+- [x] **Temperature box at far right:** each label/value shares one line, following the same compact layout principle as the current list at left.
+- [x] Fit and format the remaining **battery voltages, delta, SOC, remaining capacity and time remaining** according to the image/previous Node-RED display, preserving the requested central/bottom arrangement, units and source identities.
 
 ### Settings-page additions
 
-- [ ] Add an option **not to display the app title**.
-- [ ] Add an option for the app to be **persistent**, matching the EQ & DSP app's existing persistence option and behavior.
+- [x] Add an option **not to display the app title**.
+- [x] Add an option for the app to be **persistent**, matching the EQ & DSP app's existing persistence option and behavior.
+
+### Build outcome
+
+0.2.0-preview implements this authorized list; the existing summary popups/chart contents and all Pi collector/database behaviour remain unchanged. Viewer presets adapt the EQ Save/Update/Manage options to display settings; audio factory presets are project-specific to EQ. The first preview signing key is unavailable, so this APK requires reinstalling the preview and re-entering its settings. See [CHANGELOG.md](CHANGELOG.md) and [BUILD-VALIDATION.md](BUILD-VALIDATION.md).
+
+- [ ] Owner device review: compare the new screen with the reference image, try themes/labels/presets/lock, test forced landscape/fullscreen/keep-screen, notification permission and persistence/background/resume on a phone and the Joying head unit.
 
 ## Earlier clarification — context only, 2026-10-09
 

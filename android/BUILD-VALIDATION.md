@@ -1,5 +1,21 @@
 # Build validation
 
+## Android 0.2.0-preview — companion layout/themes/settings, 2026-10-10
+
+Source parent: PicoData `266b5884e3eeaf3e76c13855b2a6522ace817039`. Read-only UI reference: Joying EQ & DSP `e1b54f3f58efb92215d99e2e3f2941530fbcbc15` (1.54-beta). Android build 2, min API 27, compile/target API 37; pinned AGP 9.4.0 / Gradle 9.6.0 / JDK 17. Collector 0.7.1 and database/API contracts remain unchanged.
+
+**`:app:assembleDebug :app:testDebugUnitTest :app:lintDebug` succeeds. All 28 tests pass, zero failures; lint has zero errors and 31 warnings.** Warnings include the intentional LAN HTTP/private-CA preview policies, English-only text, programmatic custom-view constructors/draw allocations, and newer manifest/orientation policy notices. They are not disabled by a baseline. Native Back uses the current API 33+ callback with a documented lint suppression only on the retained legacy API 27–32 override.
+
+- The original 13 model/history contract checks and four real loopback HTTP tests remain intact and pass. Original freshness, source identities, signs, history bucket/coverage logic and exports are unchanged.
+- Ten Robolectric activity checks (five cases on API 27 and API 35) verify offline navigation, Settings as a page, retained chart range controls, synthetic readings, green/red/Off flags, dynamically available cells, locked popups, source clearing on stop, forced landscape, saved appearance/preset credential exclusion and recreation, hide-title, and opt-in ongoing-notification show/hide/disable behaviour.
+- One API 35 native-renderer test checks 1024×600, 1280×720, 800×480 and a portrait window, retaining the logical landscape arrangement, readout bounds/text layout, one-line alignment and all 13 instruments. Synthetic live and Settings renders were visually inspected. A label/right-alignment issue was corrected with bounded canvas text rendering; no private reference image/readings/inventory is included in source or fixtures.
+- Exclusion checks confirm `buildHistory`, `selectMetric`, `loadHistory`, `showHistory`, `showDetail`, `loadSummary` and `summary` methods are unchanged from 0.1.0. ChartView, HistoryData, MonitorData, ApiClient, PrivateSettings and ScreenControl implementations are unchanged. Only the existing range navigation is relocated into a header outside chart contents; original chart/summary colours remain separate from the new global theme.
+- APK metadata confirms `com.colonellp.ellamonitor.preview`, versionName `0.2.0-preview`, versionCode `2`, min SDK 27 and target SDK 37. Signature verification succeeds for API 27 and newer. Delivered APK SHA-256: `79cdb84e69d50c876059f85df3dd3c080c88837558de2ac2bad8881e7c6df49e`.
+
+**Signing limitation:** the original 0.1.0 development key is unavailable in the retained build files/artifacts. This build uses a new retained private development key, whose certificate differs from 0.1.0; it cannot update the previous installation in place. Reinstalling clears connection/display settings. No key is committed; production signing and updates remain unsettled.
+
+These are compilation, synthetic-network/framework and renderer checks, not physical-device or live Pi verification. The owner reports API connectivity on the first preview; this new APK still needs phone/Joying comparison with the supplied image, theme/font/preset/long-label interaction, real notification/LAN permissions, portrait/fullscreen scaling, FYT keep-screen/restoration, background/resume and firmware task/battery handling. No Android 17 device or head-unit test was performed by the agent.
+
 ## Android 0.1.0-preview — first API viewer, 2026-10-09
 
 Source starts from PicoData `8069a778da17ebb1bec7dfe9846ab836ebc60174`. Collector 0.7.1 and history schema 2 are unchanged. App build 1 has minimum API 27 and compile/target API 37; AGP 9.4.0 / Gradle 9.6.0 / JDK 17.
