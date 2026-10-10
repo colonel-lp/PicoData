@@ -1,5 +1,46 @@
 # Next build changes
 
+## Owner device-review corrections — 2026-10-10
+
+These corrections supersede conflicting earlier implementation claims and exclusions. The owner has supplied photos comparing the actual app with the Node-RED display. The previous checked-off layout/theme items do not establish acceptance. This records the next-build requirements; no new build is authorized by this review.
+
+### Dashboard elements, layout and readings
+
+- [ ] Each displayed element is a button: apply the EQ app's actual themed button background, text and highlight/on/off borders to individual readouts and gauges, rather than plain text rows or generic panel borders. Preserve the lock behavior for popup interactions.
+- [ ] Match the reference photo's arrangement and temperature ordering using stable source bindings; do not use API arrival order or alphabetical order. Preserve the reference's intended grouping/spacing, without publishing the private photo, inventory or readings.
+- [ ] Remove the excessive unused space below gauge faces; fit the dashboard elements and lower readouts to the available screen while retaining the requested layout and 6px spacing.
+- [ ] Pitch and roll: fixed **−5 to +5** scale, zero in the centre, a needle, and colour **only between zero and the needle**. At zero there is no coloured sweep. Keep the actual numeric reading even when it exceeds the visible scale; do not substitute the current generic gauge appearance.
+- [ ] Correct days/time remaining to match the owner's Node-RED implementation and formatting. Current Android code reads raw Pico `capacity.timeRemaining` and formats it as seconds into days/hours; that is not yet a verified reproduction of the requested Node-RED logic. The checked repository flow contains no days/time-remaining node or calculation: obtain the current relevant flow before implementing, and do not invent a formula.
+- [ ] **Remove the app title altogether**, including the title currently above the indicators. This supersedes the earlier optional hide-title feature; do not add another Ella Monitoring heading.
+- [ ] Put cell voltages in **their own bounding box**, separate from the other battery summary readouts.
+- [ ] Show both **V[P]** and **V[S]**, as live readings: V[P] is the actual raw Pico Ella battery voltage; V[S] is the actual raw Pico starter-battery voltage. The reviewed Node-RED change nodes bind these to their respective battery voltage fields. The current secondary logged voltage selected for V[P] is not a verified equivalent; do not replace either raw live source with SBMS voltage or a derived/reference voltage.
+- [ ] Ensure **6px padding above the buttons inside the bottom panels**, alongside the agreed reference spacing.
+- [ ] Full screen must let the app **expand into the area freed by hiding Android system bars**, rather than leaving the old inset/empty space. Recalculate the usable viewport and scale on both entry and exit, preserving the reference layout.
+
+### EQ theme engine, menus and every popup
+
+- [ ] Replace the approximate theme/menu/dialog implementation with the actual EQ app's behavior and styling, adapted only for monitoring-specific elements. Inspect its current DashboardView, MainActivity menu/dialog helpers, ThemeAppearanceView, ThemeConfig and ThemeStore; reuse the established interaction/formatting rather than generic Android menus recoloured afterward.
+- [ ] Provide the **theme dropdown on the main page**, with the EQ options: Save theme as, conditional Update for a modified named theme, Manage themes, Edit theme, Default and all saved themes. Match the EQ anchored dropdown, selection/modified indication and popup behavior. Restore the reference's relevant missing main-page preset options as well.
+- [ ] Restore saved themes and relevant options throughout the theme workflows; manage/load/save/update/rename/delete must work as in EQ, with its colour picker and theme roles.
+- [ ] **Every popup/dialog must use the current app theme and look like the EQ app's popups**, including its panels, borders, text, controls, sizing, spacing and selected states. This explicitly supersedes the previous exclusion of summary-popup styling. Chart/summary content redesign is not otherwise inferred from this styling correction.
+- [ ] **No theme controls/options on the Settings page.** Theme editing belongs in the main-page theme dropdown, as in the current EQ app.
+- [ ] Move **Edit display labels** into the theme dropdown.
+- [ ] Save named theme files in **Downloads/ella-monitoring/themes**, with EQ-equivalent file-based save/load/manage behavior. Preserve existing saved themes during migration; adapt storage access for the supported Android versions.
+
+### Settings page
+
+- [ ] Do not display connection-status text on the Settings page.
+- [ ] Change **Hide app title** to **Hide connection status**; the title is removed permanently. Apply the connection-status preference to the monitoring display.
+- [ ] Add an explicit **Back** button that returns from Settings to the dashboard.
+- [ ] Group the **app version, Changelog/Update and Back button in one bounding box**, following the EQ Settings page's System grouping and themed appearance.
+- [ ] Retain the already-recorded update-check dropdown: **Off, 1hr, 3hr, 6hr, 12hr, 24hr**, alongside the previously requested update download/install and full changelog functionality.
+
+### Read-only review evidence
+
+- EQ source reviewed at `e1b54f3f58efb92215d99e2e3f2941530fbcbc15`: the dashboard has separate preset/theme selectors; themes use anchored menus and files in Downloads; Settings explicitly places theme editing on the dashboard and groups Back/Changelog/Update/version in System.
+- Ella source reviewed at `22dff908431f97356a07c54af198e506e3701d5f`: readout rows lack individual button backgrounds/borders, temperature rows follow incoming data order, the raw starter voltage is absent from LiveDashboard, and generic menu/theme handling differs from EQ.
+- The runtime Node-RED calculation remains an unresolved source requirement. No application source, collector, database, version or APK has been changed by this review.
+
 ## Missing EQ companion functionality — 2026-10-10
 
 - [ ] Carry over the Joying EQ & DSP **Changelog/Update** button, its themed dialog and complete changelog (newest entries first), adapting project references for Ella Monitoring. The 0.2.0-preview settings page currently has no such button; the repository changelog alone does not fulfil this requirement.
