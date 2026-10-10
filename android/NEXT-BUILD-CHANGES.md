@@ -48,6 +48,8 @@ Voltage clarification: the owner confirms that the voltage delivered with the ot
 
 - [ ] Display unavailable measurement values as a single dash **—**, without the word **Unavailable**. Apply consistently wherever measurement values are shown; preserve missing/stale handling and keep valid zero values as zero.
 
+- [ ] Fix Settings checkboxes appearing oversized or incorrectly laid out on the Samsung while displaying correctly on the Joying. Match the EQ companion proportions across phone/head-unit display densities, keeping the checkbox, label, spacing and touch area aligned and unclipped. Source inspection points to native CheckBox controls using default drawable/minimum sizing alongside explicit pixel text and a fixed 38px row within the scaled design viewport; verify this likely sizing mismatch before implementing the correction. Validate both device layouts, retaining correct toggle behavior and theming.
+
 ## Completed authorized build 0.21 — 2026-10-10
 
 - Use Pico's reported nominal and remaining capacity with the verified Node-RED time-to-full/empty chain and raw battery current. Zero/missing/stale inputs are unavailable.
