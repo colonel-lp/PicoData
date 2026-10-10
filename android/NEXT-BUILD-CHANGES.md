@@ -35,6 +35,8 @@ Voltage clarification: the owner confirms that the voltage delivered with the ot
 - [ ] Increase text size in the **amp-hours** and **time remaining** boxes to use their available space. Preserve centred alignment and fit longer valid values without clipping.
 - The requested centring of voltage, amp-hours and time remaining, and **20px** text padding in cell-voltage/delta-voltage boxes, remain pending as listed above. Only the accidental unfinished removal phrase was discarded.
 
+- [ ] Move the Theme dropdown directly beside the Preset dropdown in the bottom-left control box. Order the controls **Preset → Theme → Live data → Charts**, retaining global 6px padding and the separate right-hand icon control box.
+
 ### Separate gauge background theme roles — 2026-10-10
 
 - [ ] Add two independently selectable background colour roles to the theme editor: **Gauge panel 1** for the eight central gauges, and **Gauge panel 2** for the barometer, LPG, water, pitch and roll gauges. Apply each role to the individual gauge panels in its respective group. Keep these two group background colours separate from general panels, gauge borders and the optional background-highlight colour requested above; save/load them with the theme.
