@@ -1,5 +1,13 @@
 # Build validation
 
+## Android 0.22 — same-version loaded selector names, 2026-10-10
+
+Source parent: PicoData 82f74bc32cb2968a71a921b837faa80bce90b88c. Read-only EQ reference: Joying-EQ-DSP e1b54f3f58efb92215d99e2e3f2941530fbcbc15 (DashboardView.drawBottom and MainActivity display-name methods). VersionName 0.22 / versionCode 4 and APK filename remain unchanged.
+
+Source inspection verifies currentPreset/theme.name reach both selectors on every page, and the shared modification refresh updates the displayed name/UNSAVED, text colour, dot and accessibility description. Single-line ellipsis and reserved right padding prevent long names wrapping or overlapping the modification dot. The existing save/load/rename/delete and persisted-name paths rebuild the selectors; settings storage and difference comparisons are unchanged.
+
+Android SDK/Gradle remains unavailable: compilation/framework tests/lint and device visuals are not rerun. No APK is assembled. The earlier Android test results refer to their recorded revisions.
+
 ## Android 0.22 — same-version spacing and Settings corrections, 2026-10-10
 
 Source parent: PicoData 6aa9cbf761367834f3617a90e447e05e4c3ebae2. The owner explicitly requests immediate corrections without a version increment: versionName 0.22 / versionCode 4 and output filename remain unchanged.

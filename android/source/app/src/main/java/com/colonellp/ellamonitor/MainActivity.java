@@ -152,9 +152,9 @@ public final class MainActivity extends Activity {
         if(historyScreen && !settingsScreen){LinearLayout ranges=row();ranges.setPadding(8,0,8,6);for(int i=0;i<HistoryData.RANGES.length;i++){final int n=i;Button b=uiButton(HistoryData.RANGES[i],range==i,()->{range=n;offset=0;settings.prefs.edit().putInt("range",range).apply();build();loadHistory();});LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,32,1);rp.setMargins(0,0,6,0);ranges.addView(b,rp);}root.addView(ranges);}
         content = column();content.setPadding(0,6,0,0); root.addView(content,new LinearLayout.LayoutParams(-1,0,1));
         BottomBar bottom = new BottomBar(this, theme, fullscreen); root.addView(bottom,new LinearLayout.LayoutParams(-1,54));
-        Button presetButton=new ChangedButton(this,theme,"Preset",presetModified(),this::showPresetMenu);presetAnchor=presetButton;bottom.addControl(presetButton,0);
+        Button presetButton=new ChangedButton(this,theme,"Preset",currentPreset,presetModified(),this::showPresetMenu);presetAnchor=presetButton;bottom.addControl(presetButton,0);
         boolean themeModified=!theme.sameColours(appearance.names().contains(theme.name)?appearance.load(theme.name):ThemeConfig.defaults());
-        themeAnchor=new ChangedButton(this,theme,"Theme",themeModified,()->withThemeStorage(this::showThemeMenu));bottom.addControl(themeAnchor,7);
+        themeAnchor=new ChangedButton(this,theme,"Theme",theme.name,themeModified,()->withThemeStorage(this::showThemeMenu));bottom.addControl(themeAnchor,7);
         bottom.addControl(uiButton("Live data",!historyScreen && !settingsScreen,() -> { settingsScreen=false; historyScreen=false; historyEpoch++; build(); }),1);
         bottom.addControl(uiButton("Charts",historyScreen && !settingsScreen,() -> { settingsScreen=false; historyScreen=true; build(); loadHistory(); }),2);
         bottom.addControl(new EqIconButton(this,theme,"keep","Keep screen on",keepScreen,fullscreen,() -> { keepScreen=!keepScreen; settings.prefs.edit().putBoolean("keepScreen",keepScreen).apply(); screen.setKeep(keepScreen); build(); }),3);

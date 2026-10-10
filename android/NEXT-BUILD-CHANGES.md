@@ -7,6 +7,7 @@ Explicitly authorized for immediate implementation; retain **0.22 / versionCode 
 - [x] Add 6px padding between the indicator buttons and both ends of their bounding box; retain 6px between indicator buttons.
 - [x] Open the Updates frequency dropdown above its button.
 - [x] Retain the Theme dropdown beside Preset on the Settings bottom bar.
+- [x] Show loaded names in the Preset/Theme buttons using the EQ format: PRESET • name / THEME • name. Modified values show UNSAVED with the existing modification dot; preserve loaded identity for accessibility. Apply on Live data, Charts and Settings. Explicit immediate correction; keep 0.22 / versionCode 4.
 
 ## Completed authorized source update 0.22 — 2026-10-10
 
