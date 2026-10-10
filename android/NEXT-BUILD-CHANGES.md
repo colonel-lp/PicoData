@@ -27,8 +27,6 @@ These owner corrections supersede conflicting earlier checked-off items. They ar
 
 Voltage clarification: the owner confirms that the voltage delivered with the other Pico battery values is the intended source. Preserve the current V[P] raw Pico battery-voltage binding; no voltage-source change is requested.
 
-One removal request is incomplete: the lower-values/padding bullet ends with “get rid of the”. Obtain the missing item before implementing that removal.
-
 ## Completed authorized build 0.21 — 2026-10-10
 
 - Use Pico's reported nominal and remaining capacity with the verified Node-RED time-to-full/empty chain and raw battery current. Zero/missing/stale inputs are unavailable.
