@@ -1,3 +1,11 @@
+## Next source version after 0.21 — 2026-10-10
+
+- [ ] Persistent notification: show one app-authored line saying **Ella Monitoring**, with no body/subtitle text. Remove the existing tap-to-return text; preserve the notification's tap action and ongoing behavior.
+- [ ] Configure the actual Android Studio/Gradle APK output filename as **Ella-monitoring-vX.XX.apk**, using the versionName and advancing by 0.01 per authorized version. The current project still outputs `app-debug.apk`; renaming only the delivered APK did not satisfy this requirement. The next authorized version after 0.21 is 0.22.
+- The owner will compile the APK in Android Studio. Prepare and push source changes on an explicit implementation request; do not assemble, sign, deliver or publish an APK unless explicitly requested. Record validation accurately and distinguish source checks from Android compilation/device tests.
+
+These requests are recorded for the next authorized source update. No application changes or version increment are made by recording them.
+
 ## Completed authorized build 0.21 — 2026-10-10
 
 - Use Pico's reported nominal and remaining capacity with the verified Node-RED time-to-full/empty chain and raw battery current. Zero/missing/stale inputs are unavailable.
