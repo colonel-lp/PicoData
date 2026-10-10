@@ -11,11 +11,12 @@ final class GaugeView extends View {
     private final Palette colors;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF arc = new RectF();
-    private final android.graphics.Typeface face;
+    private android.graphics.Typeface face;
     private Double value;
     private final String unit;
     GaugeView(Context context, Palette colors, String unit) { super(context); this.colors = colors; this.unit = unit; this.face = android.graphics.Typeface.create(colors.fontFamily, android.graphics.Typeface.NORMAL); setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO); }
     public GaugeView(Context context) { this(context, new Palette(false), "A"); }
+    void refreshTheme() { face=android.graphics.Typeface.create(colors.fontFamily,android.graphics.Typeface.NORMAL);invalidate(); }
     void value(Double value) { if (java.util.Objects.equals(this.value, value)) return; this.value = value; invalidate(); }
     @Override protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);

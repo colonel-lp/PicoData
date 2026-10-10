@@ -67,4 +67,11 @@ final class PrivateSettings {
     String label(String id, String original) { return prefs.getString("label:" + id, original); }
     void setLabel(String id, String value) { prefs.edit().putString("label:" + id, value).apply(); }
     void resetLabel(String id) { prefs.edit().remove("label:" + id).apply(); }
+    int highlight(String id) { return Math.max(0,Math.min(2,prefs.getInt("elementHighlight:"+id,prefs.getBoolean("gaugeHighlight:"+id,false)?1:0))); }
+    boolean hidden(String id) { return prefs.getBoolean("elementHidden:"+id,false); }
+    void setHighlight(String id,int choice) {
+        SharedPreferences.Editor edit=prefs.edit().remove("gaugeHighlight:"+id);
+        if(choice==0)edit.remove("elementHighlight:"+id);else edit.putInt("elementHighlight:"+id,Math.max(1,Math.min(2,choice)));
+        edit.apply();
+    }
 }

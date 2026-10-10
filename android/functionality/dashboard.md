@@ -1,6 +1,6 @@
 # Live dashboard
 
-Updated in **0.23 / build 5**.
+Updated in **0.24 / build 6**.
 
 The Node-RED arrangement uses a 1024px-wide logical landscape canvas with uniform width-based control scale; usable height varies with system bars. The bottom bar stays 54 logical pixels high with 40px controls and 6px top padding in both fullscreen states. Portrait windows retain a rotated landscape canvas when Android ignores sensor-landscape orientation. Fullscreen omits hidden system-bar insets while keeping cutout/keyboard safety. The app-wide title is removed; the Ella Monitoring dashboard title is restored above the flags, consuming central gauge height only. Currents:, Temps: and Ella Monitoring have separate theme title backgrounds/outlines; the connection-status line is optional and always absent on Settings.
 
@@ -14,6 +14,10 @@ Time to full/empty follows the traced owner Node-RED join/calculator chain. With
 
 Charts and summaries retain their calculations/contents, but every popup now follows the shared current theme and EQ dialog chrome. Existing stable aliases, independent freshness, valid zeros and history/CSV bindings remain.
 
-In 0.22 the central gauge array has its own padded bounding box. Independent Gauge panel 1/2 backgrounds and outlines cover central/environmental gauges. Highlight background in a gauge popup overrides its normal panel colour with the theme highlight colour, persisted per element and included in presets. Lower voltage, Ah and runtime values are centred; Ah/runtime text is enlarged; cell-voltage and delta text have 20px side padding. Missing measurement displays use —, including the gauge unit line (which no longer says unavailable).
+In 0.22 the central gauge array has its own padded bounding box. Independent Gauge panel 1/2 backgrounds and outlines cover central/environmental gauges. In 0.24 every readout and heading popup offers Highlight 1/2 with colour swatches and Hide contents. One integer selection makes highlights exclusive; neither can be selected. Hiding contents keeps the bounding box and popup tap target. Choices belong to presets and drive changed-item indication; their colours belong to themes. Older per-gauge highlights migrate to Highlight 1. Lower voltage, Ah and runtime values are centred; Ah/runtime text is enlarged; cell-voltage, delta and V[P]/V[S] text have 10px side padding. Missing measurement displays use —, including the gauge unit line (which no longer says unavailable).
 
 In 0.23 the three headings have a separate Title text role. Edited dashboard labels/headings and gauge-highlight settings differing from the selected preset use Changed indicator colour; measurements and fixed flag status colours remain unchanged. Theme changes do not dirty presets. Automatic chart fallback leaves the saved selection unchanged; actual chart edits refresh selector/item indication immediately.
+
+In 0.24 V[P]/V[S] end at logical x=624, leaving 6px inside the summary box at x=630; the cell box starts at x=636 with its own 6px inset. Inverter is the final evenly spaced current row: the signed displayed Battery [Pico] current minus the displayed Load [Pico] sum. Either unavailable input makes it unavailable. It is live derived data with no history metric. Existing load arithmetic, runtime and logged channels are unchanged.
+
+Indicator background colours the flags bounding box; Voltages background colours both lower summary/cell boxes. Individual button backgrounds, outlines and fixed flag meanings remain independently applied. See [live-connection.md](live-connection.md) for independent freshness and stable-view polling.

@@ -43,7 +43,7 @@ public class ContractTest {
         assertEquals(-4,MonitorData.runtimeHours(200d,160.49,10d),0);assertEquals(16.1,MonitorData.runtimeHours(200d,160.51,-10d),0);
         assertNull(MonitorData.runtimeHours(200d,100d,0d));assertNull(MonitorData.runtimeHours(null,100d,1d));assertNull(MonitorData.runtimeHours(200d,201d,1d));
         battery.put("current",0);assertNull(MonitorData.display(MonitorData.catalogue(catalogue()),l,0).get("battery:capacity.timeRemaining").value);
-        assertNull(MonitorData.display(MonitorData.catalogue(catalogue()),l,2).get("battery:capacity.timeRemaining").value);
+        assertNull(MonitorData.display(MonitorData.catalogue(catalogue()),l,4).get("battery:capacity.timeRemaining").value);
     }
     @Test public void rawBatteryVoltagesRemainDistinctFromLoggedReference() throws Exception {
         JSONObject l=live();l.getJSONObject("pico").getJSONObject("readings").put("204",new JSONObject().put("type","battery").put("name","Starter ").put("voltage",25.2));
@@ -70,9 +70,9 @@ public class ContractTest {
     }
     @Test public void freshnessExpiresIndependentlyIncludingVoltageDependency() throws Exception {
         List<MonitorData.Metric> m = MonitorData.catalogue(catalogue()); JSONObject l = live();
-        Map<String, MonitorData.Datum> d = MonitorData.display(m, l, 2);
+        l.getJSONObject("pico").put("fresh",false);Map<String, MonitorData.Datum> d = MonitorData.display(m, l, 0);
         assertNull(find(d, "picoBattery", "current").value); assertNotNull(find(d, "sbmsBattery", "current").value);
-        l.getJSONObject("sbms").put("fresh", false); d = MonitorData.display(m, l, 0);
+        l.getJSONObject("pico").put("fresh",true);l.getJSONObject("sbms").put("fresh", false); d = MonitorData.display(m, l, 0);
         assertNotNull(find(d, "picoBattery", "current").value); assertNull(find(d, "picoBattery", "watts").value); assertNull(find(d, "picoBattery", "voltage").value);
         assertNull(d.get("flag:DFET").flag); assertNull(d.get("cell:0").value);
         assertNull(MonitorData.display(m, null, 0).get("pico:load-sum").value);
@@ -95,7 +95,7 @@ public class ContractTest {
     }
     @Test public void numericStringsAndInvalidNumbersAreUnavailable() throws Exception {
         JSONObject o = new JSONObject().put("v", "0"); assertNull(MonitorData.number(o, "v")); assertNull(MonitorData.number(null, "v"));
-        assertFalse(MonitorData.fresh(new JSONObject().put("state", "connected").put("fresh", true).put("ageSeconds", -1), 0, 3));
+        assertFalse(MonitorData.fresh(new JSONObject().put("state", "connected").put("fresh", true).put("ageSeconds", -1), 0));
     }
     @Test public void utcWindowsDoNotDependOnBstOrLocalClock() {
         Instant now = Instant.parse("2026-03-29T01:30:00Z");

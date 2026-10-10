@@ -21,6 +21,7 @@ final class ChangedButton extends Button {
         GradientDrawable background=new GradientDrawable();background.setColor(theme.buttonBackground);background.setCornerRadius(5);background.setStroke(1,theme.controls);setBackground(background);
         setOnClickListener(v->action.run());changed(changed);
     }
+    void refreshTheme(){GradientDrawable d=(GradientDrawable)getBackground();d.setColor(theme.buttonBackground);d.setStroke(1,theme.controls);changed(changed);}
     void changed(boolean value){changed=value;setText(label.toUpperCase(java.util.Locale.UK)+"  •  "+(changed?"UNSAVED":loadedName)+"   ▾");setTextColor(changed?theme.changedIndicator:theme.buttonTextOn);setContentDescription(label+", "+loadedName+(changed?", modified":""));invalidate();}
     @Override protected void onDraw(Canvas canvas){super.onDraw(canvas);if(changed){paint.setColor(theme.changedIndicator);canvas.drawCircle(getWidth()-18,getHeight()/2f,8,paint);}}
 }

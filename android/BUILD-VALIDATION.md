@@ -1,5 +1,21 @@
 # Build validation
 
+## Android 0.24 — display controls, live preview and stable polling, 2026-10-10
+
+Source parent: PicoData 351e3859a12db457c47f07e0961a2fd8eece692d. Read-only EQ reference: Joying-EQ-DSP 2ce2fc16a02e05692960675a9913d687b556a8a0 (picker preview/dismissal and colour-list flow). VersionName 0.24 / versionCode 6. Preserve the owner's latest Node-RED and Android Studio changes, including daemon JVM criteria for JDK 25.
+
+Application Java/resources and test sources compile with JDK 25, unchanged minimum API 27 and compile/target API 37. The final focused `:app:testDebugUnitTest` run of ContractTest and DisplayRevisionTest passes **24 tests, zero failures/errors/skips**. `:app:lintDebug` passes with **zero errors and 53 warnings**. Public debug/release output providers resolve to **Ella-monitoring-v0.24.apk** in a configuration-only check. No APK assembly, signing, installation or release publication occurs. Existing Java 8 source/target and Gradle deprecation warnings remain visible; no SDK target is lowered.
+
+The broader suite was attempted before the final preset exclusion and did not complete reliably in the framework harness. An inspected stall occurred in Robolectric resource/application setup before application logic. Attempts with the default test JVM and a JDK 17 test worker also stalled. This is a full-suite validation limitation; the older 51-test pass belongs to 0.23, and no full-suite pass is claimed for 0.24. The final 24-test focused run uses JDK 25 and succeeds.
+
+Focused checks cover independent collector freshness near the former SBMS age cutoff, source staleness and HTTP snapshot expiry; signed Inverter arithmetic; delayed/failing metadata alongside successful live polling; stable dashboard/readout/background identity through unchanged or missing data; live typed-colour repaint, rollback and direct retained-editor return without viewport replacement; highlights/swatches/hide access on gauges, flags, voltages, currents, cells and headings; legacy highlight migration, named preset restore, colour round-trip/order and 10px text/6px box spacing. A late owner correction is tested: Keep screen awake, Full screen and Lock are omitted from new presets and differences, and retain current values when loading named, legacy or System default presets. Their ordinary app preference persistence remains intact.
+
+Native renderer checks executed during a partial full-suite attempt exercise 1024×600, 1280×720, 800×480 and portrait fallback, all 13 gauges and evenly spaced current rows. Synthetic dashboard and colour-list renders were inspected: final Inverter row, V[P]/V[S] edge gap and colour swatches/order fit. Settings text capture remains incomplete in the framework renderer; neither the renders nor layout assertions establish physical-device appearance. Render images contain synthetic values and are not committed.
+
+The complete repository/bundled changelogs match. No collector, database, MQTT, API, source measurement/sign or history contract changes occur; Inverter is live derived data only. Presets and theme imports remain compatible, private connections remain encrypted and excluded from copied values, and signing/package identity is unchanged.
+
+Remaining device checks: actual SBMS dropouts with Pi freshness/broker cadence, prolonged foreground/background/reconnect behavior, wheel dragging and picker response time on Samsung/Joying, hide/highlight appearance and saved settings after upgrade, Android Keystore, fullscreen/portrait fit and the existing update installer. App-side display corrections do not demonstrate a broker transport fault or claim these device checks passed.
+
 ## Android 0.23 — themes, presets and picker return, 2026-10-10
 
 Source parent: PicoData 58a0d7d521f836e0064cea3ae80d127140834f12. Read-only EQ reference: Joying-EQ-DSP e1b54f3f58efb92215d99e2e3f2941530fbcbc15, colour parsing, picker flow and per-item difference rendering. VersionName 0.23 / versionCode 5. The owner builds the APK in Android Studio.

@@ -18,14 +18,14 @@ import static org.junit.Assert.*;
 @Config(sdk={27,35},qualifiers="w1024dp-h600dp-land-mdpi")
 public class UpdateTest {
     @org.junit.Before public void clear(){org.robolectric.RuntimeEnvironment.getApplication().getSharedPreferences("viewer",0).edit().clear().commit();}
-    private JSONObject release(String asset,String url,int code)throws Exception{return new JSONObject().put("tag_name","v0.24").put("name","Ella Monitoring v0.24").put("body","Android versionCode "+code).put("assets",new JSONArray().put(new JSONObject().put("name",asset).put("browser_download_url",url).put("size",1234)));}
+    private JSONObject release(String asset,String url,int code)throws Exception{return new JSONObject().put("tag_name","v0.25").put("name","Ella Monitoring v0.25").put("body","Android versionCode "+code).put("assets",new JSONArray().put(new JSONObject().put("name",asset).put("browser_download_url",url).put("size",1234)));}
     @Test public void updateFeedSelectsOnlyNewEllaApksAndOffStopsAutoChecks()throws Exception{
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
             MainActivity a=c.get();AppUpdateManager m=new AppUpdateManager(a,a.viewerPreferences());Method parse=AppUpdateManager.class.getDeclaredMethod("parseReleases",JSONArray.class);parse.setAccessible(true);
-            String valid="https://github.com/colonel-lp/PicoData/releases/download/v0.24/Ella-monitoring-v0.24.apk";
-            AppUpdateManager.CheckResult r=(AppUpdateManager.CheckResult)parse.invoke(m,new JSONArray().put(release("Other-v0.24.apk",valid,BuildConfig.VERSION_CODE+1)).put(release("Ella-monitoring-v0.24.apk","https://example.invalid/app.apk",BuildConfig.VERSION_CODE+1)).put(release("Ella-monitoring-v0.24.apk",valid,BuildConfig.VERSION_CODE+1)));
+            String valid="https://github.com/colonel-lp/PicoData/releases/download/v0.25/Ella-monitoring-v0.25.apk";
+            AppUpdateManager.CheckResult r=(AppUpdateManager.CheckResult)parse.invoke(m,new JSONArray().put(release("Other-v0.25.apk",valid,BuildConfig.VERSION_CODE+1)).put(release("Ella-monitoring-v0.25.apk","https://example.invalid/app.apk",BuildConfig.VERSION_CODE+1)).put(release("Ella-monitoring-v0.25.apk",valid,BuildConfig.VERSION_CODE+1)));
             assertNotNull(r.update);assertEquals(valid,r.update.downloadUrl);assertEquals(BuildConfig.VERSION_CODE+1,r.update.advertisedVersionCode);
-            assertNull(((AppUpdateManager.CheckResult)parse.invoke(m,new JSONArray().put(release("Ella-monitoring-v0.24.apk",valid,BuildConfig.VERSION_CODE)))).update);
+            assertNull(((AppUpdateManager.CheckResult)parse.invoke(m,new JSONArray().put(release("Ella-monitoring-v0.25.apk",valid,BuildConfig.VERSION_CODE)))).update);
             for(int hours:new int[]{0,1,3,6,12,24}){a.viewerPreferences().edit().putInt("update.intervalHours",hours).apply();assertEquals(hours*3600000L,m.updateIntervalMillis());}
             a.viewerPreferences().edit().putInt("update.intervalHours",0).apply();final boolean[] skipped={false};m.check(false,result->skipped[0]=result.skipped);org.robolectric.shadows.ShadowLooper.idleMainLooper();assertTrue(skipped[0]);m.destroy();
         }

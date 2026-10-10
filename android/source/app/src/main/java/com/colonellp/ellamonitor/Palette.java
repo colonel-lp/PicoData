@@ -1,9 +1,10 @@
 package com.colonellp.ellamonitor;
 
 final class Palette {
-    final String fontFamily;
-    final int background, panel, border, text, muted, accent, positive, negative;
-    Palette(ThemeConfig t) {
+    String fontFamily;
+    int background, panel, border, text, muted, accent, positive, negative;
+    Palette(ThemeConfig t) { update(t); }
+    void update(ThemeConfig t) {
         fontFamily=t.fontFamily; background=t.background;panel=t.panel;border=t.border;text=t.text;
         muted=t.buttonTextOff;accent=t.controls;positive=t.frontEq;negative=t.rearEq;
     }

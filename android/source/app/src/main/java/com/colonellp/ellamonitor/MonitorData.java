@@ -36,10 +36,13 @@ final class MonitorData {
         }
         return result;
     }
-    static boolean fresh(JSONObject source, double elapsedSeconds, double limit) {
+    // The collector owns each source's configured freshness interval. Bound the
+    // cached HTTP snapshot separately; do not add its age twice at the viewer.
+    static final double SNAPSHOT_LIFETIME_SECONDS=3;
+    static boolean fresh(JSONObject source, double elapsedSeconds) {
         Double age = number(source, "ageSeconds");
         return source != null && source.optBoolean("fresh", false) && "connected".equals(source.optString("state"))
-                && age != null && age >= 0 && elapsedSeconds >= 0 && age + elapsedSeconds <= limit;
+                && age != null && age >= 0 && Double.isFinite(elapsedSeconds) && elapsedSeconds >= 0 && elapsedSeconds <= SNAPSHOT_LIFETIME_SECONDS;
     }
     static final class Datum {
         final String id, name, unit, group, quantity;
@@ -55,7 +58,7 @@ final class MonitorData {
     static Map<String, Datum> display(List<Metric> metrics, JSONObject live, double elapsed) {
         Map<String, Datum> result = new LinkedHashMap<>();
         JSONObject pico = object(live, "pico"), sbms = object(live, "sbms");
-        boolean pFresh = fresh(pico, elapsed, 2), sFresh = fresh(sbms, elapsed, 3);
+        boolean pFresh = fresh(pico, elapsed), sFresh = fresh(sbms, elapsed);
         JSONObject rawPico = object(pico, "readings"), rawSbms = object(object(sbms, "reading"), "broadcast");
         JSONArray measured = live == null ? null : live.optJSONArray("measurements");
         double picoLoad = 0; boolean allLoads = true; int loadCount = 0;
@@ -91,6 +94,10 @@ final class MonitorData {
             }
         }
         add(result, "pico:load-sum", "Load Σ · Pico", "A", "battery", "current", allLoads && loadCount > 0 ? picoLoad : null, null, null, pico.optString("receivedAt"));
+        Double batteryCurrent=null;
+        for(Datum d:result.values())if(d.metric!=null&&d.metric.channel.equals("picoBattery")&&d.quantity.equals("current"))batteryCurrent=d.value;
+        Double load=result.get("pico:load-sum").value;
+        add(result,"pico:inverter","Inverter","A","loads","current",batteryCurrent!=null&&load!=null?batteryCurrent-load:null,null,null,pico.optString("receivedAt"));
         JSONObject flags = object(object(sbms, "reading"), "flags");
         for (String key : new String[]{"CFET", "DFET", "OVLK", "UVLK", "EOC", "IOT", "LVC", "CELF"}) {
             Object value = flags.opt(key); add(result, "flag:" + key, key, "", "flags", key, null, sFresh && value instanceof Boolean ? (Boolean)value : null, null, sbms.optString("receivedAt"));

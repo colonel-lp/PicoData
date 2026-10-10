@@ -51,7 +51,7 @@ import java.util.concurrent.Executors;
 public final class MainActivity extends Activity {
     private static final String LAN_PERMISSION = "android.permission.ACCESS_LOCAL_NETWORK";
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private final ExecutorService liveWorker = Executors.newSingleThreadExecutor(), historyWorker = Executors.newSingleThreadExecutor();
+    private final ExecutorService liveWorker = Executors.newSingleThreadExecutor(), historyWorker = Executors.newSingleThreadExecutor(), metadataWorker=Executors.newSingleThreadExecutor();
     private PrivateSettings settings;
     private ScreenControl screen;
     private Palette palette;
@@ -79,7 +79,9 @@ public final class MainActivity extends Activity {
     private List<MonitorData.Metric> metrics = new ArrayList<>();
     private JSONObject live, collectorStatus;
     private long receivedMono, piNowAt, piNowMono;
-    private volatile ApiClient liveClient, historyClient, summaryClient;
+    private volatile ApiClient liveClient, historyClient, summaryClient, metadataClient;
+    private boolean metadataLoading;
+    private ThemeConfig previewBaseline;
     private volatile boolean active;
     private boolean historyScreen, defined, bars, fullscreen, keepScreen, localClock, historyLoading;
     private volatile int epoch, historyEpoch;
@@ -117,10 +119,10 @@ public final class MainActivity extends Activity {
     @Override public void onWindowFocusChanged(boolean focus) { super.onWindowFocusChanged(focus); if (focus && screen != null) { screen.apply(); windowMode(); } }
     @Override protected void onStop() {
         active = false; epoch++; historyEpoch++; handler.removeCallbacks(poll); handler.removeCallbacks(expire);
-        if (liveClient != null) liveClient.cancel(); if (historyClient != null) historyClient.cancel(); if (summaryClient != null) summaryClient.cancel();
+        if (liveClient != null) liveClient.cancel(); if (metadataClient!=null)metadataClient.cancel();metadataLoading=false; if (historyClient != null) historyClient.cancel(); if (summaryClient != null) summaryClient.cancel();
         live = null; history = null; historyLoading = false; screen.stop(); persistence(false); super.onStop();
     }
-    @Override protected void onDestroy() { if(colourDialog!=null)colourDialog.dismiss();if(appearanceDialog!=null){appearanceDialog.setOnDismissListener(null);appearanceDialog.dismiss();} if(updates!=null)updates.destroy();liveWorker.shutdownNow(); historyWorker.shutdownNow(); super.onDestroy(); }
+    @Override protected void onDestroy() { if(colourDialog!=null)colourDialog.dismiss();if(appearanceDialog!=null){appearanceDialog.setOnDismissListener(null);appearanceDialog.dismiss();} if(updates!=null)updates.destroy();liveWorker.shutdownNow(); historyWorker.shutdownNow();metadataWorker.shutdownNow(); super.onDestroy(); }
 
     private int dp(float value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private LinearLayout column() { LinearLayout v = new LinearLayout(this); v.setOrientation(LinearLayout.VERTICAL); return v; }
@@ -146,7 +148,7 @@ public final class MainActivity extends Activity {
         GradientDrawable d = new GradientDrawable(); d.setColor(color); d.setCornerRadius(5); d.setStroke(1, border); return d;
     }
     private Button uiButton(String label, boolean selected, Runnable action) {
-        Button b = new Button(this); b.setText(label); b.setAllCaps(false); b.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 11.5f);
+        Button b = new Button(this); b.setActivated(selected);b.setText(label); b.setAllCaps(false); b.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 11.5f);
         b.setTypeface(Typeface.create(theme.fontFamily, Typeface.NORMAL)); b.setTextColor(selected ? theme.buttonTextOn : theme.buttonTextOff);
         b.setMinWidth(0); b.setMinimumWidth(0); b.setMinHeight(0); b.setMinimumHeight(0); b.setPadding(6,0,6,0);
         b.setBackground(uiBackground(theme.buttonBackground, selected ? theme.controls : theme.offButtonBorder)); b.setOnClickListener(v -> action.run()); return b;
@@ -209,11 +211,12 @@ public final class MainActivity extends Activity {
         headings.put("loads","Currents:"); headings.put("flags","Ella Monitoring"); headings.put("temps","Temps:");
         liveDashboard=new LiveDashboard(this,theme,readings,knownCells,new LiveDashboard.Host(){
             public String label(String id,String original){return settings.label(id,original);}
-            public void detail(MonitorData.Datum d,String name,boolean gauge){showDetail(d,name,gauge);}
+            public void detail(String id,MonitorData.Datum d,String name,boolean gauge){showElementDetail(id,d,name,gauge);}
             public void rename(String id,String original){editLabel(id,original);}
             public boolean locked(){return locked;}
-            public boolean highlighted(String id){return settings.prefs.getBoolean("gaugeHighlight:"+id,false);}
-            public boolean changed(String id,String original){return labelModified(id,original)||presetChanges.contains("gaugeHighlight:"+id);}
+            public int highlight(String id){return settings.highlight(id);}
+            public boolean hidden(String id){return settings.hidden(id);}
+            public boolean changed(String id,String original){return presetChanges.contains("label:"+id)||presetChanges.contains("elementHighlight:"+id)||presetChanges.contains("elementHidden:"+id);}
         }); content.addView(liveDashboard,new LinearLayout.LayoutParams(-1,-1));
     }
     private final class Tile {
@@ -247,15 +250,18 @@ public final class MainActivity extends Activity {
         if (settings == null || status == null) return;
         Map<String, MonitorData.Datum> next = MonitorData.display(metrics, live, live == null ? 0 : (SystemClock.elapsedRealtime() - receivedMono) / 1000d);
         // Retain metadata/layout when source snapshots disappear, but never retain their current values.
-        boolean havePicoMetadata = MonitorData.object(live, "pico").optJSONObject("readings") != null;
-        for (MonitorData.Datum old : readings.values()) if (!havePicoMetadata && !next.containsKey(old.id) && old.metric == null && old.id.startsWith("raw:")) next.put(old.id, new MonitorData.Datum(old.id, old.name, old.unit, old.group, old.quantity, null, null, null, old.receivedAt));
-        boolean changed = !next.keySet().equals(readings.keySet()); readings = next;
+        for (MonitorData.Datum old : readings.values()) if (!next.containsKey(old.id) && old.metric == null && old.id.startsWith("raw:")) {
+            String sensorPrefix=old.id.substring(0,old.id.indexOf(':',4)+1);
+            boolean replacement=false;for(String id:next.keySet())if(id.startsWith(sensorPrefix)){replacement=true;break;}
+            if(!replacement)next.put(old.id,new MonitorData.Datum(old.id,old.name,old.unit,old.group,old.quantity,null,null,null,old.receivedAt));
+        }
+        boolean changed = liveDashboard!=null&&!liveDashboard.accepts(next); readings = next;
         if (!historyScreen && !settingsScreen) { if (changed || liveDashboard == null) buildDashboard(); else liveDashboard.update(readings); }
         if (live == null) status.setText(connectionState);
         else {
             double elapsed = (SystemClock.elapsedRealtime() - receivedMono) / 1000d;
             String logging = MonitorData.object(collectorStatus, "logging").optString("state", "unknown");
-            status.setText("Pi connected   ·   Pico " + (MonitorData.fresh(MonitorData.object(live, "pico"), elapsed, 2) ? "live" : "—") + "   ·   SBMS " + (MonitorData.fresh(MonitorData.object(live, "sbms"), elapsed, 3) ? "live" : "—") + "   ·   logging " + logging + "   ·   " + clock(now()));
+            status.setText(connectionState+"   ·   Pico " + (MonitorData.fresh(MonitorData.object(live, "pico"), elapsed) ? "live" : "—") + "   ·   SBMS " + (MonitorData.fresh(MonitorData.object(live, "sbms"), elapsed) ? "live" : "—") + "   ·   logging " + logging + "   ·   " + clock(now()));
         }
     }
     private Instant now() { return piNowAt > 0 ? Instant.ofEpochMilli(piNowAt + SystemClock.elapsedRealtime() - piNowMono) : Instant.now(); }
@@ -273,7 +279,7 @@ public final class MainActivity extends Activity {
     private boolean allowed() { return Build.VERSION.SDK_INT < 37 || checkSelfPermission(LAN_PERMISSION) == PackageManager.PERMISSION_GRANTED; }
     private void restartConnection() {
         epoch++; historyEpoch++; polls = 0; live = null; collectorStatus = null; history = null; historyLoading = false; piNowAt = 0; metrics = new ArrayList<>(); readings = new LinkedHashMap<>();
-        handler.removeCallbacks(poll); if (liveClient != null) liveClient.cancel(); if (historyClient != null) historyClient.cancel();
+        handler.removeCallbacks(poll); if (liveClient != null) liveClient.cancel(); if (metadataClient!=null)metadataClient.cancel();metadataLoading=false; if (historyClient != null) historyClient.cancel();
         if (!active) return;
         if (!allowed()) { connectionState = "Local network permission is needed. Open Settings to connect."; updateLive(); return; }
         connectionState = "Connecting to Pi…"; liveClient = null; build();
@@ -290,20 +296,39 @@ public final class MainActivity extends Activity {
         final int generation = epoch; final ApiClient client = liveClient;
         liveWorker.execute(() -> {
             try {
-                List<MonitorData.Metric> catalogue = polls % 30 == 0 ? MonitorData.catalogue(client.get("/api/v1/metrics")) : null;
-                JSONObject health = polls % 30 == 0 ? client.get("/api/v1/status") : null;
-                long requestAt = SystemClock.elapsedRealtime(); JSONObject body = client.get("/api/v1/live");
-                long clockAt = Instant.parse(body.getString("now")).toEpochMilli();
+                long requestAt=SystemClock.elapsedRealtime();JSONObject body = client.get("/api/v1/live");
+                long responseAt=SystemClock.elapsedRealtime(),clockAt=Instant.parse(body.getString("now")).toEpochMilli();
                 handler.post(() -> {
                     if (!active || generation != epoch) return;
-                    if (catalogue != null) metrics = catalogue; if (health != null) collectorStatus = health; live = body; receivedMono = requestAt;
-                    piNowAt = clockAt; piNowMono = SystemClock.elapsedRealtime(); connectionState = "Pi connected"; polls++;
-                    updateLive(); if (historyScreen && !settingsScreen && !historyLoading && (polls == 1 || polls % 30 == 0)) { buildHistory(); loadHistory(); }
-                    handler.postDelayed(poll, 1000);
+                    live=body;receivedMono=requestAt;piNowAt=clockAt;piNowMono=responseAt;connectionState="Pi connected";
+                    if(polls++ % 30 == 0||metrics.isEmpty())refreshMetadata(generation);
+                    updateLive();handler.postDelayed(poll,1000);
                 });
             } catch (Exception e) {
-                handler.post(() -> { if (!active || generation != epoch) return; live = null; connectionState = "Pi unavailable. Check Wi-Fi, address, token and TLS trust. Retrying…"; updateLive(); handler.postDelayed(poll, 3000); });
+                handler.post(() -> { if (!active || generation != epoch)return;
+                    connectionState="Pi unavailable. Check Wi-Fi, address, token and TLS trust. Retrying…";
+                    // Let the bounded last successful HTTP snapshot expire normally.
+                    // A failed catalogue/status refresh never clears current readings.
+                    updateLive();handler.postDelayed(poll,1000);
+                });
             }
+        });
+    }
+    private void refreshMetadata(int generation){refreshMetadata(generation,null);}
+    private void refreshMetadata(int generation,ApiClient prepared){
+        if(metadataLoading||!active)return;metadataLoading=true;
+        metadataWorker.execute(()->{
+            if(!active||generation!=epoch)return;
+            List<MonitorData.Metric> catalogue=null;JSONObject health=null;
+            try{ApiClient client=prepared==null?client():prepared;metadataClient=client;
+                try{catalogue=MonitorData.catalogue(client.get("/api/v1/metrics"));}catch(Exception ignored){}
+                if(active&&generation==epoch)try{health=client.get("/api/v1/status");}catch(Exception ignored){}
+            }catch(Exception ignored){}
+            final List<MonitorData.Metric> result=catalogue;final JSONObject statusResult=health;
+            handler.post(()->{if(!active||generation!=epoch)return;metadataLoading=false;metadataClient=null;
+                if(result!=null)metrics=result;if(statusResult!=null)collectorStatus=statusResult;updateLive();
+                if(historyScreen&&!settingsScreen&&!historyLoading&&result!=null){buildHistory();loadHistory();}
+            });
         });
     }
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) { super.onRequestPermissionsResult(requestCode, permissions, results); if (requestCode == 37) restartConnection(); if(requestCode==28){Runnable action=storageAction;storageAction=null;if(results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED&&action!=null)action.run();else toast("Storage access is needed to save theme files in Downloads.");} }
@@ -378,9 +403,10 @@ public final class MainActivity extends Activity {
         themedAlertBuilder().setTitle(metricLabel(history.metric)).setMessage(message).setPositiveButton("Close", null).show();
     }
     private void showDetail(MonitorData.Datum d,String fallback){showDetail(d,fallback,false);}
-    private void showDetail(MonitorData.Datum d, String fallback,boolean gauge) {
-        if (d == null) { LinearLayout empty=column();empty.addView(uiText("—",14,theme.text));if(gauge)addGaugeHighlight(empty,"pending:"+fallback);themedAlertBuilder().setTitle(fallback).setView(empty).setPositiveButton("Close",null).show(); return; }
-        LinearLayout view = column(); if(gauge)addGaugeHighlight(view,d.id);view.addView(text("Snapshot at tap: " + formatted(d) + "\nReceived: " + (d.receivedAt.isEmpty() ? "—" : d.receivedAt) + "\nOriginal label: " + d.name, 15, palette.text));
+    private void showDetail(MonitorData.Datum d, String fallback,boolean gauge) {showElementDetail(d==null?"pending:"+fallback:d.id,d,fallback,gauge);}
+    private void showElementDetail(String id,MonitorData.Datum d,String fallback,boolean gauge) {
+        if (d == null) { LinearLayout empty=column();empty.addView(uiText("—",14,theme.text));addElementOptions(empty,id);themedAlertBuilder().setTitle(settings.label(id,fallback)).setView(empty).setPositiveButton("Close",null).show(); return; }
+        LinearLayout view = column(); addElementOptions(view,id);view.addView(text("Snapshot at tap: " + formatted(d) + "\nReceived: " + (d.receivedAt.isEmpty() ? "—" : d.receivedAt) + "\nOriginal label: " + d.name, 15, palette.text));
         if (d.metric == null) view.addView(text("Live only. No history is recorded for this element." + (d.id.contains("timeRemaining") ? " Time estimate follows Node-RED using Pico nominal/remaining capacity and raw battery current." : ""), 14, palette.muted));
         else {
             view.addView(text("Source: " + d.metric.source + " · " + d.metric.id + "\nChoose retained history:", 13, palette.muted));
@@ -394,8 +420,17 @@ public final class MainActivity extends Activity {
         }
         themedAlertBuilder().setTitle(settings.label(d.id, d.name)).setView(view).setPositiveButton("Close", null).show();
     }
-    private void addGaugeHighlight(LinearLayout view,String id){
-        trackChange(setting(view,"Highlight background",settings.prefs.getBoolean("gaugeHighlight:"+id,false),on->{android.content.SharedPreferences.Editor e=settings.prefs.edit();if(on)e.putBoolean("gaugeHighlight:"+id,true);else e.remove("gaugeHighlight:"+id);e.apply();if(liveDashboard!=null)liveDashboard.update(readings);}),"gaugeHighlight:"+id);
+    private void addElementOptions(LinearLayout view,String id){
+        LinearLayout options=column();view.addView(options);final boolean[] syncing={false};final CheckBox[] choices=new CheckBox[2];
+        for(int i=0;i<2;i++){final int choice=i+1;
+            choices[i]=trackChange(setting(options,"Highlight "+choice,settings.highlight(id)==choice,on->{
+                if(syncing[0])return;settings.setHighlight(id,on?choice:settings.highlight(id)==choice?0:settings.highlight(id));
+                syncing[0]=true;for(int j=0;j<2;j++)choices[j].setChecked(settings.highlight(id)==j+1);syncing[0]=false;
+                if(liveDashboard!=null)liveDashboard.refreshChanges();
+            }),"elementHighlight:"+id);
+            android.graphics.drawable.GradientDrawable swatch=roundedBackground(choice==1?theme.gaugeHighlight:theme.highlight2,theme.border,1,3);swatch.setBounds(0,0,dialogDp(22),dialogDp(22));choices[i].setCompoundDrawables(null,null,swatch,null);
+        }
+        trackChange(setting(options,"Hide contents",settings.hidden(id),on->{android.content.SharedPreferences.Editor edit=settings.prefs.edit();if(on)edit.putBoolean("elementHidden:"+id,true);else edit.remove("elementHidden:"+id);edit.apply();if(liveDashboard!=null)liveDashboard.refreshChanges();}),"elementHidden:"+id);
     }
     private void clearDialogDim(android.app.Dialog dialog){if(dialog.getWindow()!=null){dialog.getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);android.view.WindowManager.LayoutParams lp=dialog.getWindow().getAttributes();lp.dimAmount=0;dialog.getWindow().setAttributes(lp);}}
     private volatile int summaryEpoch;
@@ -542,9 +577,10 @@ public final class MainActivity extends Activity {
     private void showThemeEditor(){
         if(isFinishing()||isDestroyed())return;
         if(appearanceDialog!=null&&appearanceDialog.isShowing()){appearanceDialog.show();refreshAppearance();clearDialogDim(appearanceDialog);return;}
+        previewBaseline=appearance.names().contains(theme.name)?appearance.load(theme.name):ThemeConfig.defaults();
         appearanceView=new ThemeAppearanceView(this,this);
         final android.app.Dialog opened=new android.app.Dialog(this);appearanceDialog=opened;
-        opened.setOnDismissListener(d->{if(appearanceDialog==opened){appearanceDialog=null;appearanceView=null;}if(!isFinishing()&&!isDestroyed())build();});
+        opened.setOnDismissListener(d->{if(appearanceDialog==opened){appearanceDialog=null;appearanceView=null;}if(!isFinishing()&&!isDestroyed())previewTheme();});
         showStyledDialog(opened,appearanceView,560);clearDialogDim(opened);
     }
     ThemeConfig getThemeConfig(){return theme;}
@@ -558,6 +594,15 @@ public final class MainActivity extends Activity {
     void editThemeAppearanceColour(String field,String label){editColour(field,label);}
     void showFontMenu(View anchor,android.graphics.RectF position){String[] families={"sans-serif","sans-serif-condensed","sans-serif-medium","sans-serif-light","monospace"};List<String> labels=java.util.Arrays.asList("SANS","CONDENSED","MEDIUM","LIGHT","MONOSPACE");List<Runnable> actions=new ArrayList<>();for(String family:families)actions.add(()->{theme.fontFamily=family;settings.prefs.edit().putString("fontFamily",family).apply();build();refreshAppearance();refreshChangedIndicators();});anchoredMenu(anchor,position,false,labels,actions,java.util.Arrays.asList(families).indexOf(theme.fontFamily));}
     private void refreshAppearance(){if(appearanceView!=null)appearanceView.invalidate();if(appearanceDialog!=null&&appearanceDialog.getWindow()!=null)appearanceDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);}
+    private void previewTheme(){
+        if(root!=null)root.setBackgroundColor(theme.background);
+        if(status!=null)status.setTextColor(theme.text);
+        if(liveDashboard!=null)liveDashboard.refreshTheme();
+        if(presetAnchor instanceof ChangedButton)((ChangedButton)presetAnchor).refreshTheme();
+        if(themeAnchor instanceof ChangedButton){((ChangedButton)themeAnchor).refreshTheme();if(previewBaseline!=null)((ChangedButton)themeAnchor).changed(!theme.sameColours(previewBaseline));}
+        if(presetAnchor!=null&&presetAnchor.getParent() instanceof ViewGroup){ViewGroup bar=(ViewGroup)presetAnchor.getParent();bar.invalidate();for(int i=0;i<bar.getChildCount();i++){View v=bar.getChildAt(i);if(v instanceof Button&&!(v instanceof ChangedButton)){Button button=(Button)v;button.setBackground(uiBackground(theme.buttonBackground,button.isActivated()?theme.controls:theme.offButtonBorder));button.setTextColor(button.isActivated()?theme.buttonTextOn:theme.buttonTextOff);}v.invalidate();}}
+        refreshAppearance();
+    }
     private GradientDrawable swatch(int color){GradientDrawable d=uiBackground(color,theme.border);d.setSize(dp(24),dp(24));return d;}
     static Integer parseHexColour(String raw){
         if(raw==null)return null;String code=raw.trim();if(code.startsWith("#"))code=code.substring(1);
@@ -566,21 +611,23 @@ public final class MainActivity extends Activity {
     }
     private void editColour(String field,String label){
         final int original=theme.get(field);
+        previewBaseline=appearance.names().contains(theme.name)?appearance.load(theme.name):ThemeConfig.defaults();
+        if(settingsScreen||historyScreen){settingsScreen=false;historyScreen=false;historyEpoch++;build();}
         if(appearanceDialog!=null)appearanceDialog.hide();
         final android.app.Dialog dialog=new android.app.Dialog(this);colourDialog=dialog;
         LinearLayout panel=styledDialogRoot();panel.addView(styledTitle(label+" COLOUR"));final boolean[] syncing={false},accepted={false};
         EditText hex=new EditText(this);hex.setSingleLine();hex.setText(String.format(Locale.UK,"#%06X",original&0xffffff));hex.setSelectAllOnFocus(true);hex.setTextColor(theme.text);hex.setTypeface(getUiTypeface());hex.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,dialogTextSize(14));hex.setGravity(Gravity.CENTER);hex.setPadding(dialogDp(6),0,dialogDp(6),0);hex.setBackground(roundedBackground(theme.buttonBackground,theme.border,1,6));
-        ColorWheelView picker=new ColorWheelView(this,original);picker.setListener(color->{theme.set(field,color);if(!syncing[0]){syncing[0]=true;hex.setText(String.format(Locale.UK,"#%06X",color&0xffffff));hex.setSelection(hex.length());syncing[0]=false;}hex.setError(null);refreshAppearance();});panel.addView(picker,new LinearLayout.LayoutParams(-1,dialogDp(300)));
+        ColorWheelView picker=new ColorWheelView(this,original);picker.setListener(color->{theme.set(field,color);if(!syncing[0]){syncing[0]=true;hex.setText(String.format(Locale.UK,"#%06X",color&0xffffff));hex.setSelection(hex.length());syncing[0]=false;}hex.setError(null);previewTheme();});panel.addView(picker,new LinearLayout.LayoutParams(-1,dialogDp(300)));
         hex.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence value,int start,int count,int after){}public void afterTextChanged(android.text.Editable value){}public void onTextChanged(CharSequence value,int start,int before,int count){if(syncing[0])return;Integer parsed=parseHexColour(value.toString());if(parsed!=null){syncing[0]=true;try{picker.setColor(parsed);}finally{syncing[0]=false;}}}});
         LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(dialogDp(116),dialogDp(42));hp.gravity=Gravity.CENTER_HORIZONTAL;hp.setMargins(0,dialogDp(4),0,dialogDp(7));panel.addView(hex,hp);
         LinearLayout buttons=row();TextView cancel=dialogButton("CANCEL",theme.border),ok=dialogButton("OK",theme.controls);buttons.addView(cancel,new LinearLayout.LayoutParams(0,dialogDp(36),1));LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(0,dialogDp(36),1);bp.setMargins(dialogDp(6),0,0,0);buttons.addView(ok,bp);panel.addView(buttons);
         cancel.setOnClickListener(v->dialog.dismiss());
         ok.setOnClickListener(v->{Integer parsed=parseHexColour(hex.getText().toString());if(parsed==null){hex.setError("Enter six hex digits, with optional #.");return;}picker.setColor(parsed);accepted[0]=true;dialog.dismiss();});
-        dialog.setOnDismissListener(d->{if(colourDialog==dialog)colourDialog=null;if(!accepted[0])theme.set(field,original);appearance.active(theme);handler.post(()->{if(isFinishing()||isDestroyed())return;build();showThemeEditor();});});
+        dialog.setOnDismissListener(d->{if(colourDialog==dialog)colourDialog=null;if(!accepted[0])theme.set(field,original);appearance.active(theme);if(isFinishing()||isDestroyed())return;previewTheme();showThemeEditor();});
         showStyledDialog(dialog,panel,360);android.view.WindowManager.LayoutParams wp=dialog.getWindow().getAttributes();wp.gravity=Gravity.BOTTOM|Gravity.LEFT;wp.dimAmount=0;dialog.getWindow().setAttributes(wp);clearDialogDim(dialog);
     }
     private void migrateViewerSettings(){
-        if(settings.prefs.getInt("viewer.settingsFormat",0)>=2)return;
+        if(settings.prefs.getInt("viewer.settingsFormat",0)>=3)return;
         try{
             android.content.SharedPreferences.Editor edit=settings.prefs.edit();
             if(!settings.prefs.contains("fontFamily"))edit.putString("fontFamily",theme.fontFamily);
@@ -591,16 +638,20 @@ public final class MainActivity extends Activity {
                 if(!migrated.has("connection"))migrated.put("connection",connection);
                 edit.putString(key,migrated.toString());
             }
-            edit.putInt("viewer.settingsFormat",2).commit();
+            for(String key:settings.prefs.getAll().keySet())if(key.startsWith("gaugeHighlight:")){
+                String target="elementHighlight:"+key.substring(15);if(settings.prefs.getBoolean(key,false)&&!settings.prefs.contains(target))edit.putInt(target,1);edit.remove(key);
+            }
+            edit.putInt("viewer.settingsFormat",3).commit();
         }catch(Exception e){toast("Saved settings migration could not finish.");}
     }
     private JSONObject presetState()throws Exception{
         JSONObject state=PresetState.defaults();
-        for(Map.Entry<String,?> e:settings.prefs.getAll().entrySet())if(e.getKey().startsWith("label:")||e.getKey().startsWith("gaugeHighlight:"))state.put(e.getKey(),e.getValue());
-        return state.put("persistent",persistent).put("keepScreen",keepScreen).put("fullscreen",fullscreen).put("locked",locked)
+        for(Map.Entry<String,?> e:settings.prefs.getAll().entrySet())if(e.getKey().startsWith("label:")||e.getKey().startsWith("gaugeHighlight:")||e.getKey().startsWith("elementHighlight:")||e.getKey().startsWith("elementHidden:"))state.put(e.getKey(),e.getValue());
+        state.put("persistent",persistent)
                 .put("updateIntervalHours",settings.prefs.getInt("update.intervalHours",24)).put("fontFamily",theme.fontFamily)
                 .put("localClock",localClock).put("hideStatus",hideStatus).put("range",range).put("defined",defined)
                 .put("metric",selectedMetric).put("quantity",quantity).put("bars",bars).put("connection",settings.connectionSnapshot());
+        return PresetState.normalize(state);
     }
     private List<String> presetNames(){List<String> names=new ArrayList<>();for(String key:settings.prefs.getAll().keySet())if(key.startsWith("viewer.preset:"))names.add(key.substring(14));java.util.Collections.sort(names,String.CASE_INSENSITIVE_ORDER);return names;}
     private JSONObject defaultPreset()throws Exception{
@@ -647,16 +698,16 @@ public final class MainActivity extends Activity {
             JSONObject p=defaults?PresetState.defaults():PresetState.normalize(new JSONObject(settings.prefs.getString("viewer.preset:"+name,"{}")));
             JSONObject connection=p.optJSONObject("connection");if(connection==null)connection=settings.connectionSnapshot();
             android.content.SharedPreferences.Editor edit=settings.prefs.edit();settings.stageConnection(edit,connection);
-            for(String key:settings.prefs.getAll().keySet())if(key.startsWith("label:")||key.startsWith("gaugeHighlight:"))edit.remove(key);
-            for(java.util.Iterator<String> keys=p.keys();keys.hasNext();){String key=keys.next();if(key.startsWith("label:"))edit.putString(key,p.getString(key));else if(key.startsWith("gaugeHighlight:"))edit.putBoolean(key,p.getBoolean(key));}
-            edit.putBoolean("persistent",p.getBoolean("persistent")).putBoolean("keepScreen",p.getBoolean("keepScreen")).putBoolean("fullscreen",p.getBoolean("fullscreen"))
-                    .putBoolean("locked",p.getBoolean("locked")).putInt("update.intervalHours",p.getInt("updateIntervalHours")).putBoolean("localClock",p.getBoolean("localClock"))
+            for(String key:settings.prefs.getAll().keySet())if(key.startsWith("label:")||key.startsWith("gaugeHighlight:")||key.startsWith("elementHighlight:")||key.startsWith("elementHidden:"))edit.remove(key);
+            for(java.util.Iterator<String> keys=p.keys();keys.hasNext();){String key=keys.next();if(key.startsWith("label:"))edit.putString(key,p.getString(key));else if(key.startsWith("elementHighlight:"))edit.putInt(key,p.getInt(key));else if(key.startsWith("elementHidden:"))edit.putBoolean(key,p.getBoolean(key));}
+            edit.putBoolean("persistent",p.getBoolean("persistent"))
+                    .putInt("update.intervalHours",p.getInt("updateIntervalHours")).putBoolean("localClock",p.getBoolean("localClock"))
                     .putBoolean("hideStatus",p.getBoolean("hideStatus")).putInt("range",p.getInt("range")).putBoolean("defined",p.getBoolean("defined"))
                     .putString("metric",p.getString("metric")).putString("quantity",p.getString("quantity")).putBoolean("bars",p.getBoolean("bars"))
                     .putString("fontFamily",p.getString("fontFamily")).putString("currentPreset",name);
             if(defaults)edit.putString("viewer.defaultConnection",connection.toString());
             if(!edit.commit())throw new Exception();
-            persistent=p.getBoolean("persistent");keepScreen=p.getBoolean("keepScreen");fullscreen=p.getBoolean("fullscreen");locked=p.getBoolean("locked");
+            persistent=p.getBoolean("persistent");
             localClock=p.getBoolean("localClock");hideStatus=p.getBoolean("hideStatus");range=p.getInt("range");defined=p.getBoolean("defined");
             selectedMetric=p.getString("metric");quantity=p.getString("quantity");bars=p.getBoolean("bars");theme.fontFamily=p.getString("fontFamily");currentPreset=name;offset=0;
             screen.setKeep(keepScreen);windowMode();persistence(true);updates.schedule();build();restartConnection();if(historyScreen&&!settingsScreen)loadHistory();

@@ -22,29 +22,31 @@ final class ThemeAppearanceView extends View {
         ThemeConfig.BACKGROUND, ThemeConfig.TEXT,
         ThemeConfig.PANEL, ThemeConfig.BORDER,
         ThemeConfig.TITLE_TEXT, ThemeConfig.TITLE_BACKGROUND,
-        ThemeConfig.TITLE_OUTLINE, null,
+        ThemeConfig.TITLE_OUTLINE, ThemeConfig.CHANGED_INDICATOR,
+        ThemeConfig.INDICATOR_BACKGROUND, ThemeConfig.VOLTAGES_BACKGROUND,
         ThemeConfig.GAUGE_PANEL_1, ThemeConfig.GAUGE_OUTLINE_1,
         ThemeConfig.GAUGE_PANEL_2, ThemeConfig.GAUGE_OUTLINE_2,
         ThemeConfig.FRONT_EQ, ThemeConfig.REAR_EQ,
-        ThemeConfig.GAUGE_HIGHLIGHT, ThemeConfig.BUTTON_BACKGROUND,
+        ThemeConfig.HIGHLIGHT_1, ThemeConfig.HIGHLIGHT_2,
+        ThemeConfig.BUTTON_BACKGROUND, null,
         ThemeConfig.BUTTON_TEXT_ON, ThemeConfig.CONTROLS,
-        ThemeConfig.BUTTON_TEXT_OFF, ThemeConfig.OFF_BUTTON_BORDER,
-        ThemeConfig.CHANGED_INDICATOR
+        ThemeConfig.BUTTON_TEXT_OFF, ThemeConfig.OFF_BUTTON_BORDER
     };
     private final String[] colourLabels = {
-        "BACKGROUND", "TEXT", "PANELS", "BORDERS", "TITLE TEXT", "TITLE BACKGROUND", "TITLE OUTLINE", "",
+        "BACKGROUND", "TEXT", "PANELS", "BORDERS", "TITLE TEXT", "TITLE BACKGROUND",
+        "TITLE OUTLINE", "CHANGED INDICATOR", "INDICATOR BACKGROUND", "VOLTAGES BACKGROUND",
         "GAUGE PANEL 1", "GAUGE PANEL 1 OUTLINE", "GAUGE PANEL 2", "GAUGE PANEL 2 OUTLINE",
-        "GAUGE POSITIVE", "GAUGE NEGATIVE", "GAUGE HIGHLIGHT", "BUTTON BACKGROUND",
-        "BUTTON ON TEXT", "BUTTON ON BORDER", "BUTTON OFF TEXT", "BUTTON OFF BORDER", "CHANGED INDICATOR"
+        "GAUGE POSITIVE", "GAUGE NEGATIVE", "HIGHLIGHT 1", "HIGHLIGHT 2", "BUTTON BACKGROUND", "",
+        "BUTTON ON TEXT", "BUTTON ON BORDER", "BUTTON OFF TEXT", "BUTTON OFF BORDER"
     };
     private final RectF[] colourButtons = new RectF[colourFields.length];
-    private final RectF backButton = new RectF(20, 513, 518, 553);
+    private final RectF backButton = new RectF(20, 508, 518, 548);
 
     ThemeAppearanceView(Context context, MainActivity host) {
         super(context);
         this.host = host;
         stroke.setStyle(Paint.Style.STROKE);
-        float left = 20, top = 40, w = 240, h = 37, gapX = 18, gapY = 6;
+        float left = 20, top = 40, w = 240, h = 33, gapX = 18, gapY = 6;
         for (int i = 0; i < colourButtons.length; i++) {
             int col = i % 2, row = i / 2;
             float x = left + col * (w + gapX), y = top + row * (h + gapY);

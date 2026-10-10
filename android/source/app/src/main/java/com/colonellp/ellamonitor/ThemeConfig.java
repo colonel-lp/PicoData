@@ -88,8 +88,15 @@ final class ThemeConfig {
     int gaugePanel2 = buttonBackground;
     static final String GAUGE_OUTLINE_2 = "gaugeOutline2";
     int gaugeOutline2 = controls;
-    static final String GAUGE_HIGHLIGHT = "gaugeHighlight";
+    static final String GAUGE_HIGHLIGHT = "gaugeHighlight"; // legacy theme import key
+    static final String HIGHLIGHT_1 = "highlight1";
+    static final String HIGHLIGHT_2 = "highlight2";
+    static final String INDICATOR_BACKGROUND = "indicatorBackground";
+    static final String VOLTAGES_BACKGROUND = "voltagesBackground";
     int gaugeHighlight = blend(buttonBackground, controls, .2f);
+    int highlight2 = blend(buttonBackground, rearEq, .2f);
+    int indicatorBackground = panel;
+    int voltagesBackground = panel;
     static final String TITLE_TEXT = "titleText";
     int titleText = text;
     static final String TITLE_BACKGROUND = "titleBackground";
@@ -141,6 +148,9 @@ final class ThemeConfig {
         t.gaugePanel2 = gaugePanel2;
         t.gaugeOutline2 = gaugeOutline2;
         t.gaugeHighlight = gaugeHighlight;
+        t.highlight2 = highlight2;
+        t.indicatorBackground = indicatorBackground;
+        t.voltagesBackground = voltagesBackground;
         t.titleText = titleText;
         t.titleBackground = titleBackground;
         t.titleOutline = titleOutline;
@@ -203,7 +213,10 @@ final class ThemeConfig {
         if (GAUGE_OUTLINE_1.equals(field)) return gaugeOutline1;
         if (GAUGE_PANEL_2.equals(field)) return gaugePanel2;
         if (GAUGE_OUTLINE_2.equals(field)) return gaugeOutline2;
-        if (GAUGE_HIGHLIGHT.equals(field)) return gaugeHighlight;
+        if (GAUGE_HIGHLIGHT.equals(field) || HIGHLIGHT_1.equals(field)) return gaugeHighlight;
+        if (HIGHLIGHT_2.equals(field)) return highlight2;
+        if (INDICATOR_BACKGROUND.equals(field)) return indicatorBackground;
+        if (VOLTAGES_BACKGROUND.equals(field)) return voltagesBackground;
         if (TITLE_TEXT.equals(field)) return titleText;
         if (TITLE_BACKGROUND.equals(field)) return titleBackground;
         if (TITLE_OUTLINE.equals(field)) return titleOutline;
@@ -238,7 +251,10 @@ final class ThemeConfig {
         if (GAUGE_OUTLINE_1.equals(field)) { gaugeOutline1 = color; return; }
         if (GAUGE_PANEL_2.equals(field)) { gaugePanel2 = color; return; }
         if (GAUGE_OUTLINE_2.equals(field)) { gaugeOutline2 = color; return; }
-        if (GAUGE_HIGHLIGHT.equals(field)) { gaugeHighlight = color; return; }
+        if (GAUGE_HIGHLIGHT.equals(field) || HIGHLIGHT_1.equals(field)) { gaugeHighlight = color; return; }
+        if (HIGHLIGHT_2.equals(field)) { highlight2 = color; return; }
+        if (INDICATOR_BACKGROUND.equals(field)) { indicatorBackground = color; return; }
+        if (VOLTAGES_BACKGROUND.equals(field)) { voltagesBackground = color; return; }
         if (TITLE_TEXT.equals(field)) { titleText = color; return; }
         if (TITLE_BACKGROUND.equals(field)) { titleBackground = color; return; }
         if (TITLE_OUTLINE.equals(field)) { titleOutline = color; return; }
@@ -269,13 +285,16 @@ final class ThemeConfig {
 
     JSONObject toJson() throws JSONException {
         JSONObject o = new JSONObject();
-        o.put("format", 15);
+        o.put("format", 16);
         o.put(TITLE_TEXT, titleText);
         o.put(GAUGE_PANEL_1, gaugePanel1);
         o.put(GAUGE_OUTLINE_1, gaugeOutline1);
         o.put(GAUGE_PANEL_2, gaugePanel2);
         o.put(GAUGE_OUTLINE_2, gaugeOutline2);
-        o.put(GAUGE_HIGHLIGHT, gaugeHighlight);
+        o.put(HIGHLIGHT_1, gaugeHighlight);
+        o.put(HIGHLIGHT_2, highlight2);
+        o.put(INDICATOR_BACKGROUND, indicatorBackground);
+        o.put(VOLTAGES_BACKGROUND, voltagesBackground);
         o.put(TITLE_BACKGROUND, titleBackground);
         o.put(TITLE_OUTLINE, titleOutline);
 
@@ -370,7 +389,10 @@ final class ThemeConfig {
         t.gaugeOutline1 = o.optInt(GAUGE_OUTLINE_1, t.controls);
         t.gaugePanel2 = o.optInt(GAUGE_PANEL_2, t.buttonBackground);
         t.gaugeOutline2 = o.optInt(GAUGE_OUTLINE_2, t.controls);
-        t.gaugeHighlight = o.optInt(GAUGE_HIGHLIGHT, blend(t.buttonBackground, t.controls, .2f));
+        t.gaugeHighlight = o.optInt(HIGHLIGHT_1, o.optInt(GAUGE_HIGHLIGHT, blend(t.buttonBackground, t.controls, .2f)));
+        t.highlight2 = o.optInt(HIGHLIGHT_2, blend(t.buttonBackground, t.rearEq, .2f));
+        t.indicatorBackground = o.optInt(INDICATOR_BACKGROUND, t.panel);
+        t.voltagesBackground = o.optInt(VOLTAGES_BACKGROUND, t.panel);
         t.titleText = o.optInt(TITLE_TEXT, t.text);
         t.titleBackground = o.optInt(TITLE_BACKGROUND, t.panel);
         t.titleOutline = o.optInt(TITLE_OUTLINE, t.border);
@@ -385,6 +407,9 @@ final class ThemeConfig {
                 && gaugePanel2 == other.gaugePanel2
                 && gaugeOutline2 == other.gaugeOutline2
                 && gaugeHighlight == other.gaugeHighlight
+                && highlight2 == other.highlight2
+                && indicatorBackground == other.indicatorBackground
+                && voltagesBackground == other.voltagesBackground
                 && titleText == other.titleText
                 && titleBackground == other.titleBackground
                 && titleOutline == other.titleOutline

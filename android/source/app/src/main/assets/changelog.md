@@ -1,5 +1,19 @@
 # Android changelog
 
+## 0.24 — 2026-10-10
+
+Android source version 0.24 / versionCode 6. Owner-built APK output: Ella-monitoring-v0.24.apk. Package/signing identity, collector/API/database/MQTT contracts and SDK targets are unchanged. This delivery prepares source only.
+
+- Keep screen awake, Full screen and Lock are independent app-wide states. Exclude them from preset save/load and modification checks; loading older presets or System default preserves their current values.
+- Restore live colour preview by repainting existing dashboard views. OK/Cancel returns directly to the retained colour list without rebuilding the page; cancellation rolls back. Adapt the working EQ picker flow, retaining RGB validation and undimmed dialogs.
+- Replace Gauge highlight with Highlight 1 and add Highlight 2. Show both colours in the editor and all element popups. Each element can select one highlight or neither. Preserve older highlights as Highlight 1.
+- Add Hide contents to readout and heading popups. Hide labels/values/gauges while retaining boxes, spacing and popup access. Save visibility/highlight choices in presets; themes store colours only. Changed settings use the existing difference indication.
+- Restore 6px inside the summary box after V[P]/V[S]. Use 10px text side padding for cell voltages, delta and both V[P]/V[S] cells; preserve centred lower voltage/Ah/runtime values.
+- Add Inverter as the final live current row: Battery [Pico] minus the displayed Load [Pico]. Preserve signed inputs; unavailable inputs show a dash. No new logging or history is introduced.
+- Trust the collector's independent Pico/SBMS freshness decision instead of applying a second short source-age limit. Expire cached HTTP snapshots after three seconds including request latency; actual stale/disconnected sources still show dashes.
+- Isolate catalogue/status requests from live polling. Metadata failures do not clear readings. Retain stable dashboard views through missing snapshots/bindings and avoid repainting unchanged values, addressing periodic whole-dashboard redraws.
+- Move Changed indicator beside Title outline. Add Indicator background for the flags box and Voltages background for both lower summary/cell-voltage boxes. Preserve fixed green/red flag semantics and compatible older theme/preset imports.
+
 ## 0.23 — 2026-10-10
 
 Android source version 0.23 / versionCode 5. Owner-built APK output: Ella-monitoring-v0.23.apk. No APK is assembled or published in this source delivery. Collector/API/database/MQTT contracts and signing identity remain unchanged.
