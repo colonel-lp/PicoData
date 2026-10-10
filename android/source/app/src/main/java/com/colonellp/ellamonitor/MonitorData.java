@@ -81,7 +81,13 @@ final class MonitorData {
             }
             if (m.channel.equals("picoBattery")) {
                 JSONObject raw = object(rawPico, m.definition.optString("sensorId"));
-                for (String field : new String[]{"capacity.remaining", "capacity.timeRemaining"}) add(result, "battery:" + field, field.endsWith("timeRemaining") ? "Runtime · Pico estimate" : "Remaining capacity · Pico", field.endsWith("timeRemaining") ? "s" : "Ah", "summary", field, available ? number(raw, field) : null, null, null, pico.optString("receivedAt"));
+                Double remaining = available ? number(raw, "capacity.remaining") : null;
+                Double nominal = available ? number(raw, "capacity.nominal") : null;
+                Double current = available ? number(raw, "current") : null;
+                add(result, "battery:capacity.remaining", "Remaining capacity · Pico", "Ah", "summary", "capacity.remaining", remaining == null ? null : (double)Math.round(remaining), null, null, pico.optString("receivedAt"));
+                add(result, "battery:capacity.nominal", "Nominal capacity · Pico", "Ah", "summary", "capacity.nominal", nominal, null, null, pico.optString("receivedAt"));
+                add(result, "battery:capacity.timeRemaining", "Time to full / empty · Pico", "h", "summary", "capacity.timeRemaining", runtimeHours(nominal, remaining, current), null, null, pico.optString("receivedAt"));
+                add(result, "battery:pico-voltage", "V [P]", "V", "summary", "voltage", available ? number(raw, "voltage") : null, null, null, pico.optString("receivedAt"));
             }
         }
         add(result, "pico:load-sum", "Load Σ · Pico", "A", "battery", "current", allLoads && loadCount > 0 ? picoLoad : null, null, null, pico.optString("receivedAt"));
@@ -94,6 +100,9 @@ final class MonitorData {
         while (keys.hasNext() && count++ < 256) {
             String sensorId = keys.next(); JSONObject sensor = rawPico.optJSONObject(sensorId); if (sensor == null) continue;
             String type = sensor.optString("type"), name = sensor.optString("name", sensorId);
+            if (type.equals("battery") && name.trim().equalsIgnoreCase("starter")) {
+                add(result, rawBinding(sensorId, sensor) + ":starter-voltage", "V [S]", "V", "summary", "starterVoltage", pFresh ? number(sensor, "voltage") : null, null, null, pico.optString("receivedAt"));
+            }
             // Conservative fingerprint includes available configuration metadata, not positional ID alone.
             String binding = rawBinding(sensorId, sensor);
             String field = type.equals("thermometer") ? "temperature" : type.equals("barometer") ? "pressure" : type.equals("inclinometer") ? "degree" : type.equals("tank") ? "percentage" : null;
@@ -116,6 +125,13 @@ final class MonitorData {
         }
         return result;
     }
+    /** Node-RED join/divide chain: positive current charges; negative current discharges. */
+    static Double runtimeHours(Double nominal, Double remaining, Double current) {
+        if (nominal == null || remaining == null || current == null || !Double.isFinite(nominal) || !Double.isFinite(remaining) || !Double.isFinite(current) || nominal <= 0 || remaining < 0 || remaining > nominal || current == 0) return null;
+        double ah = Math.round(remaining);
+        double hours = -(current > 0 ? nominal - ah : ah) / current;
+        return Double.isFinite(hours) ? Math.floor(hours * 100 + .5) / 100 : null;
+    }
     static String rawBinding(String id, JSONObject sensor) {
         List<String> keys = new ArrayList<>(); sensor.keys().forEachRemaining(keys::add); java.util.Collections.sort(keys);
         StringBuilder fingerprint = new StringBuilder("raw:" + id + ":");
@@ -125,3 +141,4 @@ final class MonitorData {
     static String fieldName(String field) { return field.equals("stateOfCharge") ? "SOC" : field.equals("watts") ? "power" : field; }
     private static void add(Map<String, Datum> r, String id, String name, String unit, String group, String q, Double v, Boolean f, Metric m, String at) { r.put(id, new Datum(id, name, unit, group, q, v, f, m, at)); }
 }
+

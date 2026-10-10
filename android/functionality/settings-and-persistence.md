@@ -1,9 +1,11 @@
 # Settings and persistence
 
-Updated in **0.2.0-preview / build 2**.
+Updated in **0.21 / build 3**.
 
-Settings is a grouped two-column page reachable from the bottom gear: Connection, Display & App, Theme & Appearance, Labels & Export. It retains manual origin/token setup, encrypted Android Keystore token storage and foreground connection restart. The credentials page prevents screenshots and token view-state saving. Hide-title changes only the title; status/navigation remain. Local clock changes display timezone only. Label editing/export preserve the original APIs and source/history behaviour.
+Settings is the grouped two-column Connection, Display & App, Export and System page. Connection retains encrypted private-token/manual-origin setup and foreground reconnection. Credentials disable screenshots and token view-state saving. No connection-status line or theme controls appear here. Hide connection status applies to monitoring pages; the title is permanently removed. Local-clock display preserves UTC history boundaries. System groups version, Changelog / Update, update frequency and an explicit Back button returning to Live data.
 
-Persistence is opt-in and follows EQ's return-to-app notification behaviour. A low-importance ongoing notification appears while backgrounded and tapping it returns to the app; it is removed while visible or when persistence is disabled. Android 13+ requests notification permission. The non-exported service declares Android's specialUse foreground-service type/subtype for current targets. It does not poll the API, collect data, acquire a background wake lock or deliver alerts. START_STICKY allows system restart, but firmware/user battery/task restrictions still require device validation. Pi collection/logging continues independently.
+Persistence remains opt-in, following EQ's ongoing return-to-app notification while backgrounded, with Android 13+ notification permission and the guarded specialUse service. It never adds background live polling, data logging, wake locks or alerts. Pi logging continues independently. Foreground keep-screen and detected FYT handling remain intact; fullscreen recalculates the canvas using the released bar space. Device/firmware restrictions and EQ interaction still require hardware validation.
 
-Foreground keep-screen/fullscreen behaviour and detected FYT service capability are unchanged. The first preview's development signing key could not be recovered: 0.2.0 uses a retained private replacement preview key and requires reinstalling 0.1.0, clearing settings. Production signing and updater/release policy remain pending; keys are never stored in GitHub.
+The installed preview package and retained 0.2.0 development certificate are preserved so 0.21 installs as an update without clearing settings. A separate production identity is not introduced. Keys and local SDK/build outputs are excluded from GitHub.
+
+See [updates.md](updates.md) for changelog/release/installer handling.

@@ -1,15 +1,21 @@
+## Completed authorized build 0.21 — 2026-10-10
+
+- Use Pico's reported nominal and remaining capacity with the verified Node-RED time-to-full/empty chain and raw battery current. Zero/missing/stale inputs are unavailable.
+- Remove the blank gaps from the reference current list; distribute all rows evenly with 6px global element padding.
+- Completed the pending dashboard, theme, Settings, changelog and update corrections below. Updates use PicoData releases; source stays in android/source. Retain the installed preview package and signing key.
+
 # Next build changes
 
-## Owner device-review corrections — 2026-10-10
+## Owner device-review corrections — implemented in 0.21, 2026-10-10
 
 ### Runtime source correction and owner preference — 2026-10-10
 
 - Collector formula review: with `C` as decoded nominal Ah and `f = SOC/100`, its calculation is approximately **`3600 × C / (currentA × f + 0.001)` seconds**. Discharge current is negative, so normal discharging selects the fixed seven-day substitute. It also puts SOC in the denominator instead of using remaining capacity in the numerator, and does not use the missing capacity for charging. This is not a correct time-to-empty/time-to-full estimate.
 - The owner's Node-RED arithmetic is the better fit: discharge uses `remainingAh / abs(currentA)` hours; charge uses `(fullCapacityAh − remainingAh) / currentA` hours and the flow prepends the established negative sign. It assumes the present net current continues; it is not necessarily identical to Simarine's own estimate.
 - Recommendation for a future authorized implementation: keep the Node-RED calculation/formatting but use the battery's valid decoded nominal Ah for full capacity rather than a fixed installation capacity. Treat zero/missing/stale current as unavailable; do not keep the old fabricated seven-day result. This recommendation does not authorize altering collector compatibility or application code now.
-- [ ] **Prefer Simarine/Pico's own displayed time estimate if it is available in the received protocol data**, as requested by the owner. Investigate the actual packet/configuration field and its units, sign, unavailable sentinels and freshness before using it. The native estimate has not yet been identified in the existing decoder; the Node-RED calculation below is the confirmed alternative, not evidence that Pico transmits its own estimate.
-- [ ] Correct the misleading **Runtime · Pico estimate** description. The currently consumed `capacity.timeRemaining` is computed in `node.js/lib/readings.js`, inherited from `python/pico-mqtt.py` and the archived upstream code; it is **not a decoded native time value**. It explicitly changes negative calculated results to **604800 seconds (seven days)**, which the Android formatter renders as `7d:00h`. Do not present that fabricated fallback as Simarine's estimate.
-- [ ] Remove that seven-day substitute from the app's runtime source selection. Preserve the collector's existing MQTT compatibility contract during the investigation; any collector/protocol change must be explicitly included in an authorized build/release. If a valid native estimate cannot be obtained, use the verified owner Node-RED calculation below with correct unavailable handling.
+- [x] **Prefer Simarine/Pico's own displayed time estimate if it is available in the received protocol data**, as requested by the owner. Investigate the actual packet/configuration field and its units, sign, unavailable sentinels and freshness before using it. The native estimate has not yet been identified in the existing decoder; the Node-RED calculation below is the confirmed alternative, not evidence that Pico transmits its own estimate.
+- [x] Correct the misleading **Runtime · Pico estimate** description. The currently consumed `capacity.timeRemaining` is computed in `node.js/lib/readings.js`, inherited from `python/pico-mqtt.py` and the archived upstream code; it is **not a decoded native time value**. It explicitly changes negative calculated results to **604800 seconds (seven days)**, which the Android formatter renders as `7d:00h`. Do not present that fabricated fallback as Simarine's estimate.
+- [x] Remove that seven-day substitute from the app's runtime source selection. Preserve the collector's existing MQTT compatibility contract during the investigation; any collector/protocol change must be explicitly included in an authorized build/release. If a valid native estimate cannot be obtained, use the verified owner Node-RED calculation below with correct unavailable handling.
 - The owner reports that Simarine displays an estimate while the app remains at seven days. Source inspection explains the app's fallback; agreement with Simarine's displayed estimate has not been tested on hardware.
 
 
@@ -17,11 +23,11 @@ These corrections supersede conflicting earlier implementation claims and exclus
 
 ### Dashboard elements, layout and readings
 
-- [ ] Each displayed element is a button: apply the EQ app's actual themed button background, text and highlight/on/off borders to individual readouts and gauges, rather than plain text rows or generic panel borders. Preserve the lock behavior for popup interactions.
-- [ ] Match the reference photo's arrangement and temperature ordering using stable source bindings; do not use API arrival order or alphabetical order. Preserve the reference's intended grouping/spacing, without publishing the private photo, inventory or readings.
-- [ ] Remove the excessive unused space below gauge faces; fit the dashboard elements and lower readouts to the available screen while retaining the requested layout and 6px spacing.
-- [ ] Pitch and roll: fixed **−5 to +5** scale, zero in the centre, a needle, and colour **only between zero and the needle**. At zero there is no coloured sweep. Keep the actual numeric reading even when it exceeds the visible scale; do not substitute the current generic gauge appearance.
-- [ ] Correct days/time remaining using the now-supplied owner export **flows(1).json** (2026-10-10), following **Pico → Delay → Total → Divide → Battery [Pico] and Set message topic → Join 2 → Set message payload → Divide → Split into time → Time to Full 2**; and **Pico → Delay → SOC AH → Nearest integer → SOC Ah and Set message topic → the same Join 2**. This source requirement is now resolved; do not use raw Pico `capacity.timeRemaining`.
+- [x] Each displayed element is a button: apply the EQ app's actual themed button background, text and highlight/on/off borders to individual readouts and gauges, rather than plain text rows or generic panel borders. Preserve the lock behavior for popup interactions.
+- [x] Match the reference photo's arrangement and temperature ordering using stable source bindings; do not use API arrival order or alphabetical order. Preserve the reference's intended grouping/spacing, without publishing the private photo, inventory or readings.
+- [x] Remove the excessive unused space below gauge faces; fit the dashboard elements and lower readouts to the available screen while retaining the requested layout and 6px spacing.
+- [x] Pitch and roll: fixed **−5 to +5** scale, zero in the centre, a needle, and colour **only between zero and the needle**. At zero there is no coloured sweep. Keep the actual numeric reading even when it exceeds the visible scale; do not substitute the current generic gauge appearance.
+- [x] Correct days/time remaining using the now-supplied owner export **flows(1).json** (2026-10-10), following **Pico → Delay → Total → Divide → Battery [Pico] and Set message topic → Join 2 → Set message payload → Divide → Split into time → Time to Full 2**; and **Pico → Delay → SOC AH → Nearest integer → SOC Ah and Set message topic → the same Join 2**. This source requirement is now resolved; do not use raw Pico `capacity.timeRemaining`.
   - Total supplies raw signed Pico total/battery current. The first Divide node divides by 1 and rounds to one decimal, but its output field is **topic**, so **payload remains the raw current**; the next Change node then assigns topic `batteryPico`. Do not mistakenly use the rounded topic value as the calculation input.
   - SOC AH supplies battery remaining capacity in Ah, rounded with nearest-integer/JavaScript Math.round behavior, and is assigned topic `SOC`. Join 2 builds a payload object keyed by topic and emits after two messages.
   - The payload expression selects `[fullCapacityAh − roundedRemainingAh, currentA]` when current is positive; otherwise `[roundedRemainingAh, currentA]`. Use the configured full-capacity constant from the owner's private export; preserve it without publishing the installation's capacity/inventory.
@@ -29,47 +35,47 @@ These corrections supersede conflicting earlier implementation claims and exclus
   - Split into time takes the absolute rounded hours for formatting and prepends `-` for negative hours. At 24 hours or more, display `Dd:HHh`; below 24 hours, display `Hh:MMm`. Days, leftover hours and minutes are **floored**, and HH/MM are zero-padded. Do not convert the input from seconds or always format days/hours.
   - Time to Full 2 centres the resulting string vertically/horizontally and uses bold text. Apply the app's current theme/button styling while preserving the calculation/formatting.
   - The calculator rejects a zero denominator and emits no updated result; it does not return zero runtime. The Android display must treat zero-current, missing or stale inputs as an unavailable estimate rather than a fresh fabricated result. Preserve the independently fresh Ah/current readings.
-- [ ] **Remove the app title altogether**, including the title currently above the indicators. This supersedes the earlier optional hide-title feature; do not add another Ella Monitoring heading.
-- [ ] Put cell voltages in **their own bounding box**, separate from the other battery summary readouts.
-- [ ] Show both **V[P]** and **V[S]**, as live readings: V[P] is the actual raw Pico Ella battery voltage; V[S] is the actual raw Pico starter-battery voltage. The reviewed Node-RED change nodes bind these to their respective battery voltage fields. The current secondary logged voltage selected for V[P] is not a verified equivalent; do not replace either raw live source with SBMS voltage or a derived/reference voltage.
-- [ ] Ensure **6px padding above the buttons inside the bottom panels**, alongside the agreed reference spacing.
-- [ ] Full screen must let the app **expand into the area freed by hiding Android system bars**, rather than leaving the old inset/empty space. Recalculate the usable viewport and scale on both entry and exit, preserving the reference layout.
+- [x] **Remove the app title altogether**, including the title currently above the indicators. This supersedes the earlier optional hide-title feature; do not add another Ella Monitoring heading.
+- [x] Put cell voltages in **their own bounding box**, separate from the other battery summary readouts.
+- [x] Show both **V[P]** and **V[S]**, as live readings: V[P] is the actual raw Pico Ella battery voltage; V[S] is the actual raw Pico starter-battery voltage. The reviewed Node-RED change nodes bind these to their respective battery voltage fields. The current secondary logged voltage selected for V[P] is not a verified equivalent; do not replace either raw live source with SBMS voltage or a derived/reference voltage.
+- [x] Ensure **6px padding above the buttons inside the bottom panels**, alongside the agreed reference spacing.
+- [x] Full screen must let the app **expand into the area freed by hiding Android system bars**, rather than leaving the old inset/empty space. Recalculate the usable viewport and scale on both entry and exit, preserving the reference layout.
 
 ### EQ theme engine, menus and every popup
 
-- [ ] Replace the approximate theme/menu/dialog implementation with the actual EQ app's behavior and styling, adapted only for monitoring-specific elements. Inspect its current DashboardView, MainActivity menu/dialog helpers, ThemeAppearanceView, ThemeConfig and ThemeStore; reuse the established interaction/formatting rather than generic Android menus recoloured afterward.
-- [ ] Provide the **theme dropdown on the main page**, with the EQ options: Save theme as, conditional Update for a modified named theme, Manage themes, Edit theme, Default and all saved themes. Match the EQ anchored dropdown, selection/modified indication and popup behavior. Restore the reference's relevant missing main-page preset options as well.
-- [ ] Restore saved themes and relevant options throughout the theme workflows; manage/load/save/update/rename/delete must work as in EQ, with its colour picker and theme roles.
-- [ ] **Every popup/dialog must use the current app theme and look like the EQ app's popups**, including its panels, borders, text, controls, sizing, spacing and selected states. This explicitly supersedes the previous exclusion of summary-popup styling. Chart/summary content redesign is not otherwise inferred from this styling correction.
-- [ ] **No theme controls/options on the Settings page.** Theme editing belongs in the main-page theme dropdown, as in the current EQ app.
-- [ ] Move **Edit display labels** into the theme dropdown.
-- [ ] Save named theme files in **Downloads/ella-monitoring/themes**, with EQ-equivalent file-based save/load/manage behavior. Preserve existing saved themes during migration; adapt storage access for the supported Android versions.
+- [x] Replace the approximate theme/menu/dialog implementation with the actual EQ app's behavior and styling, adapted only for monitoring-specific elements. Inspect its current DashboardView, MainActivity menu/dialog helpers, ThemeAppearanceView, ThemeConfig and ThemeStore; reuse the established interaction/formatting rather than generic Android menus recoloured afterward.
+- [x] Provide the **theme dropdown on the main page**, with the EQ options: Save theme as, conditional Update for a modified named theme, Manage themes, Edit theme, Default and all saved themes. Match the EQ anchored dropdown, selection/modified indication and popup behavior. Restore the reference's relevant missing main-page preset options as well.
+- [x] Restore saved themes and relevant options throughout the theme workflows; manage/load/save/update/rename/delete must work as in EQ, with its colour picker and theme roles.
+- [x] **Every popup/dialog must use the current app theme and look like the EQ app's popups**, including its panels, borders, text, controls, sizing, spacing and selected states. This explicitly supersedes the previous exclusion of summary-popup styling. Chart/summary content redesign is not otherwise inferred from this styling correction.
+- [x] **No theme controls/options on the Settings page.** Theme editing belongs in the main-page theme dropdown, as in the current EQ app.
+- [x] Move **Edit display labels** into the theme dropdown.
+- [x] Save named theme files in **Downloads/ella-monitoring/themes**, with EQ-equivalent file-based save/load/manage behavior. Preserve existing saved themes during migration; adapt storage access for the supported Android versions.
 
 ### Settings page
 
-- [ ] Do not display connection-status text on the Settings page.
-- [ ] Change **Hide app title** to **Hide connection status**; the title is removed permanently. Apply the connection-status preference to the monitoring display.
-- [ ] Add an explicit **Back** button that returns from Settings to the dashboard.
-- [ ] Group the **app version, Changelog/Update and Back button in one bounding box**, following the EQ Settings page's System grouping and themed appearance.
-- [ ] Retain the already-recorded update-check dropdown: **Off, 1hr, 3hr, 6hr, 12hr, 24hr**, alongside the previously requested update download/install and full changelog functionality.
+- [x] Do not display connection-status text on the Settings page.
+- [x] Change **Hide app title** to **Hide connection status**; the title is removed permanently. Apply the connection-status preference to the monitoring display.
+- [x] Add an explicit **Back** button that returns from Settings to the dashboard.
+- [x] Group the **app version, Changelog/Update and Back button in one bounding box**, following the EQ Settings page's System grouping and themed appearance.
+- [x] Retain the already-recorded update-check dropdown: **Off, 1hr, 3hr, 6hr, 12hr, 24hr**, alongside the previously requested update download/install and full changelog functionality.
 
-### Read-only review evidence
+### Review evidence (prior to this authorized build)
 
 - EQ source reviewed at `e1b54f3f58efb92215d99e2e3f2941530fbcbc15`: the dashboard has separate preset/theme selectors; themes use anchored menus and files in Downloads; Settings explicitly places theme editing on the dashboard and groups Back/Changelog/Update/version in System.
 - Ella source reviewed at `22dff908431f97356a07c54af198e506e3701d5f`: readout rows lack individual button backgrounds/borders, temperature rows follow incoming data order, the raw starter voltage is absent from LiveDashboard, and generic menu/theme handling differs from EQ.
-- Runtime source resolved from the owner's supplied `flows(1).json`: it contains Time to Full 2 and the additional topic/join/calculation nodes absent from the older GitHub copies. The export remains private; only the functional calculation contract is recorded here. No application source, collector, database, version or APK has been changed by this review.
+- Runtime source resolved from the owner's supplied `flows(1).json`: it contains Time to Full 2 and the additional topic/join/calculation nodes absent from the older GitHub copies. The export remains private; only the functional calculation contract is recorded here. That review changed no application source. The later authorized 0.21 build implements the confirmed Node-RED alternative; a native protocol estimate remains unidentified.
 
-## Missing EQ companion functionality — 2026-10-10
+## Missing EQ companion functionality — implemented in 0.21, 2026-10-10
 
-- [ ] Carry over the Joying EQ & DSP **Changelog/Update** button, its themed dialog and complete changelog (newest entries first), adapting project references for Ella Monitoring. The 0.2.0-preview settings page currently has no such button; the repository changelog alone does not fulfil this requirement.
-- [ ] Carry over the EQ app's update checking, **Download & Install** action, validated APK download, Android installer handoff and confirmed-install cleanup. Inspect the current EQ implementation before adapting it; use Ella's own package, version, signing identity and release source rather than EQ's.
-- [ ] Add a themed **update-check frequency dropdown in Settings**, with options in this order: **Off, 1hr, 3hr, 6hr, 12hr, 24hr**. Save the selection and use it for automatic update-check frequency; **Off** disables automatic checks. Keep manual checking available through Changelog/Update. This selection supersedes a fixed automatic-check interval copied from EQ.
-- [ ] Resolve the still-unsettled Ella release/package/signing configuration needed to make updates functional. This does not block displaying the complete in-app changelog. Updates were requested in APP-PLAN.md but remain unimplemented in 0.2.0-preview; do not describe the companion functionality as complete while these are missing.
-- This records the owner's correction for the next build; no application-source change or new build is requested by this question.
+- [x] Carry over the Joying EQ & DSP **Changelog/Update** button, its themed dialog and complete changelog (newest entries first), adapting project references for Ella Monitoring. The 0.2.0-preview settings page currently has no such button; the repository changelog alone does not fulfil this requirement.
+- [x] Carry over the EQ app's update checking, **Download & Install** action, validated APK download, Android installer handoff and confirmed-install cleanup. Inspect the current EQ implementation before adapting it; use Ella's own package, version, signing identity and release source rather than EQ's.
+- [x] Add a themed **update-check frequency dropdown in Settings**, with options in this order: **Off, 1hr, 3hr, 6hr, 12hr, 24hr**. Save the selection and use it for automatic update-check frequency; **Off** disables automatic checks. Keep manual checking available through Changelog/Update. This selection supersedes a fixed automatic-check interval copied from EQ.
+- [x] Resolve the still-unsettled Ella release/package/signing configuration needed to make updates functional. This does not block displaying the complete in-app changelog. Updates were requested in APP-PLAN.md but remain unimplemented in 0.2.0-preview; do not describe the companion functionality as complete while these are missing.
+- Originally recorded without source changes; implemented after the owner authorized 0.21.
 
 ## Future APK naming and versioning — 2026-10-10
 
-- [ ] On every future authorized Android build, deliver `Ella-monitoring-vX.XX.apk`, preserving this exact capitalization and two decimal places, with the version increasing by **0.01 per build**. Keep versionName consistent with the filename and increment versionCode. Do not append preview/build suffixes to the filename.
+- [x] On every future authorized Android build, deliver `Ella-monitoring-vX.XX.apk`, preserving this exact capitalization and two decimal places, with the version increasing by **0.01 per build**. Keep versionName consistent with the filename and increment versionCode. Do not append preview/build suffixes to the filename.
 - This is a standing requirement for future builds, also recorded in `agents.md`; it does not request a new build or change the current delivered version.
 
 ## Owner-requested next-build list — 2026-10-10
@@ -351,3 +357,4 @@ See [README.md](README.md), [CHANGELOG.md](CHANGELOG.md) and [BUILD-VALIDATION.m
 ## Owner-reported initial history check — 2026-10-09
 
 - [x] Owner inspected an actual saved minute electrical record and could identify voltage/SOC. Keep the posted values/timestamps private. This verifies initial live history visibility, not all channels, energy accuracy, retention or long-run recovery.
+

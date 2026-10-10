@@ -1,5 +1,22 @@
 # Build validation
 
+## Android 0.21 — dashboard corrections, Pico runtime and updates, 2026-10-10
+
+Source parent: PicoData b9eec4844e5cc23d35ad46ac4d3dc85324a3a4fd. Read-only EQ reference e1b54f3f58efb92215d99e2e3f2941530fbcbc15. Android build 3, min API 27, compile/target API 37; AGP 9.4.0 / Gradle 9.6.0 / JDK 17. Pi collector 0.7.1 and API/history/MQTT contracts are unchanged.
+
+**assembleDebug, testDebugUnitTest and lintDebug pass. All 37 tests pass, no failures/errors/skips; lint reports zero errors and 49 warnings.** Warnings cover existing intentional LAN/private-CA policies, English strings, legacy guarded APIs, programmatic view constructors/allocations, newer manifest/orientation notices and the EQ-style native alert resource lookup. SDK targets are not lowered and no lint baseline disables errors.
+
+- Fifteen model/history checks include the new runtime charging/discharging capacity/rounding/sign/format cases, zero/missing/invalid/stale inputs and separate raw Pico/starter voltages independent of SBMS reference freshness. Original electrical/history/source/coverage/CSV semantics remain covered.
+- Four loopback HTTP checks preserve authentication, bounds, redirect rejection and cancellation behavior.
+- Eleven framework activity checks cover API 27/35 navigation, lock/flags/cells/source clearing, forced landscape, credential-excluding presets/theme recreation, persistence/status hiding, fullscreen system-bar inset release and Settings System/Back with no theme controls.
+- One filesystem-backed MediaStore stand-in checks legacy theme migration, file load/rename/delete and path rejection on API 35. The API 27 activity path verifies legacy named files. These are synthetic framework/storage checks, not a real Downloads provider/permission test.
+- Five update checks cover Ella-only valid repository/newer release selection, all intervals including automatic Off, confirmed-version cleanup and signature comparison/complete bundled notes. Real GitHub download and Android installer/unknown-app prompts are not hardware-tested.
+- Native API 35 renders check 1024×600, 1280×720, 800×480 and portrait fallback; a fuller synthetic dashboard verifies nine evenly spaced current rows with 6px gaps, all 13 gauges/readout bounds, and Settings layout. Live and Settings images were inspected privately. Source fixtures contain generic synthetic values, not the owner's photo/installation data.
+- The exact complete android/CHANGELOG.md is bundled in assets/changelog.md. ApiClient, HistoryData, ChartView, PrivateSettings and ScreenControl remain unchanged. No collector/database/logging files are changed.
+- APK metadata confirms com.colonellp.ellamonitor.preview, versionName 0.21, versionCode 3, minimum 27 and target 37. APK v2/v3 verification succeeds for API 27 onward. The retained certificate SHA256 f092a9f4313643bd9d9da4701afb02d48d0ca5fb3b3234a9b1ef0bfef6d23be9 matches 0.2.0 for in-place updates. Delivered Ella-monitoring-v0.21.apk SHA256: fb6ca00abd7e0d0fbf44f9f3c33c8e5e1513b98d8ee971fa195026c219a974d5.
+
+These are compiled APK, synthetic-network/model/framework/storage and renderer results. Exact phone/Joying fit, actual Pi readings/runtime, storage/LAN/notification permissions, future-release installer handoff, FYT screen behavior and long foreground/background recovery require owner device verification. No physical-device or Android 17 device installation is claimed. The new updater is configured for PicoData releases; committing source alone does not publish an attached APK release.
+
 ## Android 0.2.0-preview — companion layout/themes/settings, 2026-10-10
 
 Source parent: PicoData `266b5884e3eeaf3e76c13855b2a6522ace817039`. Read-only UI reference: Joying EQ & DSP `e1b54f3f58efb92215d99e2e3f2941530fbcbc15` (1.54-beta). Android build 2, min API 27, compile/target API 37; pinned AGP 9.4.0 / Gradle 9.6.0 / JDK 17. Collector 0.7.1 and database/API contracts remain unchanged.
@@ -204,4 +221,5 @@ This is owner-reported hardware evidence; the raw capture has not been supplied 
 Incoming framing/CRC interpretation was derived from upstream request layouts and passed every recorded response/packet in the owner's reported capture. This validates that capture, not every firmware or failure condition. The recorder includes raw TCP data to diagnose failures. The live receiver currently bounds-checks fields but does not enforce receive CRCs.
 
 No real Pico, SBMS0, Pi or Android hardware test has been performed by the agent. The original 0.1.0 step built no MQTT transport; 0.2.0 adds the optional publisher described above. No APK, production broker or SignalK integration has been built.
+
 

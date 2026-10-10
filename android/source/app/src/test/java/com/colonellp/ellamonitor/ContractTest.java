@@ -22,7 +22,7 @@ public class ContractTest {
     }
     static JSONObject source(JSONObject data, String key, double age) throws Exception { return new JSONObject().put("state", "connected").put("fresh", true).put("ageSeconds", age).put("receivedAt", "2026-01-01T00:00:00Z").put(key, data); }
     static JSONObject live() throws Exception {
-        JSONObject raw = new JSONObject().put("101", new JSONObject().put("type", "battery").put("name", "Synthetic battery").put("capacity.remaining", 125).put("capacity.timeRemaining", 36000))
+        JSONObject raw = new JSONObject().put("101", new JSONObject().put("type", "battery").put("name", "Synthetic battery").put("capacity.remaining", 125.4).put("capacity.nominal", 250).put("current", -2.5).put("voltage",12.7).put("capacity.timeRemaining", 604800))
                 .put("202", new JSONObject().put("type", "thermometer").put("name", "Synthetic temperature").put("pos", 55).put("temperature", 8.5))
                 .put("203", new JSONObject().put("type", "tank").put("name", "Synthetic tank").put("pos", 56).put("percentage", 0).put("remainingCapacity", 0));
         JSONObject broadcast = new JSONObject().put("cellsMV", new JSONArray(new int[]{3101,3102,0,0,3103,3104,0,0})).put("tempInt", 18.5).put("tempExt", 10).put("flags", new JSONObject().put("delta", 3));
@@ -33,6 +33,24 @@ public class ContractTest {
     }
     static MonitorData.Datum find(Map<String, MonitorData.Datum> data, String channel, String field) {
         return data.values().stream().filter(d -> d.metric != null && d.metric.channel.equals(channel) && d.quantity.equals(field)).findFirst().get();
+    }
+    @Test public void nodeRedRuntimeUsesPicoCapacityAndRawCurrent() throws Exception {
+        JSONObject l=live();JSONObject battery=l.getJSONObject("pico").getJSONObject("readings").getJSONObject("101");
+        Map<String,MonitorData.Datum> d=MonitorData.display(MonitorData.catalogue(catalogue()),l,0);
+        assertEquals(50,d.get("battery:capacity.timeRemaining").value,0);assertEquals("2d:02h",LiveDashboard.runtimeText(50));
+        battery.put("current",10).put("capacity.nominal",300).put("capacity.remaining",125.4);
+        d=MonitorData.display(MonitorData.catalogue(catalogue()),l,0);assertEquals(-17.5,d.get("battery:capacity.timeRemaining").value,0);assertEquals("-17h:30m",LiveDashboard.runtimeText(-17.5));
+        assertEquals(-4,MonitorData.runtimeHours(200d,160.49,10d),0);assertEquals(16.1,MonitorData.runtimeHours(200d,160.51,-10d),0);
+        assertNull(MonitorData.runtimeHours(200d,100d,0d));assertNull(MonitorData.runtimeHours(null,100d,1d));assertNull(MonitorData.runtimeHours(200d,201d,1d));
+        battery.put("current",0);assertNull(MonitorData.display(MonitorData.catalogue(catalogue()),l,0).get("battery:capacity.timeRemaining").value);
+        assertNull(MonitorData.display(MonitorData.catalogue(catalogue()),l,2).get("battery:capacity.timeRemaining").value);
+    }
+    @Test public void rawBatteryVoltagesRemainDistinctFromLoggedReference() throws Exception {
+        JSONObject l=live();l.getJSONObject("pico").getJSONObject("readings").put("204",new JSONObject().put("type","battery").put("name","Starter ").put("voltage",25.2));
+        Map<String,MonitorData.Datum> d=MonitorData.display(MonitorData.catalogue(catalogue()),l,0);assertEquals(12.7,d.get("battery:pico-voltage").value,0);
+        MonitorData.Datum starter=d.values().stream().filter(x->x.quantity.equals("starterVoltage")).findFirst().get();assertEquals(25.2,starter.value,0);
+        l.getJSONObject("sbms").put("fresh",false);assertEquals(12.7,MonitorData.display(MonitorData.catalogue(catalogue()),l,0).get("battery:pico-voltage").value,0);
+        l.getJSONObject("pico").put("fresh",false);assertNull(MonitorData.display(MonitorData.catalogue(catalogue()),l,0).get("battery:pico-voltage").value);
     }
     @Test public void signedValuesSocAndValidZeroKeepSourceIdentity() throws Exception {
         Map<String, MonitorData.Datum> data = MonitorData.display(MonitorData.catalogue(catalogue()), live(), 0);
@@ -113,3 +131,4 @@ public class ContractTest {
         }
     }
 }
+

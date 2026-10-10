@@ -54,13 +54,13 @@ public class ActivityTest {
     }
     @Test public void themeAndViewerPresetsExcludeCredentialsAndSurviveRecreation()throws Exception{
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
-            MainActivity a=c.get();PrivateSettings settings=(PrivateSettings)field(a,"settings");settings.prefs.edit().putString("token","secret-placeholder").putString("address","http://private-placeholder").putString("label:synthetic","Custom label").apply();
+            MainActivity a=c.get();if(android.os.Build.VERSION.SDK_INT>=29)ThemeStorageTest.installProvider();PrivateSettings settings=(PrivateSettings)field(a,"settings");settings.prefs.edit().putString("token","secret-placeholder").putString("address","http://private-placeholder").putString("label:synthetic","Custom label").apply();
             Method m=MainActivity.class.getDeclaredMethod("presetState");m.setAccessible(true);String json=m.invoke(a).toString();assertFalse(json.contains("secret-placeholder"));assertFalse(json.contains("private-placeholder"));assertTrue(json.contains("Custom label"));
-            ThemeConfig t=(ThemeConfig)field(a,"theme");t.background=Color.rgb(20,30,40);t.fontFamily="monospace";AppearanceStore store=new AppearanceStore(settings.prefs);store.save("Test theme",t);store.active(t);assertEquals(t.background,store.active().background);assertEquals("monospace",store.load("Test theme").fontFamily);store.rename("Test theme","Renamed");assertNull(store.load("Test theme"));assertNotNull(store.load("Renamed"));c.recreate();assertEquals(t.background,((ThemeConfig)field(c.get(),"theme")).background);
+            ThemeConfig t=(ThemeConfig)field(a,"theme");t.background=Color.rgb(20,30,40);t.fontFamily="monospace";AppearanceStore store=new AppearanceStore(a,settings.prefs);store.save("Test theme",t);store.active(t);assertEquals(t.background,store.active().background);assertEquals("monospace",store.load("Test theme").fontFamily);store.rename("Test theme","Renamed");assertNull(store.load("Test theme"));assertNotNull(store.load("Renamed"));c.recreate();assertEquals(t.background,((ThemeConfig)field(c.get(),"theme")).background);
         }
-    }    @Test public void persistenceIsOptInAndHideTitleHidesTheTitle()throws Exception{
+    }    @Test public void persistenceIsOptInAndHideStatusHidesStatus()throws Exception{
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
-            MainActivity a=c.get();description(a.getWindow().getDecorView(),"Settings").performClick();View root=a.getWindow().getDecorView();android.widget.CheckBox title=(android.widget.CheckBox)text(root,"Hide app title");title.setChecked(true);assertEquals(View.GONE,((View)field(a,"appTitle")).getVisibility());
+            MainActivity a=c.get();description(a.getWindow().getDecorView(),"Settings").performClick();View root=a.getWindow().getDecorView();android.widget.CheckBox title=(android.widget.CheckBox)text(root,"Hide connection status");title.setChecked(true);assertEquals(View.GONE,((View)field(a,"status")).getVisibility());
             PrivateSettings settings=(PrivateSettings)field(a,"settings");assertFalse(settings.prefs.getBoolean("persistent",false));settings.prefs.edit().putBoolean("persistent",true).apply();
             org.robolectric.android.controller.ServiceController<PersistentService> service=Robolectric.buildService(PersistentService.class).create();try{
                 service.get().onStartCommand(new android.content.Intent().putExtra("visible",false),0,1);android.app.NotificationManager manager=a.getSystemService(android.app.NotificationManager.class);assertEquals(1,manager.getActiveNotifications().length);assertTrue((manager.getActiveNotifications()[0].getNotification().flags&android.app.Notification.FLAG_ONGOING_EVENT)!=0);
@@ -69,5 +69,15 @@ public class ActivityTest {
             }finally{service.destroy();}
         }
     }
+    @Test @Config(sdk=35) public void fullScreenReleasesSystemBarSpaceAndSettingsHasNoThemeControls()throws Exception{
+        try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
+            MainActivity a=c.get();assertNull(text(a.getWindow().getDecorView(),"Ella Monitoring"));
+            android.view.WindowInsets insets=new android.view.WindowInsets.Builder().setInsets(android.view.WindowInsets.Type.systemBars(),android.graphics.Insets.of(0,24,0,48)).build();
+            DesignViewport viewport=(DesignViewport)field(a,"viewport");viewport.dispatchApplyWindowInsets(insets);assertEquals(24,viewport.getPaddingTop());assertEquals(48,viewport.getPaddingBottom());
+            description(a.getWindow().getDecorView(),"Full screen").performClick();viewport=(DesignViewport)field(a,"viewport");viewport.dispatchApplyWindowInsets(insets);assertEquals(0,viewport.getPaddingTop());assertEquals(0,viewport.getPaddingBottom());
+            description(a.getWindow().getDecorView(),"Settings").performClick();assertNull(field(a,"themeAnchor"));assertEquals(View.GONE,((View)field(a,"status")).getVisibility());assertNotNull(text(a.getWindow().getDecorView(),"Changelog / Update"));text(a.getWindow().getDecorView(),"Back").performClick();assertNotNull(text(a.getWindow().getDecorView(),"Current Draw"));
+        }
+    }
 
 }
+
