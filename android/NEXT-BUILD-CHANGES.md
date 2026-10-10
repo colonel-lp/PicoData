@@ -1,3 +1,10 @@
+## Pending picker corrections after 0.23 — 2026-10-10
+
+Owner device report supersedes the completed picker claims below. Record for the next authorized source build; do not change application source or version while logging this report.
+
+- [ ] Restore live colour preview while moving the wheel/brightness control or entering a valid RGB value. Apply the current colour to the visible app and relevant themed elements immediately, matching the EQ app. Preserve current preset/theme separation, input validation and Cancel/Back/outside rollback. Source review at 70125b4a82a2ff103437e2849c51d89d95c823d9: the picker listener changes the ThemeConfig value but calls only refreshAppearance(), which invalidates the hidden colour-list view; it does not refresh existing app views/backgrounds for live preview. Verify the visible result, not only the stored colour.
+- [ ] Remove the owner's reported approximately two-second delay between OK/Cancel and the theme-colour list returning. Match the EQ app's immediate return and keep the existing list usable, undimmed and correctly themed. Source review shows the dismiss callback writes the active theme and posts a full build() before showThemeEditor(); investigate that unnecessary full-page rebuild and persistence/difference work before returning the editor. This identifies work on the return path, not a measured cause of the exact delay. Preview/rollback and editor return should avoid full page reconstruction on each picker interaction. Verify repeated wheel/hex edits, OK/Cancel/Back/outside return and visible live preview on supported device layouts; framework callback tests alone did not establish timing or actual live rendering in 0.23.
+
 ## Authorized source build 0.23 — 2026-10-10
 
 Completed the agreed picker, title-colour, preset/theme separation, private connection and change-indication list. Owner compiles Ella-monitoring-v0.23.apk in Android Studio; no APK assembly/signing/publication here.
