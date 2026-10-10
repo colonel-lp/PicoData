@@ -50,6 +50,8 @@ Voltage clarification: the owner confirms that the voltage delivered with the ot
 
 - [ ] Fix Settings checkboxes appearing oversized or incorrectly laid out on the Samsung while displaying correctly on the Joying. Match the EQ companion proportions across phone/head-unit display densities, keeping the checkbox, label, spacing and touch area aligned and unclipped. Source inspection points to native CheckBox controls using default drawable/minimum sizing alongside explicit pixel text and a fixed 38px row within the scaled design viewport; verify this likely sizing mismatch before implementing the correction. Validate both device layouts, retaining correct toggle behavior and theming.
 
+- [ ] Match Ella Monitoring's visible app-icon size to the EQ app in both the launcher/desktop and the Android status bar on the Joying. Compare each app's actual icon resources, artwork bounds and padding, including notification small icons; adjust the applicable Ella resources while preserving its icon design and required Android formats. Verify both placements rather than assuming one asset change covers both.
+
 ## Completed authorized build 0.21 — 2026-10-10
 
 - Use Pico's reported nominal and remaining capacity with the verified Node-RED time-to-full/empty chain and raw battery current. Zero/missing/stale inputs are unavailable.
