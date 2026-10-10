@@ -46,6 +46,8 @@ Voltage clarification: the owner confirms that the voltage delivered with the ot
 - [ ] Make the two gauge groups' outlines independently themeable: **Gauge panel 1 outline** for the eight central gauges and **Gauge panel 2 outline** for barometer, LPG, water, pitch and roll. This supersedes the earlier single shared Gauge borders colour request. Save/load both roles with the theme.
 - [ ] Order all theme colour pickers logically by the elements they control. Keep related background, text, outline and state colours together; place each gauge panel's background and outline next to each other. Group general app colours, titles, panels/gauges, buttons and their on/off/changed states, then chart-specific options where applicable. Preserve existing functionality while reorganising the editor.
 
+- [ ] Display unavailable measurement values as a single dash **—**, without the word **Unavailable**. Apply consistently wherever measurement values are shown; preserve missing/stale handling and keep valid zero values as zero.
+
 ## Completed authorized build 0.21 — 2026-10-10
 
 - Use Pico's reported nominal and remaining capacity with the verified Node-RED time-to-full/empty chain and raw battery current. Zero/missing/stale inputs are unavailable.
