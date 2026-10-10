@@ -11,37 +11,40 @@ import android.view.View;
 /** The former Settings theme panel, presented as a dashboard popup. */
 final class ThemeAppearanceView extends View {
     static final float BASE_W = 544f;
-    static final float BASE_H = 385f;
+    static final float BASE_H = 560f;
 
     private final MainActivity host;
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
     private float uiScaleX = 1f, uiScaleY = 1f;
     private final RectF panel = new RectF(0, 0, BASE_W, BASE_H);
-    private final RectF[] colourButtons = new RectF[12];
-    // The rows intentionally mirror the visual order in the editor: the
-    // two related colours are always side-by-side.
     private final String[] colourFields = {
-        ThemeConfig.FRONT_EQ, ThemeConfig.REAR_EQ,
-        ThemeConfig.TEXT, ThemeConfig.CONTROLS,
+        ThemeConfig.BACKGROUND, ThemeConfig.TEXT,
         ThemeConfig.PANEL, ThemeConfig.BORDER,
-        ThemeConfig.BACKGROUND, ThemeConfig.BUTTON_BACKGROUND,
-        ThemeConfig.BUTTON_TEXT_ON, ThemeConfig.BUTTON_TEXT_OFF,
-        ThemeConfig.OFF_BUTTON_BORDER, ThemeConfig.CHANGED_INDICATOR
+        ThemeConfig.TITLE_BACKGROUND, ThemeConfig.TITLE_OUTLINE,
+        ThemeConfig.GAUGE_PANEL_1, ThemeConfig.GAUGE_OUTLINE_1,
+        ThemeConfig.GAUGE_PANEL_2, ThemeConfig.GAUGE_OUTLINE_2,
+        ThemeConfig.FRONT_EQ, ThemeConfig.REAR_EQ,
+        ThemeConfig.GAUGE_HIGHLIGHT, ThemeConfig.BUTTON_BACKGROUND,
+        ThemeConfig.BUTTON_TEXT_ON, ThemeConfig.CONTROLS,
+        ThemeConfig.BUTTON_TEXT_OFF, ThemeConfig.OFF_BUTTON_BORDER,
+        ThemeConfig.CHANGED_INDICATOR
     };
     private final String[] colourLabels = {
-        "GAUGE POSITIVE", "GAUGE NEGATIVE", "TEXT", "BUTTON ON BORDER",
-        "PANELS", "BORDERS", "BACKGROUND", "BUTTON BACKGROUND",
-        "BUTTON ON TEXT", "BUTTON OFF TEXT", "BUTTON OFF BORDER", "CHANGED INDICATOR"
+        "BACKGROUND", "TEXT", "PANELS", "BORDERS", "TITLE BACKGROUND", "TITLE OUTLINE",
+        "GAUGE PANEL 1", "GAUGE PANEL 1 OUTLINE", "GAUGE PANEL 2", "GAUGE PANEL 2 OUTLINE",
+        "GAUGE POSITIVE", "GAUGE NEGATIVE", "GAUGE HIGHLIGHT", "BUTTON BACKGROUND",
+        "BUTTON ON TEXT", "BUTTON ON BORDER", "BUTTON OFF TEXT", "BUTTON OFF BORDER", "CHANGED INDICATOR"
     };
-    private final RectF fontSelector = new RectF(20, 327, 260, 369);
-    private final RectF backButton = new RectF(278, 327, 518, 369);
+    private final RectF[] colourButtons = new RectF[colourFields.length];
+    private final RectF fontSelector = new RectF(20, 510, 260, 546);
+    private final RectF backButton = new RectF(278, 510, 518, 546);
 
     ThemeAppearanceView(Context context, MainActivity host) {
         super(context);
         this.host = host;
         stroke.setStyle(Paint.Style.STROKE);
-        float left = 20, top = 40, w = 240, h = 42, gapX = 18, gapY = 5;
+        float left = 20, top = 40, w = 240, h = 40, gapX = 18, gapY = 5;
         for (int i = 0; i < colourButtons.length; i++) {
             int col = i % 2, row = i / 2;
             float x = left + col * (w + gapX), y = top + row * (h + gapY);
@@ -94,7 +97,7 @@ final class ThemeAppearanceView extends View {
         p.setColor(color); c.drawRoundRect(swatch, 5, 5, p);
         stroke.setColor(ThemeConfig.blend(t.text, t.background, 0.35f)); stroke.setStrokeWidth(0.9f);
         c.drawRoundRect(swatch, 5, 5, stroke);
-        centredText(c, label, r.left + 48, r.centerY(), 12.5f, t.buttonTextOn, Paint.Align.LEFT);
+        centredText(c, label, r.left + 48, r.centerY(), 10.8f, t.buttonTextOn, Paint.Align.LEFT);
         centredText(c, hex(color), r.right - 8, r.centerY(), 10.8f, t.buttonTextOn, Paint.Align.RIGHT);
     }
 

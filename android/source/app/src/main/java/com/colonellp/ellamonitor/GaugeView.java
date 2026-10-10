@@ -42,7 +42,7 @@ final class GaugeView extends View {
         String text = value == null ? "—" : String.format(Locale.UK, unit.equals("hPa") || unit.equals("%") ? "%.0f" : "%.2f", value);
         canvas.drawText(text, w / 2, top + diameter * (angle?.83f:.62f), paint);
         paint.setTypeface(android.graphics.Typeface.DEFAULT); paint.setTextSize(Math.min(14 * getResources().getDisplayMetrics().scaledDensity, diameter * .14f)); paint.setColor(colors.muted);
-        canvas.drawText(value == null ? "unavailable" : unit, w / 2, top + diameter * (angle?.98f:.80f), paint);
+        canvas.drawText(value == null ? "" : unit, w / 2, top + diameter * (angle?.98f:.80f), paint);
     }
 }
 

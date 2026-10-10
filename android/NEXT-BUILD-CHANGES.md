@@ -1,56 +1,56 @@
-## Next source version after 0.21 — 2026-10-10
+## Completed authorized source update 0.22 — 2026-10-10
 
-- [ ] Persistent notification: show one app-authored line saying **Ella Monitoring**, with no body/subtitle text. Remove the existing tap-to-return text; preserve the notification's tap action and ongoing behavior.
-- [ ] Configure the actual Android Studio/Gradle APK output filename as **Ella-monitoring-vX.XX.apk**, using the versionName and advancing by 0.01 per authorized version. The current project still outputs `app-debug.apk`; renaming only the delivered APK did not satisfy this requirement. The next authorized version after 0.21 is 0.22.
+- [x] Persistent notification: show one app-authored line saying **Ella Monitoring**, with no body/subtitle text. Remove the existing tap-to-return text; preserve the notification's tap action and ongoing behavior.
+- [x] Configure the actual Android Studio/Gradle APK output filename as **Ella-monitoring-vX.XX.apk**, using the versionName and advancing by 0.01 per authorized version. The current project still outputs `app-debug.apk`; renaming only the delivered APK did not satisfy this requirement. The next authorized version after 0.21 is 0.22.
 - The owner will compile the APK in Android Studio. Prepare and push source changes on an explicit implementation request; do not assemble, sign, deliver or publish an APK unless explicitly requested. Record validation accurately and distinguish source checks from Android compilation/device tests.
 
-These requests are recorded for the next authorized source update. No application changes or version increment are made by recording them.
+Implemented in source 0.22 / versionCode 4 after the owner explicitly requested the next build and source commit. The owner compiles the APK; no APK is assembled or published here.
 
 ### Dashboard and theme corrections — 2026-10-10
 
-These owner corrections supersede conflicting earlier checked-off items. They are pending for the next authorized source update; the owner compiles the APK.
+These owner corrections supersede conflicting earlier checked-off items. Implemented in source 0.22; the owner compiles the APK.
 
-- [ ] Restore the **Ella Monitoring** dashboard header directly above the indicator box, as in the supplied Node-RED reference. This is a dashboard group title, distinct from the removed app-wide title. Source inspection: the current flags group has an empty title.
-- [ ] Add a **Gauge borders** colour picker to the theme editor and apply it to gauge borders; retain a separate role from other panel/button outlines.
-- [ ] Centre the lower voltage, amp-hours and time-remaining values within their cells.
-- [ ] Change the text padding before and after the values in the cell-voltage and delta-voltage boxes from 6px to **20px**. Retain the global 6px gaps between elements.
-- [ ] Remove the user-facing **LIVE** entry identified in the themes list and add a **System default** option. Check the existing theme/preset menu placement rather than silently relabelling an unrelated setting.
-- [ ] Reformat the Settings block currently titled **SYSTEM** to match the EQ app's bottom-right block. Remove the SYSTEM heading, arrange controls in two rows with space reserved for a future button, and put the app version at the bottom. Match EQ button proportions and spacing. Retain Changelog/Update and Back.
-- [ ] Remove the separate **Check for updates** text and include **Updates:** within the update-frequency control. Retain Off / 1hr / 3hr / 6hr / 12hr / 24hr choices.
-- [ ] Keep the bottom bar and its buttons at the same height when fullscreen is toggled, matching the requested EQ style. Fullscreen should expand the available content without changing bottom-control heights. Source inspection: MainActivity uses 44/54 logical pixels for the bar; BottomBar uses 26/40 for its controls, and DesignViewport changes its logical base height. Account for all three when fixing the visible height.
-- [ ] Add an option in each gauge's popup to highlight its background colour, with a corresponding colour picker in Themes.
-- [ ] The bottom preset and theme boxes must say **Preset** and **Theme** and show a changed-state dot like the EQ app. Replace the current asterisk/whole-label colour treatment with the reference dot behavior.
-- [ ] Rename **Current Draw** to **Currents:**.
-- [ ] Give **Currents:**, **Temps:** and **Ella Monitoring** title boxes themed outlines and backgrounds. Add theme colour roles named **Title outline** and **Title background**.
-- [ ] Both OK and Cancel in a colour picker must return to the theme colour-editor box. Fix the reported unwanted screen dimming; inspect nested-dialog/window dim behavior and match the EQ app.
-- [ ] Remove the top explanatory/title text from the rename-display-label popup and resize it to fit. Match comparable EQ popup dimensions and button sizes; the current buttons are too large.
+- [x] Restore the **Ella Monitoring** dashboard header directly above the indicator box, as in the supplied Node-RED reference. This is a dashboard group title, distinct from the removed app-wide title. Source inspection: the current flags group has an empty title.
+- [x] Gauge-border theming is implemented with the later requested independent **Gauge panel 1 outline** and **Gauge panel 2 outline** controls, superseding the single shared picker.
+- [x] Centre the lower voltage, amp-hours and time-remaining values within their cells.
+- [x] Change the text padding before and after the values in the cell-voltage and delta-voltage boxes from 6px to **20px**. Retain the global 6px gaps between elements.
+- [x] Remove the user-facing **LIVE** entry identified in the themes list and add a **System default** option. Check the existing theme/preset menu placement rather than silently relabelling an unrelated setting.
+- [x] Reformat the Settings block currently titled **SYSTEM** to match the EQ app's bottom-right block. Remove the SYSTEM heading, arrange controls in two rows with space reserved for a future button, and put the app version at the bottom. Match EQ button proportions and spacing. Retain Changelog/Update and Back.
+- [x] Remove the separate **Check for updates** text and include **Updates:** within the update-frequency control. Retain Off / 1hr / 3hr / 6hr / 12hr / 24hr choices.
+- [x] Keep the bottom bar and its buttons at the same height when fullscreen is toggled, matching the requested EQ style. Fullscreen should expand the available content without changing bottom-control heights. Source inspection: MainActivity uses 44/54 logical pixels for the bar; BottomBar uses 26/40 for its controls, and DesignViewport changes its logical base height. Account for all three when fixing the visible height.
+- [x] Add an option in each gauge's popup to highlight its background colour, with a corresponding colour picker in Themes.
+- [x] The bottom preset and theme boxes must say **Preset** and **Theme** and show a changed-state dot like the EQ app. Replace the current asterisk/whole-label colour treatment with the reference dot behavior.
+- [x] Rename **Current Draw** to **Currents:**.
+- [x] Give **Currents:**, **Temps:** and **Ella Monitoring** title boxes themed outlines and backgrounds. Add theme colour roles named **Title outline** and **Title background**.
+- [x] Both OK and Cancel in a colour picker must return to the theme colour-editor box. Fix the reported unwanted screen dimming; inspect nested-dialog/window dim behavior and match the EQ app.
+- [x] Remove the top explanatory/title text from the rename-display-label popup and resize it to fit. Match comparable EQ popup dimensions and button sizes; the current buttons are too large.
 
 Voltage clarification: the owner confirms that the voltage delivered with the other Pico battery values is the intended source. Preserve the current V[P] raw Pico battery-voltage binding; no voltage-source change is requested.
 
 ### Further dashboard and preset clarification — 2026-10-10
 
-- [ ] Put the complete gauge array in its own bounding box, using global 6px padding between elements and around the group.
-- [ ] The preset changed indicator must show that current settings differ from the currently saved preset. Include display-label changes and other settings belonging to the preset in this comparison. Unsaved differences trigger the dot/highlight; saving or restoring matching values clears it. Keep theme-specific modification indication consistent with the saved theme.
-- [ ] When adding the **Ella Monitoring** header above the indicators, make space by reducing only the height of the gauges. Preserve their widths and the dimensions of the remaining dashboard elements.
-- [ ] Increase text size in the **amp-hours** and **time remaining** boxes to use their available space. Preserve centred alignment and fit longer valid values without clipping.
-- The requested centring of voltage, amp-hours and time remaining, and **20px** text padding in cell-voltage/delta-voltage boxes, remain pending as listed above. Only the accidental unfinished removal phrase was discarded.
+- [x] Put the complete gauge array in its own bounding box, using global 6px padding between elements and around the group.
+- [x] The preset changed indicator must show that current settings differ from the currently saved preset. Include display-label changes and other settings belonging to the preset in this comparison. Unsaved differences trigger the dot/highlight; saving or restoring matching values clears it. Keep theme-specific modification indication consistent with the saved theme.
+- [x] When adding the **Ella Monitoring** header above the indicators, make space by reducing only the height of the gauges. Preserve their widths and the dimensions of the remaining dashboard elements.
+- [x] Increase text size in the **amp-hours** and **time remaining** boxes to use their available space. Preserve centred alignment and fit longer valid values without clipping.
+- The requested centring of voltage, amp-hours and time remaining, and **20px** text padding in cell-voltage/delta-voltage boxes, are implemented as listed above. Only the accidental unfinished removal phrase was discarded.
 
-- [ ] Move the Theme dropdown directly beside the Preset dropdown in the bottom-left control box. Order the controls **Preset → Theme → Live data → Charts**, retaining global 6px padding and the separate right-hand icon control box.
+- [x] Move the Theme dropdown directly beside the Preset dropdown in the bottom-left control box. Order the controls **Preset → Theme → Live data → Charts**, retaining global 6px padding and the separate right-hand icon control box.
 
 ### Separate gauge background theme roles — 2026-10-10
 
-- [ ] Add two independently selectable background colour roles to the theme editor: **Gauge panel 1** for the eight central gauges, and **Gauge panel 2** for the barometer, LPG, water, pitch and roll gauges. Apply each role to the individual gauge panels in its respective group. Keep these two group background colours separate from general panels, gauge borders and the optional background-highlight colour requested above; save/load them with the theme.
+- [x] Add two independently selectable background colour roles to the theme editor: **Gauge panel 1** for the eight central gauges, and **Gauge panel 2** for the barometer, LPG, water, pitch and roll gauges. Apply each role to the individual gauge panels in its respective group. Keep these two group background colours separate from general panels, gauge borders and the optional background-highlight colour requested above; save/load them with the theme.
 
 ### Gauge outlines and colour-picker ordering — 2026-10-10
 
-- [ ] Make the two gauge groups' outlines independently themeable: **Gauge panel 1 outline** for the eight central gauges and **Gauge panel 2 outline** for barometer, LPG, water, pitch and roll. This supersedes the earlier single shared Gauge borders colour request. Save/load both roles with the theme.
-- [ ] Order all theme colour pickers logically by the elements they control. Keep related background, text, outline and state colours together; place each gauge panel's background and outline next to each other. Group general app colours, titles, panels/gauges, buttons and their on/off/changed states, then chart-specific options where applicable. Preserve existing functionality while reorganising the editor.
+- [x] Make the two gauge groups' outlines independently themeable: **Gauge panel 1 outline** for the eight central gauges and **Gauge panel 2 outline** for barometer, LPG, water, pitch and roll. This supersedes the earlier single shared Gauge borders colour request. Save/load both roles with the theme.
+- [x] Order all theme colour pickers logically by the elements they control. Keep related background, text, outline and state colours together; place each gauge panel's background and outline next to each other. Group general app colours, titles, panels/gauges, buttons and their on/off/changed states, then chart-specific options where applicable. Preserve existing functionality while reorganising the editor.
 
-- [ ] Display unavailable measurement values as a single dash **—**, without the word **Unavailable**. Apply consistently wherever measurement values are shown; preserve missing/stale handling and keep valid zero values as zero.
+- [x] Display unavailable measurement values as a single dash **—**, without the word **Unavailable**. Apply consistently wherever measurement values are shown; preserve missing/stale handling and keep valid zero values as zero.
 
-- [ ] Fix Settings checkboxes appearing oversized or incorrectly laid out on the Samsung while displaying correctly on the Joying. Match the EQ companion proportions across phone/head-unit display densities, keeping the checkbox, label, spacing and touch area aligned and unclipped. Source inspection points to native CheckBox controls using default drawable/minimum sizing alongside explicit pixel text and a fixed 38px row within the scaled design viewport; verify this likely sizing mismatch before implementing the correction. Validate both device layouts, retaining correct toggle behavior and theming.
+- [x] Fix Settings checkboxes appearing oversized or incorrectly laid out on the Samsung while displaying correctly on the Joying. Match the EQ companion proportions across phone/head-unit display densities, keeping the checkbox, label, spacing and touch area aligned and unclipped. Source inspection points to native CheckBox controls using default drawable/minimum sizing alongside explicit pixel text and a fixed 38px row within the scaled design viewport; verify this likely sizing mismatch before implementing the correction. Validate both device layouts, retaining correct toggle behavior and theming.
 
-- [ ] Match Ella Monitoring's visible app-icon size to the EQ app in both the launcher/desktop and the Android status bar on the Joying. Compare each app's actual icon resources, artwork bounds and padding, including notification small icons; adjust the applicable Ella resources while preserving its icon design and required Android formats. Verify both placements rather than assuming one asset change covers both.
+- [x] Match Ella Monitoring's visible app-icon size to the EQ app in both the launcher/desktop and the Android status bar on the Joying. Compare each app's actual icon resources, artwork bounds and padding, including notification small icons; adjust the applicable Ella resources while preserving its icon design and required Android formats. Verify both placements rather than assuming one asset change covers both.
 
 ## Completed authorized build 0.21 — 2026-10-10
 

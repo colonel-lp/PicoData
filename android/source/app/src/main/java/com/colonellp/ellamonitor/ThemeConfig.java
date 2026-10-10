@@ -48,7 +48,7 @@ final class ThemeConfig {
     static final String BUTTON_BACKGROUND = "buttonBackground";
     static final String OFF_BUTTON_BORDER = "offButtonBorder";
 
-    String name = "Default";
+    String name = "System default";
     int frontEq = -16729857;
     int rearEq = -65469;
     int controls = -15826385;
@@ -79,6 +79,21 @@ final class ThemeConfig {
     int buttonBackground = -16380912;
     int offButtonBorder = -14807240;
     int changedIndicator = Color.rgb(255, 194, 87);
+
+    static final String GAUGE_PANEL_1 = "gaugePanel1";
+    int gaugePanel1 = buttonBackground;
+    static final String GAUGE_OUTLINE_1 = "gaugeOutline1";
+    int gaugeOutline1 = controls;
+    static final String GAUGE_PANEL_2 = "gaugePanel2";
+    int gaugePanel2 = buttonBackground;
+    static final String GAUGE_OUTLINE_2 = "gaugeOutline2";
+    int gaugeOutline2 = controls;
+    static final String GAUGE_HIGHLIGHT = "gaugeHighlight";
+    int gaugeHighlight = blend(buttonBackground, controls, .2f);
+    static final String TITLE_BACKGROUND = "titleBackground";
+    int titleBackground = panel;
+    static final String TITLE_OUTLINE = "titleOutline";
+    int titleOutline = border;
 
     static ThemeConfig defaults() {
         return new ThemeConfig();
@@ -119,6 +134,14 @@ final class ThemeConfig {
     ThemeConfig copy() {
         ThemeConfig t = new ThemeConfig();
         t.name = name;
+        t.gaugePanel1 = gaugePanel1;
+        t.gaugeOutline1 = gaugeOutline1;
+        t.gaugePanel2 = gaugePanel2;
+        t.gaugeOutline2 = gaugeOutline2;
+        t.gaugeHighlight = gaugeHighlight;
+        t.titleBackground = titleBackground;
+        t.titleOutline = titleOutline;
+
         t.frontEq = frontEq;
         t.rearEq = rearEq;
         t.controls = controls;
@@ -173,6 +196,14 @@ final class ThemeConfig {
     }
 
     int get(String field) {
+        if (GAUGE_PANEL_1.equals(field)) return gaugePanel1;
+        if (GAUGE_OUTLINE_1.equals(field)) return gaugeOutline1;
+        if (GAUGE_PANEL_2.equals(field)) return gaugePanel2;
+        if (GAUGE_OUTLINE_2.equals(field)) return gaugeOutline2;
+        if (GAUGE_HIGHLIGHT.equals(field)) return gaugeHighlight;
+        if (TITLE_BACKGROUND.equals(field)) return titleBackground;
+        if (TITLE_OUTLINE.equals(field)) return titleOutline;
+
         if (CHANGED_INDICATOR.equals(field)) return changedIndicator;
         if (FRONT_EQ.equals(field)) return frontEq;
         if (REAR_EQ.equals(field)) return rearEq;
@@ -199,6 +230,14 @@ final class ThemeConfig {
     }
 
     void set(String field, int color) {
+        if (GAUGE_PANEL_1.equals(field)) { gaugePanel1 = color; return; }
+        if (GAUGE_OUTLINE_1.equals(field)) { gaugeOutline1 = color; return; }
+        if (GAUGE_PANEL_2.equals(field)) { gaugePanel2 = color; return; }
+        if (GAUGE_OUTLINE_2.equals(field)) { gaugeOutline2 = color; return; }
+        if (GAUGE_HIGHLIGHT.equals(field)) { gaugeHighlight = color; return; }
+        if (TITLE_BACKGROUND.equals(field)) { titleBackground = color; return; }
+        if (TITLE_OUTLINE.equals(field)) { titleOutline = color; return; }
+
         if (CHANGED_INDICATOR.equals(field)) changedIndicator = color;
         else if (FRONT_EQ.equals(field)) frontEq = color;
         else if (REAR_EQ.equals(field)) rearEq = color;
@@ -225,7 +264,15 @@ final class ThemeConfig {
 
     JSONObject toJson() throws JSONException {
         JSONObject o = new JSONObject();
-        o.put("format", 13);
+        o.put("format", 14);
+        o.put(GAUGE_PANEL_1, gaugePanel1);
+        o.put(GAUGE_OUTLINE_1, gaugeOutline1);
+        o.put(GAUGE_PANEL_2, gaugePanel2);
+        o.put(GAUGE_OUTLINE_2, gaugeOutline2);
+        o.put(GAUGE_HIGHLIGHT, gaugeHighlight);
+        o.put(TITLE_BACKGROUND, titleBackground);
+        o.put(TITLE_OUTLINE, titleOutline);
+
         o.put("name", name);
         o.put(FRONT_EQ, frontEq);
         o.put(REAR_EQ, rearEq);
@@ -330,11 +377,26 @@ final class ThemeConfig {
         t.buttonBackground = o.optInt(BUTTON_BACKGROUND, t.buttonBackground);
         t.offButtonBorder = o.optInt(OFF_BUTTON_BORDER, blend(t.border, t.background, 0.18f));
         t.changedIndicator = o.optInt(CHANGED_INDICATOR, t.changedIndicator);
+        t.gaugePanel1 = o.optInt(GAUGE_PANEL_1, t.buttonBackground);
+        t.gaugeOutline1 = o.optInt(GAUGE_OUTLINE_1, t.controls);
+        t.gaugePanel2 = o.optInt(GAUGE_PANEL_2, t.buttonBackground);
+        t.gaugeOutline2 = o.optInt(GAUGE_OUTLINE_2, t.controls);
+        t.gaugeHighlight = o.optInt(GAUGE_HIGHLIGHT, blend(t.buttonBackground, t.controls, .2f));
+        t.titleBackground = o.optInt(TITLE_BACKGROUND, t.panel);
+        t.titleOutline = o.optInt(TITLE_OUTLINE, t.border);
+        if (t.name.equals("Default")) t.name = "System default";
         return t;
     }
 
     boolean sameColours(ThemeConfig other) {
         return other != null
+                && gaugePanel1 == other.gaugePanel1
+                && gaugeOutline1 == other.gaugeOutline1
+                && gaugePanel2 == other.gaugePanel2
+                && gaugeOutline2 == other.gaugeOutline2
+                && gaugeHighlight == other.gaugeHighlight
+                && titleBackground == other.titleBackground
+                && titleOutline == other.titleOutline
                 && frontEq == other.frontEq
                 && rearEq == other.rearEq
                 && controls == other.controls

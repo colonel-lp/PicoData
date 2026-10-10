@@ -19,7 +19,7 @@ public final class PersistentService extends Service {
         if(visible){stopForeground(STOP_FOREGROUND_REMOVE);return START_STICKY;}
         Intent launch=new Intent(this,MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP|Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent tap=PendingIntent.getActivity(this,0,launch,PendingIntent.FLAG_UPDATE_CURRENT|PendingIntent.FLAG_IMMUTABLE);
-        Notification notification=new Notification.Builder(this,CHANNEL).setSmallIcon(com.colonellp.ellamonitor.R.drawable.app_icon).setContentTitle("Ella Monitoring").setContentText("Tap to return to the app").setContentIntent(tap).setOngoing(true).setShowWhen(false).build();
+        Notification notification=new Notification.Builder(this,CHANNEL).setSmallIcon(com.colonellp.ellamonitor.R.drawable.app_icon).setContentTitle("Ella Monitoring").setContentIntent(tap).setOngoing(true).setShowWhen(false).build();
         if(android.os.Build.VERSION.SDK_INT>=34)startForeground(ID,notification,android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);else startForeground(ID,notification);
         return START_STICKY;
     }

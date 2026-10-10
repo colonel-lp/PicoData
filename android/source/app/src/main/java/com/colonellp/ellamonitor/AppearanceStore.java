@@ -23,7 +23,7 @@ final class AppearanceStore {
     void active(ThemeConfig t) { try { prefs.edit().putString("appearance.active",t.toJson().toString()).apply(); } catch(Exception ignored) {} }
     private File directory() { return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),"ella-monitoring/themes"); }
     private String fileName(String name) throws Exception {
-        if(name==null || name.trim().isEmpty() || name.length()>80 || name.matches(".*[\\\\/:*?\"<>|].*") || name.endsWith(".") || name.equals("Default")) throw new IllegalArgumentException("Use a theme name of 1–80 characters without file separators.");
+        if(name==null || name.trim().isEmpty() || name.length()>80 || name.matches(".*[\\\\/:*?\"<>|].*") || name.endsWith(".") || (name.equals("Default") || name.equals("System default"))) throw new IllegalArgumentException("Use a theme name of 1–80 characters without file separators.");
         return name.trim()+".json";
     }
     private Map<String,Uri> files() {

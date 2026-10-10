@@ -1,5 +1,18 @@
 # Android changelog
 
+## 0.22 — 2026-10-10
+
+Android source version 0.22 / versionCode 4. Prepared for the owner to compile in Android Studio; no APK is assembled, signed or published by this source update. Package, collector 0.7.1, API, MQTT and database contracts remain unchanged.
+
+- Restore the Ella Monitoring header above the indicators, reduce central gauge heights to make room, and add the padded gauge bounding box. Rename Current Draw to Currents:; give all three headers themeable backgrounds/outlines.
+- Centre lower voltage, Ah and runtime values; enlarge Ah/runtime text; apply 20px text padding in cell-voltage and delta boxes. Unavailable measurement values use a dash.
+- Add independent Gauge panel 1/2 background and outline colours, plus optional per-gauge background highlighting and its theme colour. Group theme colour pickers logically; preserve older themes with sensible inherited colours.
+- Order bottom controls Preset, Theme, Live data, Charts. Keep bar, button and icon dimensions constant when fullscreen toggles; only available content height changes. Preset/Theme use modification dots; labels and unsaved preset settings count as changes. System default replaces the old LIVE selector.
+- Use density-independent Settings checkbox geometry. Place the untitled two-row update/back block at bottom right, reserve a future button position and put the version below. Label the frequency selector Updates:.
+- Return to the theme editor after colour OK/Cancel without added dimming. Compact label-renaming dialogs omit their title/explanation; dialog buttons use companion proportions.
+- Persistent notification contains only Ella Monitoring. Match launcher/status icon intrinsic size and artwork padding to the EQ reference.
+- Android Studio/Gradle debug and release outputs are configured as Ella-monitoring-v0.22.apk using the public AGP VariantOutput filename API. Retain the signing key used for the installed app when compiling updates.
+
 ## 0.21 — 2026-10-10
 
 Android build 3. Retains the existing preview package and the retained 0.2.0 signing key for an in-place update. Pi collector 0.7.1, MQTT, database and API contracts remain unchanged.

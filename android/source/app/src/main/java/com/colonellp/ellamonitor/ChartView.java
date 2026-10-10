@@ -42,7 +42,7 @@ final class ChartView extends View {
             }
         }
         if (bars) { min = Math.min(0, min); max = Math.max(0, max); }
-        if (!found) { paint.setColor(colors.muted); paint.setTextAlign(Paint.Align.CENTER); canvas.drawText("This quantity is unavailable", getWidth() / 2f, getHeight() / 2f, paint); return; }
+        if (!found) { paint.setColor(colors.muted); paint.setTextAlign(Paint.Align.CENTER); canvas.drawText("—", getWidth() / 2f, getHeight() / 2f, paint); return; }
         double padding = Math.max(.1, (max - min) * .1); min -= padding; max += padding;
         double start = milliseconds(data.window.from), span = milliseconds(data.window.to) - start;
         for (int i = 0; i <= 4; i++) {

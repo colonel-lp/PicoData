@@ -6,8 +6,8 @@ android {
         applicationId 'com.colonellp.ellamonitor.preview'
         minSdk 27
         targetSdk 37
-        versionCode 3
-        versionName '0.21'
+        versionCode 4
+        versionName '0.22'
     }
     buildFeatures { buildConfig true }
     compileOptions {
@@ -23,3 +23,12 @@ dependencies {
     testImplementation 'org.robolectric:robolectric:4.16'
 }
 
+
+// AGP 9.4 public Variant API: Android Studio and CLI produce the same filename.
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        variant.outputs.each { output ->
+            output.outputFileName.set(output.versionName.map { version -> "Ella-monitoring-v${version}.apk" })
+        }
+    }
+}

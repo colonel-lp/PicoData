@@ -14,7 +14,7 @@ final class DesignViewport extends ViewGroup {
         int w=MeasureSpec.getSize(ws),h=MeasureSpec.getSize(hs);int availableW=Math.max(1,w-getPaddingLeft()-getPaddingRight()),availableH=Math.max(1,h-getPaddingTop()-getPaddingBottom());
         // Some recent Android large-screen modes ignore requested orientation; retain the landscape canvas there too.
         portrait=availableW<availableH;
-        LandscapeLayout layout=new LandscapeLayout(portrait?availableH:availableW,portrait?availableW:availableH,1024,fullscreen?600:510);scale=layout.scale;
+        float landscapeW=portrait?availableH:availableW,landscapeH=portrait?availableW:availableH;scale=landscapeW/1024f;LandscapeLayout layout=new LandscapeLayout(landscapeW,landscapeH,1024,landscapeH/scale);
         getChildAt(0).measure(MeasureSpec.makeMeasureSpec(Math.round(layout.width),MeasureSpec.EXACTLY),MeasureSpec.makeMeasureSpec(Math.round(layout.height),MeasureSpec.EXACTLY));setMeasuredDimension(w,h);
     }
     @Override protected void onLayout(boolean changed,int l,int t,int r,int b){

@@ -36,7 +36,7 @@ public class ActivityTest {
             MainActivity a=c.get();View root=a.getWindow().getDecorView();assertNotNull(text(root,"Live data"));assertNotNull(text(root,"Charts"));assertNotNull(description(root,"Keep screen on"));assertNotNull(text(root,"—"));
             description(root,"Settings").performClick();root=a.getWindow().getDecorView();assertNotNull(text(root,"CONNECTION"));assertNotNull(text(root,"DISPLAY & APP"));assertNull(ShadowAlertDialog.getLatestAlertDialog());
             text(root,"Charts").performClick();root=a.getWindow().getDecorView();assertNotNull(text(root,"Month"));assertNotNull(text(root,"Rolling"));text(root,"Month").performClick();
-            text(a.getWindow().getDecorView(),"Live data").performClick();assertNotNull(text(a.getWindow().getDecorView(),"Current Draw"));
+            text(a.getWindow().getDecorView(),"Live data").performClick();assertNotNull(text(a.getWindow().getDecorView(),"Currents:"));
         }
     }
     @Test public void syntheticDataFlagsLockAndExpiryWork()throws Exception{
@@ -49,7 +49,7 @@ public class ActivityTest {
     }
     @Test @Config(qualifiers="w360dp-h760dp-port-mdpi") public void forcesLandscapeAndKeepsReferenceArrangement(){
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
-            MainActivity a=c.get();assertEquals(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE,a.getRequestedOrientation());assertNotNull(text(a.getWindow().getDecorView(),"Current Draw"));assertNotNull(text(a.getWindow().getDecorView(),"Temps:"));
+            MainActivity a=c.get();assertEquals(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE,a.getRequestedOrientation());assertNotNull(text(a.getWindow().getDecorView(),"Currents:"));assertNotNull(text(a.getWindow().getDecorView(),"Temps:"));
         }
     }
     @Test public void themeAndViewerPresetsExcludeCredentialsAndSurviveRecreation()throws Exception{
@@ -63,7 +63,7 @@ public class ActivityTest {
             MainActivity a=c.get();description(a.getWindow().getDecorView(),"Settings").performClick();View root=a.getWindow().getDecorView();android.widget.CheckBox title=(android.widget.CheckBox)text(root,"Hide connection status");title.setChecked(true);assertEquals(View.GONE,((View)field(a,"status")).getVisibility());
             PrivateSettings settings=(PrivateSettings)field(a,"settings");assertFalse(settings.prefs.getBoolean("persistent",false));settings.prefs.edit().putBoolean("persistent",true).apply();
             org.robolectric.android.controller.ServiceController<PersistentService> service=Robolectric.buildService(PersistentService.class).create();try{
-                service.get().onStartCommand(new android.content.Intent().putExtra("visible",false),0,1);android.app.NotificationManager manager=a.getSystemService(android.app.NotificationManager.class);assertEquals(1,manager.getActiveNotifications().length);assertTrue((manager.getActiveNotifications()[0].getNotification().flags&android.app.Notification.FLAG_ONGOING_EVENT)!=0);
+                service.get().onStartCommand(new android.content.Intent().putExtra("visible",false),0,1);android.app.NotificationManager manager=a.getSystemService(android.app.NotificationManager.class);assertEquals(1,manager.getActiveNotifications().length);assertTrue((manager.getActiveNotifications()[0].getNotification().flags&android.app.Notification.FLAG_ONGOING_EVENT)!=0);assertEquals("Ella Monitoring",manager.getActiveNotifications()[0].getNotification().extras.getString(android.app.Notification.EXTRA_TITLE));assertNull(manager.getActiveNotifications()[0].getNotification().extras.getString(android.app.Notification.EXTRA_TEXT));
                 service.get().onStartCommand(new android.content.Intent().putExtra("visible",true),0,2);assertEquals(0,manager.getActiveNotifications().length);
                 settings.prefs.edit().putBoolean("persistent",false).apply();assertEquals(android.app.Service.START_NOT_STICKY,service.get().onStartCommand(new android.content.Intent(),0,3));
             }finally{service.destroy();}
@@ -71,11 +71,11 @@ public class ActivityTest {
     }
     @Test @Config(sdk=35) public void fullScreenReleasesSystemBarSpaceAndSettingsHasNoThemeControls()throws Exception{
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
-            MainActivity a=c.get();assertNull(text(a.getWindow().getDecorView(),"Ella Monitoring"));
+            MainActivity a=c.get();assertNotNull(text(a.getWindow().getDecorView(),"Ella Monitoring"));
             android.view.WindowInsets insets=new android.view.WindowInsets.Builder().setInsets(android.view.WindowInsets.Type.systemBars(),android.graphics.Insets.of(0,24,0,48)).build();
             DesignViewport viewport=(DesignViewport)field(a,"viewport");viewport.dispatchApplyWindowInsets(insets);assertEquals(24,viewport.getPaddingTop());assertEquals(48,viewport.getPaddingBottom());
             description(a.getWindow().getDecorView(),"Full screen").performClick();viewport=(DesignViewport)field(a,"viewport");viewport.dispatchApplyWindowInsets(insets);assertEquals(0,viewport.getPaddingTop());assertEquals(0,viewport.getPaddingBottom());
-            description(a.getWindow().getDecorView(),"Settings").performClick();assertNull(field(a,"themeAnchor"));assertEquals(View.GONE,((View)field(a,"status")).getVisibility());assertNotNull(text(a.getWindow().getDecorView(),"Changelog / Update"));text(a.getWindow().getDecorView(),"Back").performClick();assertNotNull(text(a.getWindow().getDecorView(),"Current Draw"));
+            description(a.getWindow().getDecorView(),"Settings").performClick();assertNull(field(a,"themeAnchor"));assertEquals(View.GONE,((View)field(a,"status")).getVisibility());assertNotNull(text(a.getWindow().getDecorView(),"Changelog / Update"));text(a.getWindow().getDecorView(),"Back").performClick();assertNotNull(text(a.getWindow().getDecorView(),"Currents:"));
         }
     }
 

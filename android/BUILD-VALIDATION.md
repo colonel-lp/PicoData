@@ -1,5 +1,22 @@
 # Build validation
 
+## Android 0.22 — source-only companion corrections, 2026-10-10
+
+Source parent: PicoData 9a256affa8ebc4e07bbd192ee129711e755984db. Android versionName 0.22 / versionCode 4, unchanged preview application ID, min API 27 and compile/target API 37. The owner compiles/signs the APK in Android Studio. No app APK assembly, signing, publication or physical-device installation is performed here.
+
+**testDebugUnitTest and lintDebug pass: 43 tests, zero failures/errors/skips; lint has zero errors and 52 warnings.** Application/test Java sources and Android resources compile as dependencies of the unit-test/lint tasks; these results are not an assembled APK or device verification. Existing intentional compatibility/security-policy warnings remain visible; SDK targets and error enforcement are retained.
+
+- Existing source/history/freshness/HTTP tests pass with unchanged collector/database/API mappings. V[P] still uses the raw selected Pico battery voltage; runtime and all history arithmetic remain unchanged.
+- Preset checks cover unsaved labels against default/named presets, save/restore clearing differences, gauge-highlight settings and default reset. New theme backgrounds/outlines/highlight/title roles round-trip independently; older themes inherit their existing colours.
+- Settings high-density simulation checks glyph/row bounds, native checked-state toggling and the untitled two-row control block. Framework checks include notification title-only content, persistent lifecycle, lock, navigation, forced landscape and system-bar insets.
+- Fullscreen comparisons keep bottom bar/control heights equal at the same display width. Preset/Theme/Live data order has 6px gaps. Gauge popup highlighting survives live refresh; central gauge widths are retained while height makes space for the header.
+- Native API 35 rendering checks 1024×600, 1280×720, 800×480 and portrait fallback, bounds and equal current-row gaps. Dashboard and Settings renders were visually inspected using synthetic inputs. No private measurements, image, mapping or inventory is added to source.
+- Colour OK/Cancel returns to the editor with no FLAG_DIM_BEHIND. Complete bundled changelog matches android/CHANGELOG.md and starts at the current version. Updater selection/interval/signature/cleanup checks pass.
+- A private Gradle inspection task reads both configured VariantOutput providers and verifies debug/release output filenames are Ella-monitoring-v0.22.apk. No assemble/package/sign task is invoked to verify naming. The project uses AGP 9.4's public outputFileName API: https://developer.android.com/reference/tools/gradle-api/9.4/com/android/build/api/variant/VariantOutput.
+- Icon resources use the EQ reference's 108dp intrinsic size and padded bounds. Actual launcher/status-bar sizing and all phone/head-unit appearance still require the owner's builds/device review; no hardware-equivalence claim is made.
+
+No Pi collector, SQLite schema, logging, MQTT or API source is changed. Actual device visuals, notification/storage/network permissions, signing compatibility, update installer handoff and FYT screen behavior remain owner verification tasks. Source commit alone does not create a GitHub APK release.
+
 ## Android 0.21 — dashboard corrections, Pico runtime and updates, 2026-10-10
 
 Source parent: PicoData b9eec4844e5cc23d35ad46ac4d3dc85324a3a4fd. Read-only EQ reference e1b54f3f58efb92215d99e2e3f2941530fbcbc15. Android build 3, min API 27, compile/target API 37; AGP 9.4.0 / Gradle 9.6.0 / JDK 17. Pi collector 0.7.1 and API/history/MQTT contracts are unchanged.

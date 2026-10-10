@@ -29,14 +29,14 @@ final class EqIconButton extends View {
         } else if (kind.equals("keep")) {
             p.setColor(icon); p.setStyle(selected ? Paint.Style.FILL : Paint.Style.STROKE); p.setStrokeWidth(2.1f); c.drawCircle(cx, cy, selected ? 9 : 8, p);
         } else if (kind.equals("lock")) {
-            float s = fullscreen ? 1 : .84f; cy += 2*s; p.setStyle(Paint.Style.FILL); p.setColor(icon);
+            float s = 1; cy += 2*s; p.setStyle(Paint.Style.FILL); p.setColor(icon);
             c.drawRoundRect(new RectF(cx-9.5f*s,cy-1.5f*s,cx+9.5f*s,cy+11.5f*s),3.3f,3.3f,p);
             p.setStyle(Paint.Style.STROKE); p.setStrokeCap(Paint.Cap.ROUND); p.setStrokeWidth(4*s);
             c.drawArc(new RectF(cx-7*s,cy-14.5f*s,cx+7*s,cy+.5f*s),180,selected?180:143,false,p);
             c.drawLine(cx-7*s,cy-7*s,cx-7*s,cy-s,p); if(selected)c.drawLine(cx+7*s,cy-7*s,cx+7*s,cy-s,p);
             p.setStyle(Paint.Style.FILL); p.setColor(t.buttonBackground);c.drawCircle(cx,cy+3.4f*s,2.1f*s,p);c.drawRoundRect(new RectF(cx-1.05f*s,cy+3.3f*s,cx+1.05f*s,cy+8.4f*s),1,1,p);
         } else {
-            float s = fullscreen ? 1 : .84f; Path gear = new Path();
+            float s = 1; Path gear = new Path();
             for(int i=0;i<40;i++){double a=-Math.PI/2+i*Math.PI*2/40;int phase=i&3;float radius=(phase==1||phase==2?15.5f:12.3f)*s;float x=cx+(float)Math.cos(a)*radius,y=cy+(float)Math.sin(a)*radius;if(i==0)gear.moveTo(x,y);else gear.lineTo(x,y);}gear.close();
             p.setStyle(Paint.Style.FILL);p.setColor(t.controls);c.drawPath(gear,p);c.drawCircle(cx,cy,10.7f*s,p);p.setColor(t.buttonBackground);c.drawCircle(cx,cy,6*s,p);
         }
