@@ -20,6 +20,7 @@ import java.util.Locale;
 
 /** Fixed landscape arrangement from the owner's dashboard, scaled by DesignViewport. */
 final class LiveDashboard extends ViewGroup {
+    private static final int GAP=6, CENTRE_LEFT=168, CENTRE_RIGHT=630, ENV_LEFT=636, ENV_RIGHT=866;
     interface Host { String label(String id,String original); void detail(MonitorData.Datum d,String name,boolean gauge); void rename(String id,String original); boolean locked(); boolean highlighted(String id); }
     final ThemeConfig theme;
     final Host host;
@@ -32,7 +33,7 @@ final class LiveDashboard extends ViewGroup {
     private final java.util.Set<String> knownCells;
     LiveDashboard(Context context,ThemeConfig theme,Map<String,MonitorData.Datum> readings,java.util.Set<String> knownCells,Host host) {
         super(context);this.theme=theme;this.readings=readings;this.host=host;this.knownCells=knownCells;gaugeColors=new Palette(theme);setClipChildren(true);
-        group("loads","Currents:",8,162,true);group("flags","Ella Monitoring",168,623,true);group("gauges","",162,629,false);group("environment","",629,866,false);group("temps","Temps:",872,1016,true);group("summary","",168,630,false);group("cells","",636,866,false);
+        group("loads","Currents:",8,162,true);group("flags","Ella Monitoring",CENTRE_LEFT,CENTRE_RIGHT,true);group("gauges","",CENTRE_LEFT,CENTRE_RIGHT,false);group("environment","",ENV_LEFT,ENV_RIGHT,false);group("temps","Temps:",872,1016,true);group("summary","",CENTRE_LEFT,CENTRE_RIGHT,false);group("cells","",ENV_LEFT,ENV_RIGHT,false);
         for(MonitorData.Datum d:readings.values())if(d.group.equals("loads")&&d.quantity.equals("current"))add("loads",d,clean(d.name),false);
         if(!bySlot.containsKey("loads:0"))add("loads",null,"Waiting for current data",false);
         for(String f:new String[]{"CFET","OVLK","EOC","LVC","DFET","UVLK","IOT","CELF"})add("flags",readings.get("flag:"+f),f,false);
@@ -131,14 +132,15 @@ final class LiveDashboard extends ViewGroup {
             if(key.equals("summary")||key.equals("cells")){top=summaryTop;end=bottom;}
             place(g,(Integer)pos[1]*sx,top,(Integer)pos[2]*sx,end,layout);
         }
-        for(TextView v:titles){String key=(String)v.getTag();float left=key.equals("loads")?14:key.equals("flags")?174:878,right=key.equals("loads")?156:key.equals("flags")?617:1010;place(v,left*sx,6,right*sx,28,layout);}
+        for(TextView v:titles){String key=(String)v.getTag();float left=key.equals("loads")?14:key.equals("flags")?CENTRE_LEFT+GAP:878,right=key.equals("loads")?156:key.equals("flags")?CENTRE_RIGHT-GAP:1010;place(v,left*sx,6,right*sx,28,layout);}
         float gaugesTop=114,gaugeHeight=(mainBottom-6-gaugesTop-6)/2;
+        float centralWidth=(CENTRE_RIGHT-CENTRE_LEFT-5*GAP)/4f,environmentWidth=(ENV_RIGHT-ENV_LEFT-3*GAP)/2f;
         for(Item i:items){float l=0,t=0,r=0,b=0;int n=i.index;
             switch(i.slot){
                 case "loads":case "temps":{boolean load=i.slot.equals("loads");l=load?14:878;r=load?156:1010;int total=count(i.slot);float rowHeight=(bottom-40-6*Math.max(0,total-1))/Math.max(1,total);t=34+n*(rowHeight+6);b=t+rowHeight;break;}
-                case "flags":l=168+(n%4)*115.25f;r=l+109.25f;t=32+(n/4)*35;b=t+29;break;
-                case "gauges":l=168+(n%4)*115.25f;r=l+109.25f;t=gaugesTop+(n/4)*(gaugeHeight+6);b=t+gaugeHeight;break;
-                case "environment":if(n==0){l=635;r=860;t=6;b=mainBottom/3-3;}else{int row=n<3?1:2;l=635+((n-1)%2)*115.5f;r=l+109.5f;t=row*(mainBottom/3)+3;b=(row+1)*(mainBottom/3)-6;}break;
+                case "flags":l=CENTRE_LEFT+GAP+(n%4)*(centralWidth+GAP);r=l+centralWidth;t=32+(n/4)*35;b=t+29;break;
+                case "gauges":l=CENTRE_LEFT+GAP+(n%4)*(centralWidth+GAP);r=l+centralWidth;t=gaugesTop+(n/4)*(gaugeHeight+6);b=t+gaugeHeight;break;
+                case "environment":if(n==0){l=ENV_LEFT+GAP;r=ENV_RIGHT-GAP;t=6;b=mainBottom/3-3;}else{int row=n<3?1:2;l=ENV_LEFT+GAP+((n-1)%2)*(environmentWidth+GAP);r=l+environmentWidth;t=row*(mainBottom/3)+3;b=(row+1)*(mainBottom/3)-6;}break;
                 case "summary":l=174;r=284;t=summaryTop+6+n*32;b=t+26;break;
                 case "capacity":l=290;r=400;t=summaryTop+6;b=bottom-6;break;
                 case "runtime":l=406;r=516;t=summaryTop+6;b=bottom-6;break;

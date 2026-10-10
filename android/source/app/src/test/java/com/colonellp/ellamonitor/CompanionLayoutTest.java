@@ -60,7 +60,7 @@ public class CompanionLayoutTest {
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
             MainActivity a=c.get();RenderTest.renderFixture(a);layout(a,1024,600);LiveDashboard dashboard=(LiveDashboard)ActivityTest.field(a,"liveDashboard");LiveDashboard.Readout gauge=null;
             for(int i=0;i<dashboard.getChildCount();i++)if(dashboard.getChildAt(i) instanceof LiveDashboard.Readout){LiveDashboard.Readout r=(LiveDashboard.Readout)dashboard.getChildAt(i);if(r.fallback.equals("Battery [Pico]"))gauge=r;}
-            assertNotNull(gauge);assertEquals(109,gauge.getWidth(),1);gauge.performClick();android.app.AlertDialog popup=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();CheckBox choice=(CheckBox)ActivityTest.text(popup.getWindow().getDecorView(),"Highlight background");assertNotNull(choice);choice.performClick();assertTrue(a.viewerPreferences().getBoolean("gaugeHighlight:"+gauge.id,false));ActivityTest.call(a,"updateLive");
+            assertNotNull(gauge);assertEquals(108,gauge.getWidth(),1);gauge.performClick();android.app.AlertDialog popup=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();CheckBox choice=(CheckBox)ActivityTest.text(popup.getWindow().getDecorView(),"Highlight background");assertNotNull(choice);choice.performClick();assertTrue(a.viewerPreferences().getBoolean("gaugeHighlight:"+gauge.id,false));ActivityTest.call(a,"updateLive");
             android.graphics.drawable.GradientDrawable background=(android.graphics.drawable.GradientDrawable)gauge.getBackground().getCurrent();assertEquals(((ThemeConfig)ActivityTest.field(a,"theme")).gaugeHighlight,background.getColor().getDefaultColor());popup.dismiss();
         }
     }

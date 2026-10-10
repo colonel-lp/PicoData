@@ -4,6 +4,7 @@
 
 Android source version 0.22 / versionCode 4. Prepared for the owner to compile in Android Studio; no APK is assembled, signed or published by this source update. Package, collector 0.7.1, API, MQTT and database contracts remain unchanged.
 
+- Same-version correction: restore 6px gaps around the central gauge box and side insets for indicators/gauges; align the environmental and cell-voltage boxes. Keep Theme on the Settings bottom bar and open Updates frequency choices above their button. Version remains 0.22 / build 4.
 - Restore the Ella Monitoring header above the indicators, reduce central gauge heights to make room, and add the padded gauge bounding box. Rename Current Draw to Currents:; give all three headers themeable backgrounds/outlines.
 - Centre lower voltage, Ah and runtime values; enlarge Ah/runtime text; apply 20px text padding in cell-voltage and delta boxes. Unavailable measurement values use a dash.
 - Add independent Gauge panel 1/2 background and outline colours, plus optional per-gauge background highlighting and its theme colour. Group theme colour pickers logically; preserve older themes with sensible inherited colours.

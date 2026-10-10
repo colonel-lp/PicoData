@@ -1,5 +1,13 @@
 # Build validation
 
+## Android 0.22 — same-version spacing and Settings corrections, 2026-10-10
+
+Source parent: PicoData 6aa9cbf761367834f3617a90e447e05e4c3ebae2. The owner explicitly requests immediate corrections without a version increment: versionName 0.22 / versionCode 4 and output filename remain unchanged.
+
+Source geometry checks verify 6px outer gaps, 6px indicator/gauge side insets and internal gaps, matching environmental/cell-box boundaries, and rounded coordinates at representative widths. Source inspection confirms Theme is constructed on Settings and Updates frequency uses the existing upward anchored menu. The existing gauge-width regression expectation is updated from 109px to 108px.
+
+Android SDK/Gradle is unavailable for this correction, so compilation, Android framework tests and lint have not been rerun. The earlier 43-test results below apply to the preceding source revision. No APK is assembled or hardware test claimed; visual confirmation remains with the owner.
+
 ## Android 0.22 — source-only companion corrections, 2026-10-10
 
 Source parent: PicoData 9a256affa8ebc4e07bbd192ee129711e755984db. Android versionName 0.22 / versionCode 4, unchanged preview application ID, min API 27 and compile/target API 37. The owner compiles/signs the APK in Android Studio. No app APK assembly, signing, publication or physical-device installation is performed here.

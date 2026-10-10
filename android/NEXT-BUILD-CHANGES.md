@@ -1,3 +1,13 @@
+## Completed same-version corrections — 2026-10-10
+
+Explicitly authorized for immediate implementation; retain **0.22 / versionCode 4**. The owner compiles the APK.
+
+- [x] Reduce the central gauge bounding box to restore 6px gaps to the current column and environmental group; keep 6px inner gauge padding.
+- [x] Align the barometer/LPG/water/pitch/roll bounding box with the cell-voltage box below, using the same left/right boundaries and width.
+- [x] Add 6px padding between the indicator buttons and both ends of their bounding box; retain 6px between indicator buttons.
+- [x] Open the Updates frequency dropdown above its button.
+- [x] Retain the Theme dropdown beside Preset on the Settings bottom bar.
+
 ## Completed authorized source update 0.22 — 2026-10-10
 
 - [x] Persistent notification: show one app-authored line saying **Ella Monitoring**, with no body/subtitle text. Remove the existing tap-to-return text; preserve the notification's tap action and ongoing behavior.
