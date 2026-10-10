@@ -4,6 +4,7 @@
 
 - [ ] Carry over the Joying EQ & DSP **Changelog/Update** button, its themed dialog and complete changelog (newest entries first), adapting project references for Ella Monitoring. The 0.2.0-preview settings page currently has no such button; the repository changelog alone does not fulfil this requirement.
 - [ ] Carry over the EQ app's update checking, **Download & Install** action, validated APK download, Android installer handoff and confirmed-install cleanup. Inspect the current EQ implementation before adapting it; use Ella's own package, version, signing identity and release source rather than EQ's.
+- [ ] Add a themed **update-check frequency dropdown in Settings**, with options in this order: **Off, 1hr, 3hr, 6hr, 12hr, 24hr**. Save the selection and use it for automatic update-check frequency; **Off** disables automatic checks. Keep manual checking available through Changelog/Update. This selection supersedes a fixed automatic-check interval copied from EQ.
 - [ ] Resolve the still-unsettled Ella release/package/signing configuration needed to make updates functional. This does not block displaying the complete in-app changelog. Updates were requested in APP-PLAN.md but remain unimplemented in 0.2.0-preview; do not describe the companion functionality as complete while these are missing.
 - This records the owner's correction for the next build; no application-source change or new build is requested by this question.
 
