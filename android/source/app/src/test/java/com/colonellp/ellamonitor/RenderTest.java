@@ -36,7 +36,8 @@ public class RenderTest {
                 assertEquals(13,gauges);
                 Bitmap b=Bitmap.createBitmap(size[0],size[1],Bitmap.Config.ARGB_8888);view.draw(new Canvas(b));assertNotEquals(0,b.getPixel(20,20));String path=System.getProperty("ella.render.path");if(path!=null&&size[0]==1024)try(java.io.OutputStream out=new java.io.FileOutputStream(path)){assertTrue(b.compress(Bitmap.CompressFormat.PNG,100,out));}b.recycle();
             }
-            ActivityTest.description(a.getWindow().getDecorView(),"Settings").performClick();view=(DesignViewport)ActivityTest.field(a,"viewport");view.measure(View.MeasureSpec.makeMeasureSpec(1024,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY));view.layout(0,0,1024,600);
+            ActivityTest.description(a.getWindow().getDecorView(),"Settings").performClick();PresetAndColourTest.idle();view=(DesignViewport)ActivityTest.field(a,"viewport");view.measure(View.MeasureSpec.makeMeasureSpec(1024,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY));view.layout(0,0,1024,600);
+            View themeSelector=(View)ActivityTest.field(a,"themeAnchor");assertEquals(View.VISIBLE,themeSelector.getVisibility());assertTrue("Theme must be attached to the bottom bar",themeSelector.getParent() instanceof BottomBar);assertEquals(220,themeSelector.getLeft());assertEquals(200,themeSelector.getWidth());assertTrue(((android.widget.TextView)themeSelector).getText().toString(),((android.widget.TextView)themeSelector).getText().toString().startsWith("THEME"));view.invalidate();
             String path=System.getProperty("ella.render.path");if(path!=null){Bitmap settings=Bitmap.createBitmap(1024,600,Bitmap.Config.ARGB_8888);view.draw(new Canvas(settings));try(java.io.OutputStream out=new java.io.FileOutputStream(path.replace(".png","-settings.png"))){settings.compress(Bitmap.CompressFormat.PNG,100,out);}settings.recycle();}
         }
     }

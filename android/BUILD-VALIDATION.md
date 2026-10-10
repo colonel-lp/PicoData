@@ -1,5 +1,21 @@
 # Build validation
 
+## Android 0.23 — themes, presets and picker return, 2026-10-10
+
+Source parent: PicoData 58a0d7d521f836e0064cea3ae80d127140834f12. Read-only EQ reference: Joying-EQ-DSP e1b54f3f58efb92215d99e2e3f2941530fbcbc15, colour parsing, picker flow and per-item difference rendering. VersionName 0.23 / versionCode 5. The owner builds the APK in Android Studio.
+
+Debug application Java/resources and test sources compile with the declared API 37 target/minimum API 27. `:app:testDebugUnitTest :app:lintDebug` passes: **51 tests, zero failures/errors/skips; lint zero errors and 53 warnings**. Warnings include existing UI allocation/layout/localisation and network-configuration advisories; SDK targets are unchanged. A separate configuration-only Gradle task checks both debug/release public output filename providers resolve to **Ella-monitoring-v0.23.apk**. No APK assembly, signing, installation or release publication is performed.
+
+Regression checks cover six-digit RGB validation, optional hash/whitespace, invalid OK remaining open, and actual visible colour-editor return after OK/Cancel/Back-style cancellation and queued callbacks. The editor remains usable for another picker, cancelled previews roll back, and no dim flag is added. Tests verify independent colour-only themes and editable presets, font ownership, read-only chart fallback, immediate changed-item colours and clearing on save, encrypted connection restoration, copied-value redaction and older preset migration.
+
+Connection tests exercise real AES-GCM encryption/decryption with a synthetic test key replacing Android Keystore. They compare decrypted values despite different encryption nonces and reject damaged ciphertext before committing connection changes. These do not verify device Keystore or hardware-backed key storage. Endpoints/tokens and dashboard data in fixtures are invented.
+
+Native-render/layout checks exercise 1024×600, 1280×720, 800×480 and portrait fallback, all 13 gauges, even current rows, fitted readouts and fixed bottom controls. Settings assertions verify the Theme selector is attached, visible and occupies its separate 200px logical slot beside Preset. Synthetic dashboard rendering was inspected. Settings text capture is incomplete in the framework renderer; these checks do not establish actual phone/head-unit appearance.
+
+Complete bundled/repository changelogs match; documentation and the completed build list reflect the revised theme/preset contract. Collector, database, API/MQTT contracts, signing identity and measurement calculations are unchanged.
+
+Remaining device checks: repeated colour-picker return and keyboard/hex feedback on Samsung/Joying; title-role and changed-item appearance; existing presets/themes after an actual upgrade; private saved-connection switching through Android Keystore; rotation/fullscreen scaling, update installer and launcher/notification appearance. No new device verification is claimed.
+
 ## Android 0.22 — same-version loaded selector names, 2026-10-10
 
 Source parent: PicoData 82f74bc32cb2968a71a921b837faa80bce90b88c. Read-only EQ reference: Joying-EQ-DSP e1b54f3f58efb92215d99e2e3f2941530fbcbc15 (DashboardView.drawBottom and MainActivity display-name methods). VersionName 0.22 / versionCode 4 and APK filename remain unchanged.

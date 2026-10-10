@@ -52,8 +52,8 @@ public class CompanionLayoutTest {
     @Test public void colourCancelAndOkReturnToEditorWithoutDim()throws Exception{
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
             MainActivity a=c.get();layout(a,1024,600);ActivityTest.call(a,"showThemeEditor");Dialog first=(Dialog)ActivityTest.field(a,"appearanceDialog");assertEquals(0,first.getWindow().getAttributes().flags&android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
-            a.editThemeAppearanceColour(ThemeConfig.GAUGE_PANEL_1,"GAUGE PANEL 1");Dialog picker=org.robolectric.shadows.ShadowDialog.getLatestDialog();assertEquals(0,picker.getWindow().getAttributes().flags&android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);ActivityTest.text(picker.getWindow().getDecorView(),"CANCEL").performClick();assertNotNull(ActivityTest.field(a,"appearanceDialog"));
-            a.editThemeAppearanceColour(ThemeConfig.GAUGE_PANEL_2,"GAUGE PANEL 2");picker=org.robolectric.shadows.ShadowDialog.getLatestDialog();ActivityTest.text(picker.getWindow().getDecorView(),"OK").performClick();assertNotNull(ActivityTest.field(a,"appearanceDialog"));
+            a.editThemeAppearanceColour(ThemeConfig.GAUGE_PANEL_1,"GAUGE PANEL 1");Dialog picker=org.robolectric.shadows.ShadowDialog.getLatestDialog();assertEquals(0,picker.getWindow().getAttributes().flags&android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);ActivityTest.text(picker.getWindow().getDecorView(),"CANCEL").performClick();PresetAndColourTest.idle();PresetAndColourTest.assertEditor(a);
+            a.editThemeAppearanceColour(ThemeConfig.GAUGE_PANEL_2,"GAUGE PANEL 2");picker=org.robolectric.shadows.ShadowDialog.getLatestDialog();ActivityTest.text(picker.getWindow().getDecorView(),"OK").performClick();PresetAndColourTest.idle();PresetAndColourTest.assertEditor(a);
         }
     }
     @Test public void gaugePopupHighlightPersistsThroughRefresh()throws Exception{

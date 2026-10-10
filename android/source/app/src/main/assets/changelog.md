@@ -1,5 +1,18 @@
 # Android changelog
 
+## 0.23 — 2026-10-10
+
+Android source version 0.23 / versionCode 5. Owner-built APK output: Ella-monitoring-v0.23.apk. No APK is assembled or published in this source delivery. Collector/API/database/MQTT contracts and signing identity remain unchanged.
+
+- Separate colour-only themes from viewer presets. Font moves to Settings and belongs to the preset. Theme edits/selection no longer mark presets UNSAVED; presets do not replace theme colours.
+- Save labels and adjustable app/chart/screen/highlight settings, including connection address and encrypted private token, in presets. Restore connection through the normal connection lifecycle. Compare decrypted token values so re-encrypting the same token does not create a false change. Keep tokens and private addresses out of copied preset summaries.
+- Migrate older presets and active font preferences without clearing connection settings. System default resets viewer settings while keeping the current connection. Existing theme colour files remain compatible.
+- Keep automatic chart fallback separate from the saved selection. Refresh change indication immediately for chart/settings edits; live readings never count as preset changes.
+- Apply Changed indicator colour to changed labels/headings, Settings fields, chart setting controls, screen/lock icons and gauge-highlight settings. Save or restore matching settings clears it; fixed flag status colours remain unchanged.
+- Keep the theme colour list alive while the picker is open and return after OK/Cancel/outside/Back dismissal without added dimming. Reject invalid RGB entry without closing; accept six hex digits with optional # and surrounding spaces. Cancel restores the original colour.
+- Add Title text alongside Title background and Title outline for Currents:, Ella Monitoring and Temps:, with backwards-compatible saved-theme fallbacks.
+- Retain the 0.22 spacing/menu corrections and loaded-name selectors on all pages. Prepare source and regression checks for the owner to compile; device appearance, Android Keystore and installer verification remain device checks.
+
 ## 0.22 — 2026-10-10
 
 Android source version 0.22 / versionCode 4. Prepared for the owner to compile in Android Studio; no APK is assembled, signed or published by this source update. Package, collector 0.7.1, API, MQTT and database contracts remain unchanged.

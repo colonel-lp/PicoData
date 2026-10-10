@@ -21,7 +21,8 @@ final class ThemeAppearanceView extends View {
     private final String[] colourFields = {
         ThemeConfig.BACKGROUND, ThemeConfig.TEXT,
         ThemeConfig.PANEL, ThemeConfig.BORDER,
-        ThemeConfig.TITLE_BACKGROUND, ThemeConfig.TITLE_OUTLINE,
+        ThemeConfig.TITLE_TEXT, ThemeConfig.TITLE_BACKGROUND,
+        ThemeConfig.TITLE_OUTLINE, null,
         ThemeConfig.GAUGE_PANEL_1, ThemeConfig.GAUGE_OUTLINE_1,
         ThemeConfig.GAUGE_PANEL_2, ThemeConfig.GAUGE_OUTLINE_2,
         ThemeConfig.FRONT_EQ, ThemeConfig.REAR_EQ,
@@ -31,20 +32,19 @@ final class ThemeAppearanceView extends View {
         ThemeConfig.CHANGED_INDICATOR
     };
     private final String[] colourLabels = {
-        "BACKGROUND", "TEXT", "PANELS", "BORDERS", "TITLE BACKGROUND", "TITLE OUTLINE",
+        "BACKGROUND", "TEXT", "PANELS", "BORDERS", "TITLE TEXT", "TITLE BACKGROUND", "TITLE OUTLINE", "",
         "GAUGE PANEL 1", "GAUGE PANEL 1 OUTLINE", "GAUGE PANEL 2", "GAUGE PANEL 2 OUTLINE",
         "GAUGE POSITIVE", "GAUGE NEGATIVE", "GAUGE HIGHLIGHT", "BUTTON BACKGROUND",
         "BUTTON ON TEXT", "BUTTON ON BORDER", "BUTTON OFF TEXT", "BUTTON OFF BORDER", "CHANGED INDICATOR"
     };
     private final RectF[] colourButtons = new RectF[colourFields.length];
-    private final RectF fontSelector = new RectF(20, 510, 260, 546);
-    private final RectF backButton = new RectF(278, 510, 518, 546);
+    private final RectF backButton = new RectF(20, 513, 518, 553);
 
     ThemeAppearanceView(Context context, MainActivity host) {
         super(context);
         this.host = host;
         stroke.setStyle(Paint.Style.STROKE);
-        float left = 20, top = 40, w = 240, h = 40, gapX = 18, gapY = 5;
+        float left = 20, top = 40, w = 240, h = 37, gapX = 18, gapY = 6;
         for (int i = 0; i < colourButtons.length; i++) {
             int col = i % 2, row = i / 2;
             float x = left + col * (w + gapX), y = top + row * (h + gapY);
@@ -75,12 +75,11 @@ final class ThemeAppearanceView extends View {
         canvas.save();
         canvas.scale(uiScaleX, uiScaleY);
         drawPanel(canvas, panel, t);
-        text(canvas, "THEME & APPEARANCE", BASE_W * 0.5f, 28, 14.5f, t.buttonTextOn, Paint.Align.CENTER);
+        text(canvas, "THEME COLOURS", BASE_W * 0.5f, 28, 14.5f, t.buttonTextOn, Paint.Align.CENTER);
         for (int i = 0; i < colourButtons.length; i++) {
             if (colourFields[i] == null) drawEmptyButton(canvas, colourButtons[i], t);
             else drawColourButton(canvas, colourButtons[i], colourLabels[i], t.get(colourFields[i]), t);
         }
-        drawSelector(canvas, fontSelector, "FONT  •  " + host.getFontDisplayName() + "   ▾", t, Paint.Align.LEFT);
         drawSelector(canvas, backButton, "BACK", t, Paint.Align.CENTER);
         canvas.restore();
     }
@@ -147,7 +146,6 @@ final class ThemeAppearanceView extends View {
                 return true;
             }
         }
-        if (fontSelector.contains(x, y)) { host.showFontMenu(this, fontSelector); return true; }
         if (backButton.contains(x, y)) { host.dismissThemeAppearanceDialog(); return true; }
         return true;
     }

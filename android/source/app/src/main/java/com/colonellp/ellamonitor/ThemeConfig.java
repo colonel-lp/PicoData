@@ -90,6 +90,8 @@ final class ThemeConfig {
     int gaugeOutline2 = controls;
     static final String GAUGE_HIGHLIGHT = "gaugeHighlight";
     int gaugeHighlight = blend(buttonBackground, controls, .2f);
+    static final String TITLE_TEXT = "titleText";
+    int titleText = text;
     static final String TITLE_BACKGROUND = "titleBackground";
     int titleBackground = panel;
     static final String TITLE_OUTLINE = "titleOutline";
@@ -139,6 +141,7 @@ final class ThemeConfig {
         t.gaugePanel2 = gaugePanel2;
         t.gaugeOutline2 = gaugeOutline2;
         t.gaugeHighlight = gaugeHighlight;
+        t.titleText = titleText;
         t.titleBackground = titleBackground;
         t.titleOutline = titleOutline;
 
@@ -201,6 +204,7 @@ final class ThemeConfig {
         if (GAUGE_PANEL_2.equals(field)) return gaugePanel2;
         if (GAUGE_OUTLINE_2.equals(field)) return gaugeOutline2;
         if (GAUGE_HIGHLIGHT.equals(field)) return gaugeHighlight;
+        if (TITLE_TEXT.equals(field)) return titleText;
         if (TITLE_BACKGROUND.equals(field)) return titleBackground;
         if (TITLE_OUTLINE.equals(field)) return titleOutline;
 
@@ -235,6 +239,7 @@ final class ThemeConfig {
         if (GAUGE_PANEL_2.equals(field)) { gaugePanel2 = color; return; }
         if (GAUGE_OUTLINE_2.equals(field)) { gaugeOutline2 = color; return; }
         if (GAUGE_HIGHLIGHT.equals(field)) { gaugeHighlight = color; return; }
+        if (TITLE_TEXT.equals(field)) { titleText = color; return; }
         if (TITLE_BACKGROUND.equals(field)) { titleBackground = color; return; }
         if (TITLE_OUTLINE.equals(field)) { titleOutline = color; return; }
 
@@ -264,7 +269,8 @@ final class ThemeConfig {
 
     JSONObject toJson() throws JSONException {
         JSONObject o = new JSONObject();
-        o.put("format", 14);
+        o.put("format", 15);
+        o.put(TITLE_TEXT, titleText);
         o.put(GAUGE_PANEL_1, gaugePanel1);
         o.put(GAUGE_OUTLINE_1, gaugeOutline1);
         o.put(GAUGE_PANEL_2, gaugePanel2);
@@ -286,7 +292,6 @@ final class ThemeConfig {
         o.put(TEXT, text);
         o.put(BUTTON_TEXT_ON, buttonTextOn);
         o.put(BUTTON_TEXT_OFF, buttonTextOff);
-        o.put(FONT_FAMILY, fontFamily);
         JSONObject spectrumColours = new JSONObject();
         spectrumColours.put(LINE_1, line1Spectrum);
         spectrumColours.put(BAR_1, bar1Spectrum);
@@ -295,22 +300,6 @@ final class ThemeConfig {
         spectrumColours.put(AURORA_3, aurora3Spectrum);
         spectrumColours.put(AURORA_4, aurora4Spectrum);
         o.put(SPECTRUM_COLOURS, spectrumColours);
-        o.put(AURORA_3_HUE_RANGE, aurora3HueRangeDeg);
-        // Keep the legacy 0..20 value for older builds. In the new 0..100
-        // range, 50 matches the previous maximum and 100 adds extra headroom.
-        o.put(LINE_GLOW_STRENGTH, Math.min(20, Math.round(lineGlowStrength / 2.5f)));
-        o.put(LINE_GLOW_STRENGTH_100, lineGlowStrength);
-        o.put(AURORA_GLOW_STRENGTH, auroraGlowStrength);
-        // Keep the legacy 0..20 value so an older build can still open a newly
-        // saved theme, while the new key retains all 100 adjustment steps.
-        o.put(AURORA_LINE_BRIGHTNESS, Math.round(auroraLineBrightness / 5f));
-        o.put(AURORA_LINE_BRIGHTNESS_100, auroraLineBrightness);
-        JSONObject smoothing = new JSONObject();
-        smoothing.put(LINE_1, lineSimpleSmoothing);
-        smoothing.put(AURORA_2, lineGlowSmoothing);
-        smoothing.put(AURORA_4, auroraSmoothing);
-        o.put(SPECTRUM_SMOOTHING, smoothing);
-        o.put("spectrumSmoothingScale",2);
         o.put(SLIDERS, sliders);
         o.put(BUTTON_BACKGROUND, buttonBackground);
         o.put(OFF_BUTTON_BORDER, offButtonBorder);
@@ -382,6 +371,7 @@ final class ThemeConfig {
         t.gaugePanel2 = o.optInt(GAUGE_PANEL_2, t.buttonBackground);
         t.gaugeOutline2 = o.optInt(GAUGE_OUTLINE_2, t.controls);
         t.gaugeHighlight = o.optInt(GAUGE_HIGHLIGHT, blend(t.buttonBackground, t.controls, .2f));
+        t.titleText = o.optInt(TITLE_TEXT, t.text);
         t.titleBackground = o.optInt(TITLE_BACKGROUND, t.panel);
         t.titleOutline = o.optInt(TITLE_OUTLINE, t.border);
         if (t.name.equals("Default")) t.name = "System default";
@@ -395,6 +385,7 @@ final class ThemeConfig {
                 && gaugePanel2 == other.gaugePanel2
                 && gaugeOutline2 == other.gaugeOutline2
                 && gaugeHighlight == other.gaugeHighlight
+                && titleText == other.titleText
                 && titleBackground == other.titleBackground
                 && titleOutline == other.titleOutline
                 && frontEq == other.frontEq
@@ -409,20 +400,12 @@ final class ThemeConfig {
                 && text == other.text
                 && buttonTextOn == other.buttonTextOn
                 && buttonTextOff == other.buttonTextOff
-                && fontFamily.equals(other.fontFamily)
                 && line1Spectrum == other.line1Spectrum
                 && bar1Spectrum == other.bar1Spectrum
                 && aurora1Spectrum == other.aurora1Spectrum
                 && aurora2Spectrum == other.aurora2Spectrum
                 && aurora3Spectrum == other.aurora3Spectrum
                 && aurora4Spectrum == other.aurora4Spectrum
-                && aurora3HueRangeDeg == other.aurora3HueRangeDeg
-                && lineGlowStrength == other.lineGlowStrength
-                && auroraGlowStrength == other.auroraGlowStrength
-                && auroraLineBrightness == other.auroraLineBrightness
-                && lineSimpleSmoothing == other.lineSimpleSmoothing
-                && lineGlowSmoothing == other.lineGlowSmoothing
-                && auroraSmoothing == other.auroraSmoothing
                 && sliders == other.sliders
                 && buttonBackground == other.buttonBackground
                 && offButtonBorder == other.offButtonBorder

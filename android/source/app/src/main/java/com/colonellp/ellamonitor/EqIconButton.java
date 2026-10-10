@@ -12,6 +12,8 @@ final class EqIconButton extends View {
     private final ThemeConfig t;
     private final String kind;
     private final boolean selected, fullscreen;
+    private boolean changed;
+    void changed(boolean value){changed=value;invalidate();}
     private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
     EqIconButton(Context c, ThemeConfig theme, String kind, String label, boolean selected, boolean fullscreen, Runnable action) {
         super(c); t = theme; this.kind = kind; this.selected = selected; this.fullscreen = fullscreen;
@@ -20,8 +22,8 @@ final class EqIconButton extends View {
     @Override protected void onDraw(Canvas c) {
         RectF r = new RectF(.8f, .8f, getWidth() - .8f, getHeight() - .8f);
         p.setStyle(Paint.Style.FILL); p.setColor(t.buttonBackground); c.drawRoundRect(r, 5, 5, p);
-        p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(selected ? 1.45f : 1.1f); p.setColor(selected || kind.equals("settings") ? t.controls : t.offButtonBorder); c.drawRoundRect(r, 5, 5, p);
-        int icon = selected ? t.controls : ThemeConfig.blend(t.controls, t.buttonBackground, .48f);
+        p.setStyle(Paint.Style.STROKE); p.setStrokeWidth(selected ? 1.45f : 1.1f); p.setColor(changed?t.changedIndicator:selected || kind.equals("settings") ? t.controls : t.offButtonBorder); c.drawRoundRect(r, 5, 5, p);
+        int icon = changed?t.changedIndicator:selected ? t.controls : ThemeConfig.blend(t.controls, t.buttonBackground, .48f);
         float cx = r.centerX(), cy = r.centerY();
         if (kind.equals("screen")) {
             p.setColor(icon); p.setStrokeWidth(2.1f); p.setStrokeCap(Paint.Cap.SQUARE); float d = 9, a = 5;
