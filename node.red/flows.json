@@ -114,7 +114,7 @@
         "id": "15ec5d23b47d7187",
         "type": "ui_base",
         "theme": {
-            "name": "theme-light",
+            "name": "theme-dark",
             "lightTheme": {
                 "default": "#0094CE",
                 "baseColor": "#0094CE",
@@ -126,54 +126,56 @@
                 "default": "#097479",
                 "baseColor": "#097479",
                 "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
-                "edited": false
+                "edited": true,
+                "reset": false
             },
             "customTheme": {
                 "name": "Untitled Theme 1",
                 "default": "#4B7930",
                 "baseColor": "#4B7930",
-                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif"
+                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
+                "reset": false
             },
             "themeState": {
                 "base-color": {
-                    "default": "#0094CE",
-                    "value": "#0094CE",
+                    "default": "#097479",
+                    "value": "#097479",
                     "edited": false
                 },
                 "page-titlebar-backgroundColor": {
-                    "value": "#0094CE",
+                    "value": "#097479",
                     "edited": false
                 },
                 "page-backgroundColor": {
-                    "value": "#fafafa",
-                    "edited": false
-                },
-                "page-sidebar-backgroundColor": {
-                    "value": "#ffffff",
-                    "edited": false
-                },
-                "group-textColor": {
-                    "value": "#1bbfff",
-                    "edited": false
-                },
-                "group-borderColor": {
-                    "value": "#ffffff",
-                    "edited": false
-                },
-                "group-backgroundColor": {
-                    "value": "#ffffff",
-                    "edited": false
-                },
-                "widget-textColor": {
                     "value": "#111111",
                     "edited": false
                 },
+                "page-sidebar-backgroundColor": {
+                    "value": "#333333",
+                    "edited": false
+                },
+                "group-textColor": {
+                    "value": "#0eb8c0",
+                    "edited": false
+                },
+                "group-borderColor": {
+                    "value": "#555555",
+                    "edited": false
+                },
+                "group-backgroundColor": {
+                    "value": "#333333",
+                    "edited": false
+                },
+                "widget-textColor": {
+                    "value": "#eeeeee",
+                    "edited": false
+                },
                 "widget-backgroundColor": {
-                    "value": "#0094ce",
+                    "value": "#097479",
                     "edited": false
                 },
                 "widget-borderColor": {
-                    "value": "#ffffff",
+                    "value": "#333333",
                     "edited": false
                 },
                 "base-font": {
@@ -196,8 +198,8 @@
             "allowTempTheme": "true",
             "dateFormat": "DD/MM/YYYY",
             "sizes": {
-                "sx": 48,
-                "sy": 48,
+                "sx": 24,
+                "sy": 30,
                 "gx": 6,
                 "gy": 6,
                 "cx": 6,
@@ -266,104 +268,6 @@
         "willMsg": {},
         "userProps": "",
         "sessionExpiry": ""
-    },
-    {
-        "id": "9cd84f9e06fae9bc",
-        "type": "ui_base",
-        "theme": {
-            "name": "theme-dark",
-            "lightTheme": {
-                "default": "#0094CE",
-                "baseColor": "#0094CE",
-                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif",
-                "edited": true,
-                "reset": false
-            },
-            "darkTheme": {
-                "default": "#097479",
-                "baseColor": "#097479",
-                "baseFont": "Verdana,Verdana,Geneva,sans-serif",
-                "edited": true,
-                "reset": false
-            },
-            "customTheme": {
-                "name": "Untitled Theme 1",
-                "default": "#4B7930",
-                "baseColor": "#4B7930",
-                "baseFont": "-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen-Sans,Ubuntu,Cantarell,Helvetica Neue,sans-serif"
-            },
-            "themeState": {
-                "base-color": {
-                    "default": "#097479",
-                    "value": "#097479",
-                    "edited": false
-                },
-                "page-titlebar-backgroundColor": {
-                    "value": "#097479",
-                    "edited": false
-                },
-                "page-backgroundColor": {
-                    "value": "#111111",
-                    "edited": false
-                },
-                "page-sidebar-backgroundColor": {
-                    "value": "#333333",
-                    "edited": false
-                },
-                "group-textColor": {
-                    "value": "#0eb8c0",
-                    "edited": false
-                },
-                "group-borderColor": {
-                    "value": "#555555",
-                    "edited": false
-                },
-                "group-backgroundColor": {
-                    "value": "#333333",
-                    "edited": false
-                },
-                "widget-textColor": {
-                    "value": "#eeeeee",
-                    "edited": false
-                },
-                "widget-backgroundColor": {
-                    "value": "#097479",
-                    "edited": false
-                },
-                "widget-borderColor": {
-                    "value": "#333333",
-                    "edited": false
-                },
-                "base-font": {
-                    "value": "Verdana,Verdana,Geneva,sans-serif"
-                }
-            },
-            "angularTheme": {
-                "primary": "indigo",
-                "accents": "blue",
-                "warn": "red",
-                "background": "grey",
-                "palette": "light"
-            }
-        },
-        "site": {
-            "name": "Node-RED Dashboard",
-            "hideToolbar": "true",
-            "allowSwipe": "true",
-            "lockMenu": "false",
-            "allowTempTheme": "true",
-            "dateFormat": "DD/MM/YYYY",
-            "sizes": {
-                "sx": 24,
-                "sy": 24,
-                "gx": 1,
-                "gy": 1,
-                "cx": 6,
-                "cy": 12,
-                "px": 3,
-                "py": 3
-            }
-        }
     },
     {
         "id": "a05e991a1b08d5e3",
@@ -2194,7 +2098,7 @@
         "type": "ui_text",
         "z": "2d519f9110a6099a",
         "group": "9cf1e8b8202e424f",
-        "order": 4,
+        "order": 6,
         "width": "4",
         "height": "1",
         "name": "C [1]",
@@ -2215,7 +2119,7 @@
         "type": "ui_text",
         "z": "2d519f9110a6099a",
         "group": "9cf1e8b8202e424f",
-        "order": 7,
+        "order": 10,
         "width": "4",
         "height": "1",
         "name": "C [2]",
@@ -2236,7 +2140,7 @@
         "type": "ui_text",
         "z": "2d519f9110a6099a",
         "group": "9cf1e8b8202e424f",
-        "order": 5,
+        "order": 7,
         "width": "4",
         "height": "1",
         "name": "C [7]",
@@ -2257,7 +2161,7 @@
         "type": "ui_text",
         "z": "2d519f9110a6099a",
         "group": "9cf1e8b8202e424f",
-        "order": 8,
+        "order": 11,
         "width": "4",
         "height": "1",
         "name": "C [8]",
@@ -2278,9 +2182,9 @@
         "type": "ui_text",
         "z": "2d519f9110a6099a",
         "group": "9cf1e8b8202e424f",
-        "order": 3,
+        "order": 8,
         "width": "4",
-        "height": "2",
+        "height": "1",
         "name": "delta",
         "label": "Δ",
         "format": "{{msg.payload}} mV",
@@ -2301,7 +2205,7 @@
         "group": "9cf1e8b8202e424f",
         "order": 1,
         "width": "4",
-        "height": "2",
+        "height": "1",
         "name": "BMS",
         "label": "",
         "format": "{{msg.payload}} V",
@@ -2320,7 +2224,7 @@
         "type": "ui_text",
         "z": "2d519f9110a6099a",
         "group": "9cf1e8b8202e424f",
-        "order": 6,
+        "order": 5,
         "width": "4",
         "height": "1",
         "name": "V [Pico]",
@@ -3324,13 +3228,13 @@
         "order": 1,
         "width": 0,
         "height": 0,
-        "format": "<style>\n    .nr-dashboard-theme {\n        min-width: 1080px;\n        max-width: 1080px;\n        padding: 0px auto;\n        margin: 0px auto;\n        background-color: black !important;\n    }\n    .nr-dashboard-cardcontainer {\n        /* groups background */\n        background-color: black !important;\n    }\n    .led .nr-dashboard-template {\n        /* led background */\n        background-color: black !important;\n    }\n    .level {\n        /* level background */\n        background-color: black !important;\n    }\n    .level .nr-dashboard-template {\n        /* level background */\n        background-color: black !important;\n        border-style: solid;\n        border-width: 1px;\n        border-color: #636669;\n     }\n\n\n    .guage {\n        background-color: #263238 !important;\n    }\n    .guage .nr-dashboard-gauge-title {\n        /* guage title font */\n        color: #d7ded9 !important;\n    }\n    .guage .nr-dashboard-gauge text {\n        /* guage value text color */\n        fill: white !important;\n    }\n\n\n    .guage2 {\n        background-color: black !important;\n    }\n    .guage2 .nr-dashboard-gauge-title {\n        /* guage title font */\n        color: white !important;\n    }\n    .guage2 .nr-dashboard-gauge text {\n        /* guage value text color */\n        fill: white !important;\n    }\n\n\n    .highlighted {\n        /* highlight important values */\n        background-color: #aacfe3 !important;\n        color: black !important;\n        }\n    .highlighted .nr-dashboard-gauge text {\n        /* text color */\n        fill: black !important;\n    }\n\n    .nr-dashboard-ui_led {\n    }\n    .nr-dashboard-ui_level {\n    }\n    .nr-dashboard-theme .label {\n    }\n\n    \n    .borders {\n        border-style: solid;\n        border-width: 1px;\n        border-color: #636669;\n    }\n    .font10 {\n        font-size: 10px;\n    }\n    .font14 {\n         font-size: 16px;\n    }\n    .labels {\n        /* label background */\n        background-color: #101826 !important;\n    }\n    .labels .label {\n        /* sets labels font color,\n        needs .label to apply */\n        color: #5d7eba !important;\n    }\n    .labels .value {\n        /* ui text value color */\n        color: white  !important;\n    }\n    .labels-2 {\n    /* label background */\n    background-color: #101826 !important;\n    }\n    .labels-2 .label {\n        /* sets labels font color */\n        color: #818999 !important;    }\n    .labels-2 .value {\n        /* sets labels font color */\n        color: #818999 !important;\n    }\n    .titles12 {\n        /* yellow titles */\n        font-size: 12px;\n        color: yellow !important;\n    }\n    [class*='led_'] {\n        /* led borders */\n        border-style: solid;\n        border-width: 0px;\n        border-color: #6e6363;\n    }\n</style>\n",
+        "format": "<style>\n    .nr-dashboard-theme {\n        min-width: 1080px;\n        max-width: 1080px;\n        padding: 0px;\n        margin: 0px;\n        background-color: black !important;\n    }\n    .nr-dashboard-cardcontainer {\n        /* groups background */\n        background-color: black !important;\n    }\n    .led .nr-dashboard-template {\n        /* led background */\n        background-color: black !important;\n    }\n    .level {\n        /* level background */\n        background-color: black !important;\n    }\n    .level .nr-dashboard-template {\n        /* level background */\n        background-color: black !important;\n        border-style: solid;\n        border-width: 1px;\n        border-color: #636669;\n     }\n\n\n    .guage {\n        background-color: #263238 !important;\n    }\n    .guage .nr-dashboard-gauge-title {\n        /* guage title font */\n        color: #d7ded9 !important;\n    }\n    .guage .nr-dashboard-gauge text {\n        /* guage value text color */\n        fill: white !important;\n    }\n\n\n    .guage2 {\n        background-color: black !important;\n    }\n    .guage2 .nr-dashboard-gauge-title {\n        /* guage title font */\n        color: white !important;\n    }\n    .guage2 .nr-dashboard-gauge text {\n        /* guage value text color */\n        fill: white !important;\n    }\n\n\n    .highlighted {\n        /* highlight important values */\n        background-color: #aacfe3 !important;\n        color: black !important;\n        }\n    .highlighted .nr-dashboard-gauge text {\n        /* text color */\n        fill: black !important;\n    }\n\n    .nr-dashboard-ui_led {\n    }\n    .nr-dashboard-ui_level {\n    }\n    .nr-dashboard-theme .label {\n    }\n\n    \n    .borders {\n        border-style: solid;\n        border-width: 1px;\n        border-color: #636669;\n    }\n    .font10 {\n        font-size: 10px;\n    }\n    .font14 {\n         font-size: 16px;\n    }\n    .labels {\n        /* label background */\n        background-color: #101826 !important;\n    }\n    .labels .label {\n        /* sets labels font color,\n        needs .label to apply */\n        color: #5d7eba !important;\n    }\n    .labels .value {\n        /* ui text value color */\n        color: white  !important;\n    }\n    .labels-2 {\n    /* label background */\n    background-color: #101826 !important;\n    }\n    .labels-2 .label {\n        /* sets labels font color */\n        color: #818999 !important;    }\n    .labels-2 .value {\n        /* sets labels font color */\n        color: #818999 !important;\n    }\n    .titles12 {\n        /* yellow titles */\n        font-size: 12px;\n        color: yellow !important;\n    }\n    [class*='led_'] {\n        /* led borders */\n        border-style: solid;\n        border-width: 0px;\n        border-color: #6e6363;\n    }\n</style>\n",
         "storeOutMessages": true,
         "fwdInMessages": true,
         "resendOnRefresh": true,
         "templateScope": "global",
         "className": "",
-        "x": 130,
+        "x": 110,
         "y": 40,
         "wires": [
             []
@@ -3500,7 +3404,7 @@
         "inputMsgField": "payload",
         "outputMsgField": "payload",
         "operation": "div",
-        "constant": "1000",
+        "constant": "-1000",
         "round": true,
         "truncate": false,
         "decimals": "1",
@@ -3594,7 +3498,8 @@
         "y": 1340,
         "wires": [
             [
-                "861ba810283a0be6"
+                "861ba810283a0be6",
+                "45ae4e98f5daa0ba"
             ]
         ]
     },
@@ -3688,7 +3593,7 @@
         "z": "2d519f9110a6099a",
         "name": "",
         "inputMsgField": "payload",
-        "outputMsgField": "payload",
+        "outputMsgField": "topic",
         "operation": "div",
         "constant": "1",
         "round": true,
@@ -3699,7 +3604,8 @@
         "y": 1260,
         "wires": [
             [
-                "ca5e2611e332df4d"
+                "ca5e2611e332df4d",
+                "14de51cb45e0f49a"
             ]
         ]
     },
@@ -4406,6 +4312,223 @@
                 "7c7786a99da04a5f",
                 "5724cc1be612a757",
                 "874c15745b1b816a"
+            ]
+        ]
+    },
+    {
+        "id": "2fefb8a4158113de",
+        "type": "ui_text",
+        "z": "2d519f9110a6099a",
+        "d": true,
+        "group": "9cf1e8b8202e424f",
+        "order": 3,
+        "width": "4",
+        "height": "1",
+        "name": "Time to Full 1",
+        "label": "",
+        "format": "Time:",
+        "layout": "col-center",
+        "className": "highlighted font14",
+        "style": false,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "x": 1280,
+        "y": 1360,
+        "wires": []
+    },
+    {
+        "id": "5e78a314f93ffab6",
+        "type": "calculator",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "inputMsgField": "payload",
+        "outputMsgField": "payload",
+        "operation": "div",
+        "constant": "-1",
+        "round": true,
+        "truncate": false,
+        "decimals": "2",
+        "decimals2": 0,
+        "x": 1310,
+        "y": 1280,
+        "wires": [
+            [
+                "9ff95bc8c4035c13"
+            ]
+        ]
+    },
+    {
+        "id": "aeb0cdfabd3dc651",
+        "type": "join",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "mode": "custom",
+        "build": "object",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "topic",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "useparts": false,
+        "accumulate": false,
+        "timeout": "",
+        "count": "2",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 1010,
+        "y": 1280,
+        "wires": [
+            [
+                "69cdf62f442648a9"
+            ]
+        ]
+    },
+    {
+        "id": "9ff95bc8c4035c13",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "Split into time",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "(   $neg := payload < 0 ? \"-\" : \"\";   $val := $abs(payload);   $days := $floor($val / 24);   $remHours := $floor($val) - ($days * 24);   $hours := $floor($val);   $minutes := $floor(($val - $hours) * 60);   $neg & (     $days > 0       ? $days & \"d:\" & $formatNumber($remHours,\"00\") & \"h\"       : $hours & \"h:\" & $formatNumber($minutes,\"00\") & \"m\"   ) )",
+                "tot": "jsonata"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1100,
+        "y": 1320,
+        "wires": [
+            [
+                "1fa1adfe589457ea"
+            ]
+        ]
+    },
+    {
+        "id": "1fa1adfe589457ea",
+        "type": "ui_template",
+        "z": "2d519f9110a6099a",
+        "group": "9cf1e8b8202e424f",
+        "name": "Time to Full 2",
+        "order": 4,
+        "width": "4",
+        "height": "2",
+        "format": "<div\n    style=\"display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; font-weight:bold;\">\n    {{msg.payload}}\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": true,
+        "templateScope": "local",
+        "className": "highlighted font14",
+        "x": 1280,
+        "y": 1320,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "14de51cb45e0f49a",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "batteryPico",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 840,
+        "y": 1260,
+        "wires": [
+            [
+                "aeb0cdfabd3dc651"
+            ]
+        ]
+    },
+    {
+        "id": "45ae4e98f5daa0ba",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "SOC",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 840,
+        "y": 1300,
+        "wires": [
+            [
+                "aeb0cdfabd3dc651"
+            ]
+        ]
+    },
+    {
+        "id": "c693120df39117c0",
+        "type": "debug",
+        "z": "2d519f9110a6099a",
+        "name": "debug 3",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1280,
+        "y": 1080,
+        "wires": []
+    },
+    {
+        "id": "69cdf62f442648a9",
+        "type": "change",
+        "z": "2d519f9110a6099a",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.batteryPico > 0 ? [(560 - payload.SOC), payload.batteryPico] : [payload.SOC, payload.batteryPico]",
+                "tot": "jsonata"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1160,
+        "y": 1280,
+        "wires": [
+            [
+                "5e78a314f93ffab6"
             ]
         ]
     }
