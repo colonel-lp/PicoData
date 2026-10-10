@@ -27,6 +27,14 @@ These owner corrections supersede conflicting earlier checked-off items. They ar
 
 Voltage clarification: the owner confirms that the voltage delivered with the other Pico battery values is the intended source. Preserve the current V[P] raw Pico battery-voltage binding; no voltage-source change is requested.
 
+### Further dashboard and preset clarification — 2026-10-10
+
+- [ ] Put the complete gauge array in its own bounding box, using global 6px padding between elements and around the group.
+- [ ] The preset changed indicator must show that current settings differ from the currently saved preset. Include display-label changes and other settings belonging to the preset in this comparison. Unsaved differences trigger the dot/highlight; saving or restoring matching values clears it. Keep theme-specific modification indication consistent with the saved theme.
+- [ ] When adding the **Ella Monitoring** header above the indicators, make space by reducing only the height of the gauges. Preserve their widths and the dimensions of the remaining dashboard elements.
+- [ ] Increase text size in the **amp-hours** and **time remaining** boxes to use their available space. Preserve centred alignment and fit longer valid values without clipping.
+- The requested centring of voltage, amp-hours and time remaining, and **20px** text padding in cell-voltage/delta-voltage boxes, remain pending as listed above. Only the accidental unfinished removal phrase was discarded.
+
 ## Completed authorized build 0.21 — 2026-10-10
 
 - Use Pico's reported nominal and remaining capacity with the verified Node-RED time-to-full/empty chain and raw battery current. Zero/missing/stale inputs are unavailable.
