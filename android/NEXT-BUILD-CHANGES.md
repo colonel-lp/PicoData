@@ -1,3 +1,11 @@
+## Pending theme picker corrections — 2026-10-10
+
+Recorded from the owner's latest report; application source and version remain unchanged until implementation is requested.
+
+- [ ] Fix the reported regression where OK or Cancel in a colour picker leaves the theme colours box closed. Both must return to a visible, usable colour-editor list; OK retains the chosen colour, Cancel restores the original, and no extra screen dimming is introduced. Preserve the same return path for outside/Back cancellation. Inspect dismissal callbacks and page rebuilding; the current source already calls showThemeEditor on these paths, so source presence alone does not establish correct runtime behaviour. Regression checks must assert the returned dialog is actually showing, can open another picker, and survives queued dismissal callbacks, including on the owner's phone/head unit.
+- [ ] Match the EQ app's colour-entry checks: trim whitespace, accept exactly six hexadecimal RGB digits with an optional leading #, reject incomplete/invalid input without changing the colour, and keep the picker open with clear feedback on invalid OK. Do not expand three-digit shorthand while editing. Use the same validation for typed preview and confirmation; retain wheel/hex synchronization. Read-only reference: Joying-EQ-DSP e1b54f3f58efb92215d99e2e3f2941530fbcbc15, MainActivity.parseHexColor/editThemeColour. Current monitoring code requires a literal # followed by six hex digits and has different feedback/return handling.
+- [ ] Provide a separate Title text colour picker for the main-screen Currents:, Ella Monitoring and Temps: headings, alongside their Title background and Title outline pickers. Apply/save/load all title roles with the theme and retain compatibility with saved themes. Title background/outline already exist in source; heading text currently follows general Text. Ensure the requested title text/background controls are visible in the colour list and affect all three heading boxes.
+
 ## Completed same-version corrections — 2026-10-10
 
 Explicitly authorized for immediate implementation; retain **0.22 / versionCode 4**. The owner compiles the APK.
