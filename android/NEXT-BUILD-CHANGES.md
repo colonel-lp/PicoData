@@ -6,6 +6,29 @@
 
 These requests are recorded for the next authorized source update. No application changes or version increment are made by recording them.
 
+### Dashboard and theme corrections — 2026-10-10
+
+These owner corrections supersede conflicting earlier checked-off items. They are pending for the next authorized source update; the owner compiles the APK.
+
+- [ ] Restore the **Ella Monitoring** dashboard header directly above the indicator box, as in the supplied Node-RED reference. This is a dashboard group title, distinct from the removed app-wide title. Source inspection: the current flags group has an empty title.
+- [ ] Add a **Gauge borders** colour picker to the theme editor and apply it to gauge borders; retain a separate role from other panel/button outlines.
+- [ ] Centre the lower voltage, amp-hours and time-remaining values within their cells.
+- [ ] Change the text padding before and after the values in the cell-voltage and delta-voltage boxes from 6px to **20px**. Retain the global 6px gaps between elements.
+- [ ] Remove the user-facing **LIVE** entry identified in the themes list and add a **System default** option. Check the existing theme/preset menu placement rather than silently relabelling an unrelated setting.
+- [ ] Reformat the Settings block currently titled **SYSTEM** to match the EQ app's bottom-right block. Remove the SYSTEM heading, arrange controls in two rows with space reserved for a future button, and put the app version at the bottom. Match EQ button proportions and spacing. Retain Changelog/Update and Back.
+- [ ] Remove the separate **Check for updates** text and include **Updates:** within the update-frequency control. Retain Off / 1hr / 3hr / 6hr / 12hr / 24hr choices.
+- [ ] Keep the bottom bar and its buttons at the same height when fullscreen is toggled, matching the requested EQ style. Fullscreen should expand the available content without changing bottom-control heights. Source inspection: MainActivity uses 44/54 logical pixels for the bar; BottomBar uses 26/40 for its controls, and DesignViewport changes its logical base height. Account for all three when fixing the visible height.
+- [ ] Add an option in each gauge's popup to highlight its background colour, with a corresponding colour picker in Themes.
+- [ ] The bottom preset and theme boxes must say **Preset** and **Theme** and show a changed-state dot like the EQ app. Replace the current asterisk/whole-label colour treatment with the reference dot behavior.
+- [ ] Rename **Current Draw** to **Currents:**.
+- [ ] Give **Currents:**, **Temps:** and **Ella Monitoring** title boxes themed outlines and backgrounds. Add theme colour roles named **Title outline** and **Title background**.
+- [ ] Both OK and Cancel in a colour picker must return to the theme colour-editor box. Fix the reported unwanted screen dimming; inspect nested-dialog/window dim behavior and match the EQ app.
+- [ ] Remove the top explanatory/title text from the rename-display-label popup and resize it to fit. Match comparable EQ popup dimensions and button sizes; the current buttons are too large.
+
+Voltage clarification: the owner confirms that the voltage delivered with the other Pico battery values is the intended source. Preserve the current V[P] raw Pico battery-voltage binding; no voltage-source change is requested.
+
+One removal request is incomplete: the lower-values/padding bullet ends with “get rid of the”. Obtain the missing item before implementing that removal.
+
 ## Completed authorized build 0.21 — 2026-10-10
 
 - Use Pico's reported nominal and remaining capacity with the verified Node-RED time-to-full/empty chain and raw battery current. Zero/missing/stale inputs are unavailable.
