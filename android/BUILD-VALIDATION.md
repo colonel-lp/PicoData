@@ -1,5 +1,13 @@
 # Build validation
 
+## Android 0.26 — same-version voltage text/spacing correction, 2026-10-11
+
+Source parent: PicoData 5c8f065ad40fcd8cb58765e143df71f5bac3c6b5. Owner explicitly authorized immediate LiveDashboard.java edits and requested no tests. VersionName 0.26 / versionCode 8 and output filename Ella-monitoring-v0.26.apk remain unchanged.
+
+V[P], V[S] and cell voltages now draw label/value fragments separately at the SBMS voltage's 14px logical size, with three equal gaps calculated from the cell width and measured text. Long custom labels are ellipsized instead of shrinking voltage text. Existing numeric formatting, theme colours, hidden-content behavior and box geometry are retained.
+
+No tests, lint, compilation, APK assembly or device checks were run for this correction. The 25-test/lint results below apply to the preceding 0.26 source, not this subsequent drawing change.
+
 ## Android 0.26 — gauge presentation and saved files, 2026-10-11
 
 Source parent: PicoData c2b50af8e392722e76f248aa85e1367c084c8ed9. VersionName 0.26 / versionCode 8; owner compiles Ella-monitoring-v0.26.apk in Android Studio. Package/signing identity, minimum API 27 and compile/target API 37 are unchanged. Pi collector remains 0.7.2.

@@ -2,6 +2,7 @@
 
 ## 0.26 — 2026-10-11
 
+- Same-version correction: V[P]/V[S] and cell-voltage labels/values use the SBMS voltage's 14px logical text size with equal measured left, middle and right gaps. Shorten long custom labels rather than shrink voltage text; preserve other layout/padding. Tests were omitted at the owner's request.
 - Remove pointers from both Battery current gauges. Both SOC gauges use one anticlockwise remaining arc: green at 50–100%, amber from 25% to below 50%, red below 25%, selected before rounding the number.
 - Reduce Pitch/Roll live text; move gauge limit labels down 6px. The six current gauges show centred amps on the limit row and move their live values up 6px. Barometer, LPG and Water live values move up 6px. Preserve other layout/padding and source calculations.
 - Save/manage named presets in Downloads/ella-monitoring/presets. Migrate private originals only after a successful file save; preserve conflicting files under a separate migrated name and keep the selected preset consistent. Active preferences remain private.

@@ -108,7 +108,40 @@ final class LiveDashboard extends ViewGroup {
         float nameSize(){return isGauge?12:11.5f;}
         float valueSize(){return slot.equals("capacity")||slot.equals("runtime")?22:14;}
         @Override protected boolean drawChild(Canvas canvas,View child,long time){return child instanceof TextView || super.drawChild(canvas,child,time);}
-        @Override protected void dispatchDraw(Canvas canvas){super.dispatchDraw(canvas);drawText(canvas,name,nameSize(),isGauge,false);if(value!=null)drawText(canvas,value,valueSize(),centred(),!centred());}
+        @Override protected void dispatchDraw(Canvas canvas) {
+            super.dispatchDraw(canvas);
+            if (slot.equals("voltage") || slot.equals("cells")) {
+                drawVoltagePair(canvas);
+                return;
+            }
+            drawText(canvas,name,nameSize(),isGauge,false);
+            if(value!=null)drawText(canvas,value,valueSize(),centred(),!centred());
+        }
+        private void drawVoltagePair(Canvas canvas) {
+            if (value == null || value.getVisibility() != VISIBLE) return;
+            TextPaint paint = new TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+            paint.setTypeface(value.getTypeface());
+            paint.setColor(value.getCurrentTextColor());
+            paint.setTextSize(valueSize()); // Match the SBMS voltage readout without auto-shrinking.
+
+            String title = host.label(id,fallback);
+            if (slot.equals("voltage") && title.equals(fallback))
+                title = title.replace(" ","");
+            String voltage = datum == null ? "—" : format(datum);
+            float voltageWidth = paint.measureText(voltage);
+            // Shorten long custom labels rather than shrinking the voltage.
+            title = TextUtils.ellipsize(title,paint,
+                    Math.max(0,getWidth()-voltageWidth-3),TextUtils.TruncateAt.END).toString();
+            float titleWidth = paint.measureText(title);
+            float gap = Math.max(0,(getWidth()-titleWidth-voltageWidth)/3f);
+            android.graphics.Paint.FontMetrics fm = paint.getFontMetrics();
+            float baseline = getHeight()/2f-(fm.ascent+fm.descent)/2f;
+            canvas.save();
+            canvas.clipRect(0,0,getWidth(),getHeight());
+            canvas.drawText(title,gap,baseline,paint);
+            canvas.drawText(voltage,gap*2+titleWidth,baseline,paint);
+            canvas.restore();
+        }
         void update(MonitorData.Datum d){MonitorData.Datum previous=datum;datum=d;
             if(appliedStyleRevision==styleRevision&&java.util.Objects.equals(previous==null?null:previous.value,d==null?null:d.value)&&java.util.Objects.equals(previous==null?null:previous.flag,d==null?null:d.flag))return;
             appliedStyleRevision=styleRevision;
