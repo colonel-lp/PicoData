@@ -42,7 +42,7 @@ public class RenderTest {
             ActivityTest.call(a,"showThemeEditor");ThemeAppearanceView editor=(ThemeAppearanceView)ActivityTest.field(a,"appearanceView");editor.measure(View.MeasureSpec.makeMeasureSpec(544,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(560,View.MeasureSpec.EXACTLY));editor.layout(0,0,544,560);
             if(path!=null){Bitmap colours=Bitmap.createBitmap(544,560,Bitmap.Config.ARGB_8888);editor.draw(new Canvas(colours));try(java.io.OutputStream out=new java.io.FileOutputStream(path.replace(".png","-colours.png"))){assertTrue(colours.compress(Bitmap.CompressFormat.PNG,100,out));}colours.recycle();}
             a.dismissThemeAppearanceDialog();
-            android.app.AlertDialog detail=DisplayRevisionTest.popup(DisplayRevisionTest.readout(a,"Battery [Pico]"));PresetAndColourTest.idle();
+            android.app.Dialog detail=DisplayRevisionTest.popup(DisplayRevisionTest.readout(a,"Battery [Pico]"));PresetAndColourTest.idle();
             if(path!=null)renderDialog(detail,path.replace(".png","-popup.png"));detail.dismiss();
             CompanionLayoutTest.invoke(a,"confirmOverwrite",new Class<?>[]{String.class,Runnable.class},"Synthetic preset",(Runnable)()->{});
             android.app.Dialog confirmation=PresetAndColourTest.picker();PresetAndColourTest.idle();

@@ -6,7 +6,7 @@ final class Palette {
     Palette(ThemeConfig t) { update(t); }
     void update(ThemeConfig t) {
         fontFamily=t.fontFamily; background=t.background;panel=t.panel;border=t.border;text=t.text;
-        muted=t.buttonTextOff;accent=t.controls;positive=t.frontEq;negative=t.rearEq;
+        muted=t.text;accent=t.controls;positive=t.frontEq;negative=t.rearEq;
     }
     Palette(boolean light) {
         fontFamily="sans-serif-medium";

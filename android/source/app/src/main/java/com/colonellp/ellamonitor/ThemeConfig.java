@@ -169,7 +169,7 @@ final class ThemeConfig {
         t.graphBackground = graphBackground;
         t.text = text;
         t.buttonTextOn = buttonTextOn;
-        t.buttonTextOff = buttonTextOff;
+        t.buttonTextOff = buttonTextOn;
         t.fontFamily = fontFamily;
         t.line1Spectrum = line1Spectrum;
         t.bar1Spectrum = bar1Spectrum;
@@ -238,7 +238,7 @@ final class ThemeConfig {
         if (GRAPH_BACKGROUND.equals(field)) return graphBackground;
         if (TEXT.equals(field)) return text;
         if (BUTTON_TEXT_ON.equals(field)) return buttonTextOn;
-        if (BUTTON_TEXT_OFF.equals(field) || BUTTON_TEXT.equals(field)) return buttonTextOff;
+        if (BUTTON_TEXT_OFF.equals(field) || BUTTON_TEXT.equals(field)) return buttonTextOn;
         if (SPECTRUM.equals(field) || LINE_1.equals(field)) return line1Spectrum;
         if (BAR_1.equals(field)) return bar1Spectrum;
         if (AURORA_1.equals(field)) return aurora1Spectrum;
@@ -277,7 +277,7 @@ final class ThemeConfig {
         else if (GRAPH_BACKGROUND.equals(field)) graphBackground = color;
         else if (TEXT.equals(field)) text = color;
         else if (BUTTON_TEXT_ON.equals(field)) buttonTextOn = color;
-        else if (BUTTON_TEXT_OFF.equals(field) || BUTTON_TEXT.equals(field)) buttonTextOff = color;
+        else if (BUTTON_TEXT_OFF.equals(field) || BUTTON_TEXT.equals(field)) buttonTextOn = color;
         else if (SPECTRUM.equals(field) || LINE_1.equals(field)) line1Spectrum = color;
         else if (BAR_1.equals(field)) bar1Spectrum = color;
         else if (AURORA_1.equals(field)) aurora1Spectrum = color;
@@ -316,7 +316,6 @@ final class ThemeConfig {
         o.put(GRAPH_BACKGROUND, graphBackground);
         o.put(TEXT, text);
         o.put(BUTTON_TEXT_ON, buttonTextOn);
-        o.put(BUTTON_TEXT_OFF, buttonTextOff);
         JSONObject spectrumColours = new JSONObject();
         spectrumColours.put(LINE_1, line1Spectrum);
         spectrumColours.put(BAR_1, bar1Spectrum);
@@ -343,7 +342,7 @@ final class ThemeConfig {
                 if(!(o.get(key) instanceof JSONObject))throw SavedJson.invalid();JSONObject nested=o.getJSONObject(key);
                 for(java.util.Iterator<String> roles=nested.keys();roles.hasNext();){String role=roles.next();if(!java.util.Arrays.asList(LINE_1,BAR_1,BAR_2,AURORA_1,AURORA_2,AURORA_3,AURORA_4).contains(role))throw SavedJson.invalid();SavedJson.integer(nested,role,key.equals(SPECTRUM_COLOURS)?Integer.MIN_VALUE:0,key.equals(SPECTRUM_COLOURS)?0xffffffffL:100);}
                 if(key.equals(SPECTRUM_COLOURS)&&nested.length()>0)colour=true;
-            }else if((template.has(key)&&template.get(key) instanceof Number)||java.util.Arrays.asList(BUTTON_TEXT,SPECTRUM,GAUGE_HIGHLIGHT).contains(key)){SavedJson.integer(o,key,Integer.MIN_VALUE,0xffffffffL);colour=true;}
+            }else if((template.has(key)&&template.get(key) instanceof Number)||java.util.Arrays.asList(BUTTON_TEXT,BUTTON_TEXT_OFF,SPECTRUM,GAUGE_HIGHLIGHT).contains(key)){SavedJson.integer(o,key,Integer.MIN_VALUE,0xffffffffL);colour=true;}
             else if(key.equals(FONT_FAMILY)){SavedJson.string(o,key,1,40);if(!java.util.Arrays.asList("sans-serif","sans-serif-condensed","sans-serif-medium","sans-serif-light","monospace").contains(o.getString(key)))throw SavedJson.invalid();}
             else if(key.equals(AURORA_3_HUE_RANGE))SavedJson.integer(o,key,0,180);
             else if(key.equals(LINE_GLOW_STRENGTH)||key.equals(AURORA_LINE_BRIGHTNESS))SavedJson.integer(o,key,0,20);
@@ -371,7 +370,7 @@ final class ThemeConfig {
         t.text = o.optInt(TEXT, t.text);
         int legacyButton = o.optInt(BUTTON_TEXT, t.buttonTextOff);
         t.buttonTextOn = o.optInt(BUTTON_TEXT_ON, legacyButton);
-        t.buttonTextOff = o.optInt(BUTTON_TEXT_OFF, legacyButton);
+        t.buttonTextOff = t.buttonTextOn; // Legacy off-text files remain readable; the active role is removed.
         t.fontFamily = o.optString(FONT_FAMILY, t.fontFamily);
         int legacySpectrum = o.optInt(SPECTRUM, t.line1Spectrum);
         JSONObject spectrumColours = o.optJSONObject(SPECTRUM_COLOURS);
@@ -453,7 +452,6 @@ final class ThemeConfig {
                 && graphBackground == other.graphBackground
                 && text == other.text
                 && buttonTextOn == other.buttonTextOn
-                && buttonTextOff == other.buttonTextOff
                 && line1Spectrum == other.line1Spectrum
                 && bar1Spectrum == other.bar1Spectrum
                 && aurora1Spectrum == other.aurora1Spectrum

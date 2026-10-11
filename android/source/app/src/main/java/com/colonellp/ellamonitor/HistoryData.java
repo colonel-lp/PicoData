@@ -73,6 +73,7 @@ final class HistoryData {
         Result(MonitorData.Metric metric, Window window, List<Record> rows, String savedAt) { this.metric = metric; this.window = window; this.rows = rows; this.savedAt = savedAt; }
     }
     static Result fetch(ApiClient client, MonitorData.Metric metric, Window window) throws Exception {
+        if(DerivedHistory.isDerived(metric))return DerivedHistory.fetch(client,metric,window);
         String route = route(metric, window); List<Record> rows = new ArrayList<>(); String saved = ""; Instant previous = null;
         for (int page = 0; page < 10; page++) {
             JSONObject body = client.get(route);
@@ -94,11 +95,11 @@ final class HistoryData {
         throw new Exception("History range too large; select a shorter range.");
     }
     static String csv(Result result, String label) {
-        StringBuilder text = new StringBuilder("display_label,metric_id,original_name,source,source_name,sensor_id,field,role,polarity,voltage_source,resolution,start_utc,end_utc,partial,boundary_bucket,average_W,average_A,average_V,soc_percent,value,value_unit,min,max,net_Wh,net_Ah,forward_Wh,reverse_Wh,forward_Ah,reverse_Ah,power_coverage_s,current_coverage_s,voltage_coverage_s,samples,last_scalar_received_utc,current_received_utc,voltage_received_utc,soc_received_utc,saved_at_utc\r\n");
+        StringBuilder text = new StringBuilder("display_label,metric_id,original_name,source,source_name,sensor_id,field,role,polarity,voltage_source,resolution,start_utc,end_utc,partial,boundary_bucket,average_W,average_A,average_V,soc_percent,value,value_unit,min,max,net_Wh,net_Ah,forward_Wh,reverse_Wh,forward_Ah,reverse_Ah,power_coverage_s,current_coverage_s,voltage_coverage_s,samples,last_scalar_received_utc,current_received_utc,voltage_received_utc,soc_received_utc,saved_at_utc,derived_inputs\r\n");
         MonitorData.Metric m = result.metric;
         for (Record r : result.rows) {
             JSONArray v = r.raw.optJSONArray("values");
-            Object[] fields = {label, m.id, m.name, m.source, m.definition.opt("sourceName"), m.definition.opt("sensorId"), m.definition.opt("field"), m.role, m.definition.opt("polarity"), m.definition.opt("voltage"), result.window.resolution, r.start, r.end, r.partial, r.start.isBefore(result.window.from) || r.end.isAfter(result.window.to), v == null ? null : v.opt(0), v == null ? null : v.opt(1), v == null ? null : v.opt(2), v == null ? null : v.opt(3), r.raw.opt("value"), MonitorData.object(m.definition, "units").opt("value"), r.raw.opt("min"), r.raw.opt("max"), r.raw.opt("netWh"), r.raw.opt("netAh"), r.raw.opt("forwardWh"), r.raw.opt("reverseWh"), r.raw.opt("forwardAh"), r.raw.opt("reverseAh"), r.raw.opt("powerCoverageSeconds"), r.raw.opt("ampCoverageSeconds"), r.raw.opt("voltCoverageSeconds"), r.raw.opt("samples"), receipt(r.raw, "lastAt"), receipt(r.raw, "currentLastAt"), receipt(r.raw, "voltageLastAt"), receipt(r.raw, "socAt"), result.savedAt};
+            Object[] fields = {label, m.id, m.name, m.source, m.definition.opt("sourceName"), m.definition.opt("sensorId"), m.definition.opt("field"), m.role, m.definition.opt("polarity"), m.definition.opt("voltage"), result.window.resolution, r.start, r.end, r.partial, r.start.isBefore(result.window.from) || r.end.isAfter(result.window.to), v == null ? null : v.opt(0), v == null ? null : v.opt(1), v == null ? null : v.opt(2), v == null ? null : v.opt(3), r.raw.opt("value"), MonitorData.object(m.definition, "units").opt("value"), r.raw.opt("min"), r.raw.opt("max"), r.raw.opt("netWh"), r.raw.opt("netAh"), r.raw.opt("forwardWh"), r.raw.opt("reverseWh"), r.raw.opt("forwardAh"), r.raw.opt("reverseAh"), r.raw.opt("powerCoverageSeconds"), r.raw.opt("ampCoverageSeconds"), r.raw.opt("voltCoverageSeconds"), r.raw.opt("samples"), receipt(r.raw, "lastAt"), receipt(r.raw, "currentLastAt"), receipt(r.raw, "voltageLastAt"), receipt(r.raw, "socAt"), result.savedAt, DerivedHistory.inputReferences(m)};
             for (int i = 0; i < fields.length; i++) { if (i > 0) text.append(','); text.append(csvCell(fields[i])); }
             text.append("\r\n");
         }

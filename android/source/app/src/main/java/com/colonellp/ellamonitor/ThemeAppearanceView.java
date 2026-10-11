@@ -30,14 +30,14 @@ final class ThemeAppearanceView extends View {
         ThemeConfig.HIGHLIGHT_1, ThemeConfig.HIGHLIGHT_2,
         ThemeConfig.BUTTON_BACKGROUND, ThemeConfig.BUTTON_BORDER,
         ThemeConfig.BUTTON_TEXT_ON, ThemeConfig.CONTROLS,
-        ThemeConfig.BUTTON_TEXT_OFF, ThemeConfig.OFF_BUTTON_BORDER
+        null, ThemeConfig.OFF_BUTTON_BORDER
     };
     private final String[] colourLabels = {
-        "BACKGROUND", "TEXT", "PANELS", "BORDERS", "TITLE TEXT", "TITLE BACKGROUND",
+        "BACKGROUND", "LABELS", "PANELS", "BORDERS", "TITLE TEXT", "TITLE BACKGROUND",
         "TITLE OUTLINE", "CHANGED INDICATOR", "INDICATOR BACKGROUND", "VOLTAGES BACKGROUND",
         "GAUGE PANEL 1", "GAUGE PANEL 1 OUTLINE", "GAUGE PANEL 2", "GAUGE PANEL 2 OUTLINE",
         "GAUGE POSITIVE", "GAUGE NEGATIVE", "HIGHLIGHT 1", "HIGHLIGHT 2", "BUTTON BACKGROUND", "BUTTON BORDER",
-        "BUTTON ON TEXT", "BUTTON ON BORDER", "BUTTON OFF TEXT", "BUTTON OFF BORDER"
+        "BUTTON ON TEXT", "BUTTON ON BORDER", "", "BUTTON OFF BORDER"
     };
     private final RectF[] colourButtons = new RectF[colourFields.length];
     private final RectF fontButton = new RectF(20, 508, 260, 548);

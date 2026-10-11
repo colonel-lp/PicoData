@@ -15,6 +15,7 @@ final class ApiClient {
     private final String base, token;
     private final Connections connections;
     private volatile HttpURLConnection active;
+    private volatile boolean cancelled;
     ApiClient(String base, String token, Connections connections) {
         this.base = validateBase(base); this.token = token; this.connections = connections;
         if (!token.matches("[a-f0-9]{64}")) throw new IllegalArgumentException("Enter the 64-character API token.");
@@ -30,9 +31,11 @@ final class ApiClient {
         } catch (Exception e) { throw new IllegalArgumentException("Use http://PI_HOST:8080 or an HTTPS origin, without a path or credentials."); }
     }
     JSONObject get(String path) throws Exception {
+        if (cancelled) throw new IOException("Request cancelled.");
         if (!path.startsWith("/api/v1/") || path.contains("#") || path.contains("\r") || path.contains("\n")) throw new IOException("Invalid API route.");
         HttpURLConnection c = connections.open(new URL(base + path)); active = c;
         try {
+            if (cancelled) throw new IOException("Request cancelled.");
             c.setInstanceFollowRedirects(false); c.setConnectTimeout(4000); c.setReadTimeout(4000);
             c.setRequestMethod("GET"); c.setUseCaches(false);
             c.setRequestProperty("Authorization", "Bearer " + token);
@@ -56,5 +59,5 @@ final class ApiClient {
             return body;
         } finally { active = null; c.disconnect(); }
     }
-    void cancel() { HttpURLConnection c = active; if (c != null) c.disconnect(); }
+    void cancel() { cancelled = true; HttpURLConnection c = active; if (c != null) c.disconnect(); }
 }

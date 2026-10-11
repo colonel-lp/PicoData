@@ -1,5 +1,16 @@
 # Build validation
 
+## Android 0.27 — element popups, calendar summaries and derived history, 2026-10-11
+
+Source parent: PicoData a3ef6d92f7475a1ef9902f2bc0f990b74b5711c4. VersionName 0.27 / versionCode 9; owner compiles Ella-monitoring-v0.27.apk. Package/signing identity, minimum API 27, compile/target API 37, Gradle/JDK configuration and collector 0.7.2 are unchanged.
+
+- All application Java sources pass an Eclipse Java compiler source/target-8 check against Android API 35 reference classes and previously generated resource/BuildConfig classes. This is a Java source compatibility check, not a fresh Android SDK 37/Gradle resource build or APK assembly. The retained output filename provider maps versionName to Ella-monitoring-v0.27.apk.
+- CalendarAndDerivedHistoryTest passes 19 focused host-JVM JUnit tests: elapsed/calendar/fixed starts, Monday weeks/month names, local 23/25-hour DST days, expected entries, signed Ah/Wh/valid zero, independent power gaps, closed boundary exclusion, checkpoint cutoff, exact live component selection/signs, derived missing/mismatched inputs, common coverage, snapshot races, CSV input references, real metric-only fetch routes and sticky cancellation. Fixtures are synthetic; no real network/database/device inputs are used.
+- Reviewed element popup branches, equal-weight 38px/11.5px controls, 6px edges/gaps, Chart-before-Close, stateful exclusive highlights/swatches/Hide and title-only non-current bodies. Updated existing UI test expectations to the new Dialog/button footer. Those framework UI tests, lint and the whole app suite are not run for this source delivery. Font ownership/cleanup and main text-role changes are source-reviewed, not physical-device-verified.
+- Calendar summaries use device-local starts over UTC history. Closed boundary buckets are excluded rather than prorated; retention and UTC-offset edges can leave gaps. Derived totals require aligned complete common current coverage (matching complete-to-checkpoint partial buckets allowed); absent power leaves energy unavailable. Samples reports contributing history entries / expected resolution slots, not MQTT raw counts or a duration completeness guarantee. No collector logging/schema/sign changes.
+
+No APK assembled, signed, installed or published. Android Studio compilation and phone/Joying popup rendering/font ownership/period behavior remain for owner verification. Prior SOC and equal voltage-text spacing fixes are retained. The observed SBMS/Wi-Fi dropout cause remains unresolved; no transport or Mosquitto change is made in this version.
+
 ## Android 0.26 — same-version SOC depletion direction correction, 2026-10-11
 
 Source parent: PicoData b6da1b3b5dc82d39b55b7e80df487e3fb86d7012. Owner authorized an immediate simple UI fix; versionName 0.26 / versionCode 8 and output filename remain unchanged.

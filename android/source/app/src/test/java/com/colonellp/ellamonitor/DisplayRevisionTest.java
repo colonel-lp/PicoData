@@ -37,8 +37,8 @@ public class DisplayRevisionTest {
         throw new AssertionError(fallback);
     }
     static int fill(View v){return ((GradientDrawable)v.getBackground().getCurrent()).getColor().getDefaultColor();}
-    static AlertDialog popup(View v){v.performClick();return org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();}
-    static CheckBox choice(AlertDialog d,String label){return (CheckBox)ActivityTest.text(d.getWindow().getDecorView(),label);}
+    static Dialog popup(View v){v.performClick();return org.robolectric.shadows.ShadowDialog.getLatestDialog();}
+    static TextView choice(Dialog d,String label){return (TextView)ActivityTest.text(d.getWindow().getDecorView(),label.equals("Hide contents")?"Hide":label);}
 
     @Test public void wheelAndHexPreviewRepaintWithoutReplacingPageAndCancelRestores()throws Exception{
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
@@ -54,12 +54,12 @@ public class DisplayRevisionTest {
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
             MainActivity a=c.get();RenderTest.renderFixture(a);CompanionLayoutTest.layout(a,1024,600);ThemeConfig t=(ThemeConfig)ActivityTest.field(a,"theme");
             for(String name:new String[]{"Battery [Pico]","CFET","V [P]","Inverter","[1]"}){
-                LiveDashboard.Readout r=readout(a,name);AlertDialog d=popup(r);CheckBox one=choice(d,"Highlight 1"),two=choice(d,"Highlight 2");assertNotNull(one);assertNotNull(two);assertNotNull(one.getCompoundDrawables()[2]);assertEquals(t.gaugeHighlight,((GradientDrawable)one.getCompoundDrawables()[2]).getColor().getDefaultColor());assertEquals(t.highlight2,((GradientDrawable)two.getCompoundDrawables()[2]).getColor().getDefaultColor());
-                one.performClick();assertEquals(t.gaugeHighlight,fill(r));two.performClick();assertFalse(one.isChecked());assertTrue(two.isChecked());assertEquals(2,a.viewerPreferences().getInt("elementHighlight:"+r.id,0));assertEquals(t.highlight2,fill(r));
+                LiveDashboard.Readout r=readout(a,name);Dialog d=popup(r);TextView one=choice(d,"Highlight 1"),two=choice(d,"Highlight 2");assertNotNull(one);assertNotNull(two);assertNotNull(one.getCompoundDrawables()[2]);assertEquals(t.gaugeHighlight,((GradientDrawable)one.getCompoundDrawables()[2]).getColor().getDefaultColor());assertEquals(t.highlight2,((GradientDrawable)two.getCompoundDrawables()[2]).getColor().getDefaultColor());
+                one.performClick();assertEquals(t.gaugeHighlight,fill(r));two.performClick();assertFalse(one.isActivated());assertTrue(two.isActivated());assertEquals(2,a.viewerPreferences().getInt("elementHighlight:"+r.id,0));assertEquals(t.highlight2,fill(r));
                 int width=r.getWidth(),height=r.getHeight();choice(d,"Hide contents").performClick();assertEquals(View.INVISIBLE,r.name.getVisibility());if(r.gauge!=null)assertEquals(View.INVISIBLE,r.gauge.getVisibility());if(r.value!=null)assertEquals(View.INVISIBLE,r.value.getVisibility());assertEquals(width,r.getWidth());assertEquals(height,r.getHeight());d.dismiss();
-                d=popup(r);assertTrue(choice(d,"Hide contents").isChecked());choice(d,"Hide contents").performClick();assertEquals(View.VISIBLE,r.name.getVisibility());d.dismiss();
+                d=popup(r);assertTrue(choice(d,"Hide contents").isActivated());choice(d,"Hide contents").performClick();assertEquals(View.VISIBLE,r.name.getVisibility());d.dismiss();
             }
-            View title=ActivityTest.text(a.getWindow().getDecorView(),"Currents:");AlertDialog d=popup(title);choice(d,"Highlight 2").performClick();assertEquals(t.highlight2,fill(title));choice(d,"Hide contents").performClick();assertEquals("",((TextView)title).getText().toString());d.dismiss();d=popup(title);assertTrue(choice(d,"Hide contents").isChecked());d.dismiss();
+            View title=ActivityTest.text(a.getWindow().getDecorView(),"Currents:");Dialog d=popup(title);choice(d,"Highlight 2").performClick();assertEquals(t.highlight2,fill(title));choice(d,"Hide contents").performClick();assertEquals("",((TextView)title).getText().toString());d.dismiss();d=popup(title);assertTrue(choice(d,"Hide contents").isActivated());d.dismiss();
         }
     }
     @Test public void elementOptionsSurvivePresetAndLegacySelectionsMigrate()throws Exception{

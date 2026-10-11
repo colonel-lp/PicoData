@@ -35,7 +35,7 @@ public class Build25UiTest {
             updated=DisplayRevisionTest.readout(a,"Outside");assertEquals("My outside",updated.name.getText().toString());assertEquals(View.INVISIBLE,updated.name.getVisibility());
             assertEquals(1007,DisplayRevisionTest.readout(a,"Barometer").datum.value,0);
             JSONObject live=(JSONObject)ActivityTest.field(a,"live");live.getJSONObject("sbms").put("fresh",false);ActivityTest.call(a,"updateLive");assertEquals(1007,DisplayRevisionTest.readout(a,"Barometer").datum.value,0);
-            AlertDialog popup=DisplayRevisionTest.popup(updated);assertTrue(DisplayRevisionTest.choice(popup,"Highlight 2").isChecked());assertTrue(DisplayRevisionTest.choice(popup,"Hide contents").isChecked());popup.dismiss();
+            Dialog popup=DisplayRevisionTest.popup(updated);assertTrue(DisplayRevisionTest.choice(popup,"Highlight 2").isActivated());assertTrue(DisplayRevisionTest.choice(popup,"Hide contents").isActivated());popup.dismiss();
         }
     }
     @Test public void existingCatalogueSettingsStillApplyToTheSameInstrument() throws Exception {
@@ -46,15 +46,15 @@ public class Build25UiTest {
             LiveDashboard.Readout r=DisplayRevisionTest.readout(a,"Outside");assertEquals(id,r.id);assertEquals("Saved outside",r.name.getText().toString());assertEquals(View.INVISIBLE,r.name.getVisibility());assertNotNull(r.datum.metric);
         }
     }
-    @Test public void footerHasFourControlsAndVoltagesUseTheCellTextSize() throws Exception {
+    @Test public void footerHasFiveControlsAndVoltagesUseTheCellTextSize() throws Exception {
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()) {
             MainActivity a=c.get();RenderTest.renderFixture(a);CompanionLayoutTest.layout(a,1024,600);
             for(String label:new String[]{"V [P]","V [S]"}){LiveDashboard.Readout r=DisplayRevisionTest.readout(a,label),cell=DisplayRevisionTest.readout(a,"[1]");assertEquals(cell.value.getTextSize(),r.value.getTextSize(),0);assertTrue(r.centred());assertTrue(r.value.getText().toString().contains(label.replace(" ","")));assertEquals(10,r.getPaddingLeft());assertEquals(10,r.getPaddingRight());}
-            for(int[] size:new int[][]{{1024,600},{360,760}}){CompanionLayoutTest.layout(a,size[0],size[1]);AlertDialog popup=DisplayRevisionTest.popup(DisplayRevisionTest.readout(a,"Battery [Pico]"));PresetAndColourTest.idle();
-                ViewGroup footer=(ViewGroup)DisplayRevisionTest.choice(popup,"Highlight 1").getParent();assertEquals(4,footer.getChildCount());assertSame(footer,DisplayRevisionTest.choice(popup,"Highlight 2").getParent());assertSame(footer,DisplayRevisionTest.choice(popup,"Hide contents").getParent());assertEquals("CLOSE",((TextView)footer.getChildAt(3)).getText().toString());
+            for(int[] size:new int[][]{{1024,600},{360,760}}){CompanionLayoutTest.layout(a,size[0],size[1]);Dialog popup=DisplayRevisionTest.popup(DisplayRevisionTest.readout(a,"Battery [Pico]"));PresetAndColourTest.idle();
+                ViewGroup footer=(ViewGroup)DisplayRevisionTest.choice(popup,"Highlight 1").getParent();assertEquals(5,footer.getChildCount());assertSame(footer,DisplayRevisionTest.choice(popup,"Highlight 2").getParent());assertSame(footer,DisplayRevisionTest.choice(popup,"Hide contents").getParent());assertEquals("Chart",((TextView)footer.getChildAt(3)).getText().toString());assertEquals("Close",((TextView)footer.getChildAt(4)).getText().toString());
                 footer.measure(View.MeasureSpec.makeMeasureSpec(a.dialogDp(412),View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(a.dialogDp(38),View.MeasureSpec.EXACTLY));footer.layout(0,0,footer.getMeasuredWidth(),footer.getMeasuredHeight());
-                for(int i=0;i<4;i++){assertTrue(footer.getChildAt(i).getWidth()>0);assertEquals(footer.getChildAt(0).getTop(),footer.getChildAt(i).getTop());assertEquals(footer.getChildAt(0).getHeight(),footer.getChildAt(i).getHeight());assertTrue(footer.getChildAt(i).getBottom()<=footer.getHeight());assertTrue(footer.getChildAt(i).getRight()<=footer.getWidth());}
-                footer.getChildAt(3).performClick();assertFalse(popup.isShowing());
+                for(int i=0;i<5;i++){assertTrue(footer.getChildAt(i).getWidth()>0);assertEquals(footer.getChildAt(0).getTop(),footer.getChildAt(i).getTop());assertEquals(footer.getChildAt(0).getHeight(),footer.getChildAt(i).getHeight());assertTrue(footer.getChildAt(i).getBottom()<=footer.getHeight());assertTrue(footer.getChildAt(i).getRight()<=footer.getWidth());}
+                footer.getChildAt(4).performClick();assertFalse(popup.isShowing());
             }
         }
     }

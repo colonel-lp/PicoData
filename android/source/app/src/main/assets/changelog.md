@@ -1,5 +1,14 @@
 # Android changelog
 
+## 0.27 — 2026-10-11
+
+- Redesign element popups with a larger centred title and equal-height themed buttons. Highlight 1/2 are exclusive buttons with colour swatches; Hide, Chart and Close share the bottom row, with Chart directly before Close. Buttons and their bounding box have 6px scaled gaps. Other approved dialog/dashboard padding is retained.
+- Current popups show only Current (signed net Ah), Energy (signed net Wh), Samples x/y and calendar-period controls. Rolling uses the current hour, midnight, Monday or month start through now in the device timezone; Fixed uses the previous calendar hour/day/week/month. Month buttons show the month name. SOC and other readouts have title/footer only.
+- Following the owner's build-time clarification, Samples counts recorded contributing history entries versus expected minute/hour/day slots for the selected elapsed/full period, not raw publisher sample counts. Retention, missing records and unavailable boundary buckets stay gaps; no out-of-period integral is prorated or included. Entry counts do not guarantee complete duration/power coverage.
+- Load [Pico] and Inverter summaries/charts derive from their existing logged constituents with the live selection/signs. Inverter uses raw Battery [Pico] plus the signed Load sum. Missing or unmatched current coverage leaves gaps; unavailable power leaves Energy unavailable while valid Current remains. CSV adds constituent IDs/signs. No new aggregate logging, database changes or MQTT changes.
+- Font choices open above their owning Edit theme dialog and are dismissed on editor close, colour-picker opening and backgrounding. Main-page ordinary labels/values/units/limits/dashes use Labels. Remove the active Button off text picker/role and use Button on text for actual buttons; older theme files remain readable. Title colours, fixed flag status colours and other bottom-bar roles are preserved.
+- Source versionName 0.27 / versionCode 9; Android Studio output Ella-monitoring-v0.27.apk. Package/signing identity, SDK targets and collector 0.7.2 are unchanged. Retain the preceding SOC direction and equal voltage-text spacing fixes. Focused host-JVM checks pass; no APK assembly/signing/publication or hardware validation.
+
 ## 0.26 — 2026-10-11
 
 - Same-version SOC direction correction: anchor the remaining arc's end at 12 o'clock so its moving edge depletes anticlockwise as SOC falls (75% at 9, 50% at 6, 25% at 3 o'clock). Retain the whole-arc threshold colours and actual SOC value. No tests or compilation run for this correction.

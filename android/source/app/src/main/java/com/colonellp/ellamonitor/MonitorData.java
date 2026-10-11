@@ -120,11 +120,11 @@ final class MonitorData {
                 add(result, "battery:pico-voltage", "V [P]", "V", "summary", "voltage", available ? number(raw, "voltage") : null, null, null, pico.optString("receivedAt"));
             }
         }
-        add(result, "pico:load-sum", "Load Σ · Pico", "A", "battery", "current", allLoads && loadCount > 0 ? picoLoad : null, null, null, pico.optString("receivedAt"));
+        add(result, "pico:load-sum", "Load Σ · Pico", "A", "battery", "current", allLoads && loadCount > 0 ? picoLoad : null, null, DerivedHistory.metric(metrics,false), pico.optString("receivedAt"));
         Double batteryCurrent=null;
         for(Datum d:result.values())if(d.metric!=null&&d.metric.channel.equals("picoBattery")&&d.quantity.equals("current"))batteryCurrent=d.value;
         Double load=result.get("pico:load-sum").value;
-        add(result,"pico:inverter","Inverter","A","loads","current",batteryCurrent!=null&&load!=null?batteryCurrent+load:null,null,null,pico.optString("receivedAt"));
+        add(result,"pico:inverter","Inverter","A","loads","current",batteryCurrent!=null&&load!=null?batteryCurrent+load:null,null,DerivedHistory.metric(metrics,true),pico.optString("receivedAt"));
         JSONObject flags = object(object(sbms, "reading"), "flags");
         for (String key : new String[]{"CFET", "DFET", "OVLK", "UVLK", "EOC", "IOT", "LVC", "CELF"}) {
             Object value = flags.opt(key); add(result, "flag:" + key, key, "", "flags", key, null, sFresh && value instanceof Boolean ? (Boolean)value : null, null, sbms.optString("receivedAt"));

@@ -1,6 +1,6 @@
 # Appearance and viewer presets
 
-Updated in **0.26 / build 8**.
+Updated in **0.27 / build 9**.
 
 Themes contain colour roles only, with name/format metadata. Named files remain in Downloads/ella-monitoring/themes; older themes are read compatibly. Font belongs to viewer settings/presets and is selected at the bottom left of Edit theme, with Back at the right and its choices opening above. Choosing/editing a theme preserves the font and affects only the Theme modification indication. Preset save/load/update does not include or restore colours/theme selection.
 
@@ -12,9 +12,9 @@ Presets contain labels and editable app/chart settings, element highlight/hidden
 
 Older presets migrate embedded font into the settings field, discard theme from preset comparison and retain their labels/settings. Presets that previously had no connection snapshot acquire the existing active connection during migration, preserving connectivity. Migration leaves older named theme files readable; writing a theme produces colour-only format 17.
 
-PRESET • name and THEME • name are available on all pages; modifications show UNSAVED and the changed dot. One preset difference map controls selector state and changed-item colouring for Settings fields, chart setting controls, screen/lock icons and editable dashboard labels/headings. Save/update or restoring matching values clears differences. Automatic chart fallback is read-only and live readings/freshness never count as preset settings. Chart edits update indication immediately.
+PRESET • name and THEME • name are available on all pages; modifications show UNSAVED and the changed dot. One preset difference map controls selector state and changed-item colouring for Settings fields, chart setting controls and editable dashboard headings. Ordinary dashboard text uses Labels in 0.27; label/element edits still affect the preset dot. Screen/lock icon states remain excluded from presets. Save/update or restoring matching values clears differences. Automatic chart fallback is read-only and live readings/freshness never count as preset settings. Chart edits update indication immediately.
 
-Appearance code adapts the owner's EQ reference without DSP/audio/vendor operations. Popups inherit the active app theme; summaries, charts, source bindings and calculations are retained.
+Appearance code adapts the owner's EQ reference without DSP/audio/vendor operations. Popups inherit the active app theme; source bindings remain, with the requested calendar summaries and derived history introduced in 0.27.
 
 In 0.24 Changed indicator occupies the slot beside Title outline. Indicator background and Voltages background sit together before gauge panels; Highlight 1 and Highlight 2 are paired and show their colour/hex values. Every readout/heading popup shows both colours and an exclusive highlight choice, plus Hide contents. Active preferences and named presets migrate old gauge-highlight booleans to Highlight 1 without clearing labels or connection data. Theme format 16 reads the legacy gaugeHighlight key and inherits old panel colours for the new bounding-box roles.
 
@@ -29,3 +29,8 @@ In 0.26 PresetStore moves named presets to JSON files in Downloads/ella-monitori
 SavedJson enforces a 64 KB file limit, valid UTF-8 and strict complete JSON grammar with a bounded nesting depth, duplicate-key rejection and no trailing content. PresetState validates known types/ranges/enums, label lengths, legacy flags/font and encrypted connection structure. Theme validation accepts supported formats and older missing roles, but rejects malformed supplied colour fields rather than coercing defaults. Invalid files are excluded from menus with feedback; failed loads preserve active values. Names exclude separators/control characters/reserved defaults. Current theme format remains 17; new preset metadata uses presetFormat 1. Tokens remain AES-GCM ciphertext/IV, tied to the original installation's Keystore. Decryption/authentication is staged before committing a loaded preset. No plaintext token export is introduced.
 
 Legacy writes use temporary files and rename; MediaStore replacements retain the old bytes and restore them on a write failure, reporting an error if restoration itself fails. Created incomplete entries are removed. Failed migration retains private originals. These handling checks are synthetic, not a claim of crash/power-loss atomicity or real-device storage verification.
+
+
+In 0.27 the picker names the ordinary dashboard text role Labels. All main-page non-title labels, values, limits, units and unavailable dashes use it; actual button text uses Button on text. Button off text is absent from the picker, new theme serialization and colour comparison. Older supplied off-text fields still validate/load compatibly but have no active role. Other on/off borders, title colours and fixed status glyph colours retain their roles. Colour-only format 17 remains readable/writable.
+
+The Font PopupWindow is owned by the theme-dialog anchor's window token, opens above its button and is retained only while open. Dismissal clears the reference; closing Edit theme, opening a colour picker or backgrounding dismisses the menu. Font remains preset state. Element popups use equal-height on/off themed buttons for highlight choices, visibility, periods and mode, with one highlight selection and visible colour swatches.
