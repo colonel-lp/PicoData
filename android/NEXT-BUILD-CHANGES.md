@@ -1,3 +1,17 @@
+## Next-build requests — preset files and validation — 2026-10-11
+
+Recorded after source 0.25. This is a storage request and validation investigation; no application changes or version increment are authorized by this question.
+
+- [ ] Save named presets as JSON files in **Downloads/ella-monitoring/presets**, alongside the existing Downloads/ella-monitoring/themes folder. Adapt the existing Android-version-compatible Downloads storage implementation. Preserve save/update, load, rename/delete, view-values, selected-preset and changed-item behavior. Migrate existing app-private presets without losing settings, deleting originals before successful migration, or overwriting existing files silently. Keep the agreed separation: themes contain colours; presets contain editable settings, labels and connection data; Keep screen awake, Full screen and Lock remain excluded.
+- [ ] Strengthen validation for preset and theme files before applying them: bounded file reads, valid JSON object/document, supported compatible format, appropriate field types and allowed setting values/ranges, and safe file/name handling. Preserve compatible older files and missing newer fields through explicit migration/defaults; distinguish them from malformed supplied fields rather than silently accepting arbitrary objects or coercing invalid values. Reject invalid files with clear feedback and retain the current active settings/theme. Add synthetic malformed-file and migration checks when implementation is authorized.
+- [ ] Retain encrypted token storage and redacted value summaries; never write plaintext tokens to Downloads, logs, copied summaries or source. Current AES/GCM encryption uses an Android Keystore key tied to the installation/device: moving a saved encrypted preset to another installation/device does not make its connection token portable. Handle an undecryptable saved connection explicitly without partially applying the preset or replacing a working connection; do not invent a plaintext export or change this privacy contract.
+
+Current-source investigation at f776e78595aee116a9154e16fc53b5e14e6790f2:
+
+- Presets are JSON strings in app-private SharedPreferences (viewer.preset:), not Downloads files. Load catches JSON/type/decryption failures and stages connection/setting edits before committing. It validates the connection address and decrypted token, but does not strictly validate all setting ranges, enums or field types; normalization accepts supplied values for recognized keys.
+- Named theme files already use Downloads/ella-monitoring/themes. File reading rejects parse/read failures and files larger than 65,536 bytes; save validates filename length and unsafe characters. ThemeConfig.fromJson uses permissive defaults/coercions for colour fields, so a syntactically parseable but malformed theme can be accepted as defaults. There is no complete strict file schema/format validation.
+- The colour picker's six-digit RGB input checks and damaged encrypted-connection regression test exist. They do not establish comprehensive malformed preset/theme file validation.
+
 ## Authorized source build 0.25 — 2026-10-11
 
 Completed the agreed source changes for 0.25 / build 7 and the accompanying collector 0.7.2 display-policy correction. Owner builds Ella-monitoring-v0.25.apk in Android Studio; no APK assembly/signing/publication here. Physical-device checks and the demonstrated device/network dropout investigation remain open.
