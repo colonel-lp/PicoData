@@ -1,3 +1,10 @@
+## Next-build requests — Settings export and file-picker failure — 2026-10-11
+
+- [ ] Remove **Export current chart range** and its otherwise empty EXPORT group from the Settings page. Retain the chart-page export action; the owner's removal request applies to Settings.
+- [ ] Investigate/fix the reported **No file picker is available.** failure for CSV export. Current MainActivity.exportHistory opens Android ACTION_CREATE_DOCUMENT and displays this message for any exception when launching it; it does not establish that no picker is installed. Distinguish an unavailable handler from other launch failures, provide useful redacted error feedback and a supported save fallback when a document picker is unavailable. Preserve user cancellation, loaded-range CSV contents and Android 8.1/current-version storage compatibility. Confirm the affected device and actual launch failure; do not assume the same cause on Joying and Samsung.
+
+Recorded from current source at 81ade8e2bf7f45a82b0dad9fa0248e48057e7c62. Pending next authorized source build; no source/version change in this investigation.
+
 ## Next-build requests — gauge appearance and text positions — 2026-10-11
 
 Recorded after source 0.25; pending the next authorized source build.
