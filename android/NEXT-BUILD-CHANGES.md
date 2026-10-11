@@ -1,3 +1,33 @@
+## Next-build requests — element popups, summaries, font dropdown and text themes — 2026-10-11
+
+Owner supplied this list for the next build. Record only: no application-source changes or version increment are authorized by this list.
+
+### Popup layout and controls
+
+- [ ] Replace Highlight 1/2 checkboxes with selectable buttons, retaining mutually exclusive selection, shown highlight colours and saved per-element choices. Keep Hide contents in the bottom control row.
+- [ ] Put Chart immediately to the left of Close in the bottom row, alongside the highlight/hide controls; preserve existing chart navigation and hide/highlight behavior.
+- [ ] Make every popup button's text the same size as Close. Period/time buttons must also match Close's height.
+- [ ] Apply 6px gaps on every side between buttons and between buttons and their bounding box. This explicitly authorizes these popup/button spacing locations; do not change unrelated dashboard spacing.
+- [ ] Centre the element label/title at the top in larger text. Remove the existing snapshot/receipt/source/original-name/help/coverage prose and other unrequested text.
+- [ ] Use Button on/off theming for all actual buttons, including selectable highlights, periods and the Rolling/Fixed control.
+
+### Summary periods and contents
+
+- [ ] Add a period row directly above the bottom highlight/control row, with both rows the same total width. Put the Rolling/Fixed mode button on the right. Period buttons change with the mode: This hour / Last hour, Today / Yesterday, This week / Last week, This month / Last month, showing the relevant month name. Use Close's text size throughout.
+- [ ] Weeks run Monday through Sunday. Confirm precise Rolling semantics before implementation: the supplied current-period labels could mean the current calendar hour/day/week/month to now, whereas the existing code uses trailing 1-hour/24-hour/7-day/30-day windows. Do not silently choose between these. Also establish the calendar timezone when implementing fixed boundaries.
+- [ ] For Pico currents and all current gauges, show only the centred title plus Current: using the previous signed net-charge summary (Ah), and Energy: using the previous signed net-energy summary (Wh), with the requested period/control rows. Preserve their existing source meanings and arithmetic; do not substitute instantaneous amps/watts or invent unlogged metrics.
+- [ ] SOC popups have the title and common bottom controls, with no period buttons or extra summary text.
+- [ ] Voltage, cell delta, Ah, time remaining, barometer, LPG, water, Pitch/Roll and temperature popups need only the title and bottom control row; no summary-period controls or additional body text.
+- [ ] On relevant current/energy summary pages, place Samples x/y between the summary values and buttons: captured samples / samples that should have been captured for the selected period. Use actual recorded sample counts and the established logging cadence, not the number of aggregated history rows. Do not imply missing samples were recorded; handle partial periods and unavailable cadence honestly.
+
+### Font menu and text-colour roles
+
+- [ ] Fix the Font dropdown appearing behind Edit theme and remaining visible after the editor closes. Attach it to the owning theme-dialog window, keep it above that editor, and dismiss/clear it on editor close/dismissal and lifecycle changes. Preserve font choice as preset state.
+- [ ] All main-page labels and values, other than the three titles and bottom-bar controls, use the Labels theme colour. Include gauge labels/values/units/limits and unavailable dashes; do not select a readout text colour from Button on/off based on data availability.
+- [ ] Remove Button off text from the theme colour picker/active role and replace remaining uses with Button on text. Apply the Labels rule above to main-page content; use Button on text for actual button text that previously used the removed role. Preserve other button on/off theme roles and compatible loading of older saved themes. Titles retain their Title text role; bottom controls retain their own button roles apart from the explicitly removed off-text role.
+
+Read-only source review: PicoData 418d5d5d373a9932b77ca40ada3b465c9a5e95fe. LiveDashboard.Readout.update selects Button on/off text for available/unavailable readings, while GaugeView uses Palette.text (Labels) and Palette.muted (Button off text), explaining the inconsistent roles. MainActivity.showElementDetail/addElementOptions/loadSummary contain the existing verbose summaries, four rolling periods and checkbox footer. Its font menu uses anchoredMenu.showAtLocation(viewport, ...) and a method-local PopupWindow; the theme-dialog dismissal handler does not dismiss that popup. These are source findings, not device tests.
+
 ## Completed same-version correction — SOC depletion direction — 2026-10-11
 
 Owner reported that both SOC gauges still operated clockwise and explicitly requested an immediate fix. Retain 0.26 / build 8.
