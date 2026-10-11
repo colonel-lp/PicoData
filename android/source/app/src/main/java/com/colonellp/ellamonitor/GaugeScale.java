@@ -29,8 +29,7 @@ final class GaugeScale {
         float fraction = (float)Math.max(0, Math.min(1, (value - min) / (max - min)));
         return fraction * (kind == Kind.SOC ? -360 : 250);
     }
-    static float socBandSweep(double value, int band) {
-        double[] ends = {0, 25, 50, 100};
-        return (float)(-3.6 * Math.max(0, Math.min(ends[band + 1] - ends[band], value - ends[band])));
+    static int socColour(double value) {
+        return value>=50?0xff32dc68:value>=25?0xffffbf45:0xffff4545;
     }
 }

@@ -16,7 +16,7 @@ import static org.junit.Assert.*;
 @Config(sdk=35,qualifiers="w1280dp-h720dp-land-mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class RenderTest {
-    @org.junit.Before public void clearSettings(){org.robolectric.RuntimeEnvironment.getApplication().getSharedPreferences("viewer",0).edit().clear().commit();}
+    @org.junit.Before public void clearSettings(){org.robolectric.RuntimeEnvironment.getApplication().getSharedPreferences("viewer",0).edit().clear().commit();ThemeStorageTest.installProvider();}
     static void renderFixture(MainActivity a)throws Exception{
         org.json.JSONObject catalogue=ContractTest.catalogue(),live=ContractTest.live();org.json.JSONArray metrics=catalogue.getJSONArray("metrics"),measurements=live.getJSONArray("measurements");org.json.JSONObject raw=live.getJSONObject("pico").getJSONObject("readings");
         for(int i=1;i<9;i++){String id="synthetic-load-"+i;metrics.put(ContractTest.metric(id,"pico","electrical","load","",300+i).put("name","Load "+(i+1)));measurements.put(new org.json.JSONObject().put("id",id).put("fresh",true).put("mappingValid",true).put("values",new org.json.JSONObject().put("current",-.2*i).put("voltage",12.4).put("watts",-.2*i*12.4)));}

@@ -30,7 +30,7 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=35,qualifiers="w1024dp-h600dp-land-mdpi")
 public class DisplayRevisionTest {
-    @Before public void clear(){RuntimeEnvironment.getApplication().getSharedPreferences("viewer",0).edit().clear().commit();}
+    @Before public void clear(){RuntimeEnvironment.getApplication().getSharedPreferences("viewer",0).edit().clear().commit();ThemeStorageTest.installProvider();}
     static LiveDashboard.Readout readout(MainActivity a,String fallback)throws Exception{
         LiveDashboard d=(LiveDashboard)ActivityTest.field(a,"liveDashboard");
         for(int i=0;i<d.getChildCount();i++)if(d.getChildAt(i) instanceof LiveDashboard.Readout){LiveDashboard.Readout r=(LiveDashboard.Readout)d.getChildAt(i);if(r.fallback.equals(fallback))return r;}
@@ -66,7 +66,7 @@ public class DisplayRevisionTest {
         android.content.SharedPreferences prefs=RuntimeEnvironment.getApplication().getSharedPreferences("viewer",0);
         JSONObject legacy=PresetState.defaults().put("gaugeHighlight:test",true);prefs.edit().putInt("viewer.settingsFormat",2).putBoolean("gaugeHighlight:test",true).putString("viewer.preset:Old",legacy.toString()).commit();
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
-            MainActivity a=c.get();PrivateSettings s=(PrivateSettings)ActivityTest.field(a,"settings");assertEquals(1,s.highlight("test"));assertFalse(prefs.contains("gaugeHighlight:test"));assertEquals(1,new JSONObject(prefs.getString("viewer.preset:Old","{}")).getInt("elementHighlight:test"));
+            MainActivity a=c.get();PrivateSettings s=(PrivateSettings)ActivityTest.field(a,"settings");assertEquals(1,s.highlight("test"));assertFalse(prefs.contains("gaugeHighlight:test"));assertEquals(1,((PresetStore)ActivityTest.field(a,"presets")).load("Old").getInt("elementHighlight:test"));
             s.setHighlight("test",2);prefs.edit().putBoolean("elementHidden:test",true).commit();PresetAndColourTest.save(a,"New");s.setHighlight("test",0);prefs.edit().remove("elementHidden:test").commit();assertTrue(PresetAndColourTest.modified(a));PresetAndColourTest.load(a,"New");assertEquals(2,s.highlight("test"));assertTrue(s.hidden("test"));assertFalse(PresetAndColourTest.modified(a));
             PresetAndColourTest.load(a,"Old");assertEquals(1,s.highlight("test"));assertFalse(s.hidden("test"));assertFalse(PresetAndColourTest.modified(a));
         }
@@ -114,7 +114,7 @@ public class DisplayRevisionTest {
     @Test public void screenAndLockStatesAreIndependentOfCurrentAndLegacyPresets()throws Exception{
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
             MainActivity a=c.get();PresetAndColourTest.save(a,"Saved");
-            JSONObject saved=new JSONObject(a.viewerPreferences().getString("viewer.preset:Saved","{}"));
+            JSONObject saved=((PresetStore)ActivityTest.field(a,"presets")).load("Saved");
             for(String key:new String[]{"keepScreen","fullscreen","locked"})assertFalse(saved.has(key));
             for(String label:new String[]{"Keep screen on","Full screen","Lock gauge popups"})ActivityTest.description(a.getWindow().getDecorView(),label).performClick();
             assertFalse(PresetAndColourTest.modified(a));

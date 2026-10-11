@@ -1,5 +1,14 @@
 # Android changelog
 
+## 0.26 — 2026-10-11
+
+- Remove pointers from both Battery current gauges. Both SOC gauges use one anticlockwise remaining arc: green at 50–100%, amber from 25% to below 50%, red below 25%, selected before rounding the number.
+- Reduce Pitch/Roll live text; move gauge limit labels down 6px. The six current gauges show centred amps on the limit row and move their live values up 6px. Barometer, LPG and Water live values move up 6px. Preserve other layout/padding and source calculations.
+- Save/manage named presets in Downloads/ella-monitoring/presets. Migrate private originals only after a successful file save; preserve conflicting files under a separate migrated name and keep the selected preset consistent. Active preferences remain private.
+- Validate bounded UTF-8/strict JSON, file names, supported formats, field types, ranges, colour values and encrypted connection structure before loading. Preserve compatible older files, current settings on rejection and originals on failed migration. Keep API token ciphertext encrypted with the existing installation's Keystore key; another installation cannot decrypt it. Theme files remain in Downloads/ella-monitoring/themes.
+- Remove the Settings export button/group. Retain chart CSV export; if Android's save dialogue fails to launch, save to Downloads/ella-monitoring/exports with a timestamped name. Distinguish missing CSV handler from another launch exception, show the destination and preserve ordinary cancellation.
+- Source versionName 0.26 / versionCode 8; owner builds Ella-monitoring-v0.26.apk in Android Studio with the same package/signing key. No app APK assembly/signing/release publication. Pi collector remains 0.7.2; the observed SBMS dropouts associated with Joying startup still require controlled device/network testing.
+
 ## 0.25 — 2026-10-11
 
 Android source version 0.25 / versionCode 7. Owner-built output: Ella-monitoring-v0.25.apk. Prepare source only; package/signing identity and SDK targets are unchanged. Collector 0.7.2 supplies the accompanying live-freshness correction; the app remains compatible with 0.7.1.

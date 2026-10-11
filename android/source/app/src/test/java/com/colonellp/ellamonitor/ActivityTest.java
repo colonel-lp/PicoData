@@ -20,7 +20,7 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = {27, 35}, qualifiers = "w1024dp-h600dp-land-mdpi")
 public class ActivityTest {
-    @org.junit.Before public void clearSettings(){org.robolectric.RuntimeEnvironment.getApplication().getSharedPreferences("viewer",0).edit().clear().commit();}
+    @org.junit.Before public void clearSettings(){org.robolectric.RuntimeEnvironment.getApplication().getSharedPreferences("viewer",0).edit().clear().commit();ThemeStorageTest.installProvider();}
     static View text(View view, String value) {
         if (view instanceof TextView && ((TextView)view).getText().toString().equals(value)) return view;
         if (view instanceof ViewGroup) for (int i=0;i<((ViewGroup)view).getChildCount();i++){View match=text(((ViewGroup)view).getChildAt(i),value);if(match!=null)return match;}

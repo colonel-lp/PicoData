@@ -54,7 +54,7 @@ public class BindingAndGaugeTest {
         assertEquals(0,GaugeScale.sweep(GaugeScale.Kind.BATTERY,"A",0),0);assertEquals(-62.5,GaugeScale.sweep(GaugeScale.Kind.BATTERY,"A",-5),0);assertEquals(62.5,GaugeScale.sweep(GaugeScale.Kind.BATTERY,"A",5),0);assertEquals(-125,GaugeScale.sweep(GaugeScale.Kind.BATTERY,"A",-50),0);
         assertEquals(0,GaugeScale.sweep(GaugeScale.Kind.LOAD,"A",-2),0);assertEquals(250,GaugeScale.sweep(GaugeScale.Kind.LOAD,"A",12),0);
         assertEquals(-90,GaugeScale.sweep(GaugeScale.Kind.SOC,"%",25),0);assertEquals(-180,GaugeScale.sweep(GaugeScale.Kind.SOC,"%",50),0);assertEquals(-360,GaugeScale.sweep(GaugeScale.Kind.SOC,"%",100),0);
-        assertEquals(0,GaugeScale.socBandSweep(0,0),0);assertEquals(-90,GaugeScale.socBandSweep(25,0),0);assertEquals(0,GaugeScale.socBandSweep(25,1),0);assertEquals(-90,GaugeScale.socBandSweep(50,1),0);assertEquals(-180,GaugeScale.socBandSweep(100,2),0);
+        assertEquals(0xff32dc68,GaugeScale.socColour(100));assertEquals(0xff32dc68,GaugeScale.socColour(50));assertEquals(0xffffbf45,GaugeScale.socColour(49.9));assertEquals(0xffffbf45,GaugeScale.socColour(25));assertEquals(0xffff4545,GaugeScale.socColour(24.9));assertEquals(0xffff4545,GaugeScale.socColour(0));
         assertEquals(GaugeScale.Kind.DEFAULT,GaugeScale.kind("environment","Water (%)"));
     }
 }

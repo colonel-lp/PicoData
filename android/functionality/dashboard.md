@@ -1,6 +1,6 @@
 # Live dashboard
 
-Updated in **0.25 / build 7**.
+Updated in **0.26 / build 8**.
 
 The Node-RED arrangement uses a 1024px-wide logical landscape canvas with uniform width-based control scale; usable height varies with system bars. The bottom bar stays 54 logical pixels high with 40px controls and 6px top padding in both fullscreen states. Portrait windows retain a rotated landscape canvas when Android ignores sensor-landscape orientation. Fullscreen omits hidden system-bar insets while keeping cutout/keyboard safety. The app-wide title is removed; the Ella Monitoring dashboard title is restored above the flags, consuming central gauge height only. Currents:, Temps: and Ella Monitoring have separate theme title backgrounds/outlines; the connection-status line is optional and always absent on Settings.
 
@@ -22,8 +22,10 @@ In 0.24 V[P]/V[S] end at logical x=624, leaving 6px inside the summary box at x=
 
 Indicator background colours the flags bounding box; Voltages background colours both lower summary/cell boxes. Individual button backgrounds, outlines and fixed flag meanings remain independently applied. See [live-connection.md](live-connection.md) for independent freshness and stable-view polling.
 
-In 0.25 Load scales are fixed at 0–10 A with Gauge negative arcs; PV1/PV2 are 0–20 A. Battery currents are −10 to +10 A, with a needle, central zero and an arc only from zero to the clamped current. Negative/positive currents use their respective gauge theme colours. SOC uses a complete anticlockwise ring: red 0–25%, amber 25–50%, green 50–100%, starting/ending at 12 o'clock. Numeric source values are never clamped or recalculated by these scale changes. LPG, water, pressure and Pitch/Roll retain their previous ranges.
+In 0.25 Load scales are fixed at 0–10 A with Gauge negative arcs; PV1/PV2 are 0–20 A. Battery currents are −10 to +10 A, with central zero (their needles are removed in 0.26) and an arc only from zero to the clamped current. Negative/positive currents use their respective gauge theme colours. SOC uses a complete anticlockwise ring: red 0–25%, amber 25–50%, green 50–100%, starting/ending at 12 o'clock. Numeric source values are never clamped or recalculated by these scale changes. LPG, water, pressure and Pitch/Roll retain their previous ranges.
 
 V[P]/V[S] now use the same 14px logical centred label/value text as cell voltages; all retain 10px text side padding and existing boxes. Default V[P]/V[S] text is compact so those narrower boxes fit the full 14px text without automatic shrinkage; customised labels still use the existing fit behavior. Main-page readout normal/pressed outlines use the independent Button border role. Gauge-panel/title outlines and bottom-bar on/off theming remain separate.
 
 Element popup Highlight 1/2, Hide contents and Close are on the final horizontal row, with compact scaled checkboxes, colour swatches and 6px gaps between controls. Outer popup padding remains unchanged. Summary periods and Chart remain available above that footer. Only the two save-change confirmation dialogs change padding; other dashboard/popup/editor padding remains as approved.
+
+In 0.26 both SOC gauges use one remaining anticlockwise arc, with its whole colour selected at unrounded thresholds: green at 50–100%, amber at 25% to below 50%, red below 25%. This supersedes fixed red/amber/green segments. Both Battery current pointers are removed; Pitch/Roll retain theirs with live text reduced from 24% to 20% of gauge diameter. Limit labels move down 6 logical pixels (retaining the safe lower-edge bound). The six current units read amps centred on the limit baseline; their values move up 6px. Pressure/LPG/Water values also move up 6px; units, unavailable dashes, ranges/measurement values and unrelated padding are preserved.

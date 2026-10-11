@@ -1,5 +1,20 @@
 # Build validation
 
+## Android 0.26 — gauge presentation and saved files, 2026-10-11
+
+Source parent: PicoData c2b50af8e392722e76f248aa85e1367c084c8ed9. VersionName 0.26 / versionCode 8; owner compiles Ella-monitoring-v0.26.apk in Android Studio. Package/signing identity, minimum API 27 and compile/target API 37 are unchanged. Pi collector remains 0.7.2.
+
+Application Java/resources and test sources compile with the retained JDK 25 daemon configuration. Two final focused testDebugUnitTest runs pass **25 tests, zero failures/errors/skips**: BindingAndGaugeTest, Build26GaugeTest, Build26StorageTest, PresetAndColourTest and ThemeStorageTest. Framework tests use a temporary JDK 17 test launcher and local dependency settings; these are not committed. lintDebug passes with **zero errors and 53 existing warnings**. A configuration-only check verifies both debug/release output filename providers resolve to Ella-monitoring-v0.26.apk. No app APK assembly, signing, installation or release publication occurs.
+
+- Recording-Canvas tests verify pointer-free Battery gauges, one anticlockwise SOC remaining arc and the unrounded 50%/25% colour thresholds; centred amps/limits, requested 6px vertical shifts, smaller Pitch/Roll values and missing-value dashes. Native synthetic dashboard/Settings/dialog renders were inspected; these are not device evidence. Other padding and source calculations remain unchanged.
+- Filesystem-backed Downloads provider tests verify preset save/load/rename/delete, private migration with conflicts and selected-name preservation, bounded strict JSON/UTF-8, duplicate keys, supported formats/types/ranges, invalid files preserving active state, compatible legacy fields, and malformed or unauthenticated encrypted connections rejected before settings change. Existing theme/preset separation, changed-item indication, colour-picker return/validation, encrypted connection restoration and copied-value redaction also pass.
+- Simulated partial write failure restores an existing scoped-storage file; failed migration retains the private original and permits a later retry. API 27 exercises the legacy filesystem backend. These stand-ins do not prove actual provider/permission behavior or crash/power-loss atomicity. Credentials remain installation-key-bound ciphertext; Android Keystore tests use a synthetic key.
+- Simulated missing-handler and security exceptions exercise picker-free chart CSV export to Downloads/ella-monitoring/exports, comparing exact synthetic CSV contents. Ordinary cancellation does not export. Settings has no Export button. This provides an alternative when the Joying save dialogue cannot launch; actual head-unit file-picker behavior remains unverified.
+
+Broader test attempts stalled and were stopped; no complete-suite pass is claimed. The final passing counts above apply to the focused runs after the final source edits. Existing Java 8 source/target and Gradle deprecation warnings remain visible. Repository and bundled complete changelogs match; no local tooling, generated output, private runtime diagnostics or real measurements are committed.
+
+No Pi collector, MQTT, API, database or freshness-policy changes are included. The reported association between Joying startup and SBMS Wi-Fi disappearance remains an open investigation, not a demonstrated interference cause or fix. Actual phone/head-unit appearance, upgrade/storage permissions, Keystore and live network recovery still require owner verification.
+
 ## Android 0.25 and Pi collector 0.7.2 — 2026-10-11
 
 Source parent: PicoData 8cb6d2e43820542f1c5317e3f034ed33ea52b64d. Read-only EQ reference: Joying-EQ-DSP 2ce2fc16a02e05692960675a9913d687b556a8a0. Android versionName 0.25 / versionCode 7; owner compiles Ella-monitoring-v0.25.apk. Package/signing identity, minimum API 27 and compile/target API 37 are unchanged.

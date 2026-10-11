@@ -23,7 +23,7 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=35,qualifiers="w1024dp-h600dp-land-mdpi")
 public class PresetAndColourTest {
-    @Before public void clear(){RuntimeEnvironment.getApplication().getSharedPreferences("viewer",0).edit().clear().commit();}
+    @Before public void clear(){RuntimeEnvironment.getApplication().getSharedPreferences("viewer",0).edit().clear().commit();ThemeStorageTest.installProvider();}
     static Object call(MainActivity a,String method,Class<?>[] types,Object... args)throws Exception{return CompanionLayoutTest.invoke(a,method,types,args);}
     static boolean modified(MainActivity a)throws Exception{return (Boolean)call(a,"presetModified",new Class<?>[]{});}
     static void save(MainActivity a,String name)throws Exception{call(a,"writePreset",new Class<?>[]{String.class},name);}
@@ -80,7 +80,7 @@ public class PresetAndColourTest {
     }
     @Test public void presetRestoresEncryptedConnectionAndKeepsTokenOutOfCopiedValues()throws Exception{
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
-            MainActivity a=c.get();PrivateSettings settings=cryptoSettings(a);ActivityTest.set(a,"settings",settings);String token=new String(new char[64]).replace('\0','c');settings.saveConnection("https://saved.example.invalid",token);save(a,"Connection");String stored=settings.prefs.getString("viewer.preset:Connection","");assertFalse(stored.contains(token));assertTrue(new JSONObject(stored).has("connection"));
+            MainActivity a=c.get();PrivateSettings settings=cryptoSettings(a);ActivityTest.set(a,"settings",settings);String token=new String(new char[64]).replace('\0','c');settings.saveConnection("https://saved.example.invalid",token);save(a,"Connection");String stored=((PresetStore)ActivityTest.field(a,"presets")).load("Connection").toString();assertFalse(stored.contains(token));assertTrue(new JSONObject(stored).has("connection"));
             settings.saveConnection("https://other.example.invalid",new String(new char[64]).replace('\0','d'));assertTrue(modified(a));load(a,"Connection");assertEquals(token,settings.token());assertFalse(modified(a));
             call(a,"showPresetValues",new Class<?>[]{String.class},"Connection");android.app.AlertDialog values=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertEquals("COPY",values.getButton(android.app.AlertDialog.BUTTON_POSITIVE).getText().toString());values.getButton(android.app.AlertDialog.BUTTON_POSITIVE).performClick();idle();android.content.ClipboardManager clipboard=a.getSystemService(android.content.ClipboardManager.class);assertNotNull(clipboard.getPrimaryClip());String copied=clipboard.getPrimaryClip().getItemAt(0).coerceToText(a).toString();assertTrue(copied.contains("token hidden"));assertFalse(copied.contains(token));assertFalse(copied.contains("saved.example.invalid"));
         }
@@ -89,7 +89,7 @@ public class PresetAndColourTest {
         android.content.SharedPreferences prefs=RuntimeEnvironment.getApplication().getSharedPreferences("viewer",0);JSONObject oldTheme=ThemeConfig.defaults().toJson().put("fontFamily","monospace");JSONObject old=new JSONObject().put("label:test","Old label").put("theme",oldTheme);
         prefs.edit().putString("viewer.preset:Legacy",old.toString()).putString("address","https://legacy.example.invalid").putString("appearance.active",oldTheme.toString()).commit();
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()){
-            MainActivity a=c.get();JSONObject migrated=new JSONObject(prefs.getString("viewer.preset:Legacy",""));assertFalse(migrated.has("theme"));assertEquals("monospace",migrated.getString("fontFamily"));assertTrue(migrated.has("connection"));load(a,"Legacy");assertEquals("Old label",prefs.getString("label:test",""));assertEquals("https://legacy.example.invalid",prefs.getString("address",""));assertFalse(modified(a));
+            MainActivity a=c.get();JSONObject migrated=((PresetStore)ActivityTest.field(a,"presets")).load("Legacy");assertFalse(migrated.has("theme"));assertEquals("monospace",migrated.getString("fontFamily"));assertTrue(migrated.has("connection"));load(a,"Legacy");assertEquals("Old label",prefs.getString("label:test",""));assertEquals("https://legacy.example.invalid",prefs.getString("address",""));assertFalse(modified(a));
         }
     }
 }

@@ -333,6 +333,27 @@ final class ThemeConfig {
         return o;
     }
 
+    static ThemeConfig validatedSaved(JSONObject o) throws Exception {
+        JSONObject template=defaults().toJson();boolean colour=false;
+        if(o.has("format"))SavedJson.integer(o,"format",1,17);
+        if(o.has("name")){SavedJson.string(o,"name",1,80);SavedJson.name(o.getString("name"));}
+        for(java.util.Iterator<String> keys=o.keys();keys.hasNext();){String key=keys.next();
+            if(key.equals("name")||key.equals("format"))continue;
+            if(key.equals(SPECTRUM_COLOURS)||key.equals(SPECTRUM_SMOOTHING)){
+                if(!(o.get(key) instanceof JSONObject))throw SavedJson.invalid();JSONObject nested=o.getJSONObject(key);
+                for(java.util.Iterator<String> roles=nested.keys();roles.hasNext();){String role=roles.next();if(!java.util.Arrays.asList(LINE_1,BAR_1,BAR_2,AURORA_1,AURORA_2,AURORA_3,AURORA_4).contains(role))throw SavedJson.invalid();SavedJson.integer(nested,role,key.equals(SPECTRUM_COLOURS)?Integer.MIN_VALUE:0,key.equals(SPECTRUM_COLOURS)?0xffffffffL:100);}
+                if(key.equals(SPECTRUM_COLOURS)&&nested.length()>0)colour=true;
+            }else if((template.has(key)&&template.get(key) instanceof Number)||java.util.Arrays.asList(BUTTON_TEXT,SPECTRUM,GAUGE_HIGHLIGHT).contains(key)){SavedJson.integer(o,key,Integer.MIN_VALUE,0xffffffffL);colour=true;}
+            else if(key.equals(FONT_FAMILY)){SavedJson.string(o,key,1,40);if(!java.util.Arrays.asList("sans-serif","sans-serif-condensed","sans-serif-medium","sans-serif-light","monospace").contains(o.getString(key)))throw SavedJson.invalid();}
+            else if(key.equals(AURORA_3_HUE_RANGE))SavedJson.integer(o,key,0,180);
+            else if(key.equals(LINE_GLOW_STRENGTH)||key.equals(AURORA_LINE_BRIGHTNESS))SavedJson.integer(o,key,0,20);
+            else if(java.util.Arrays.asList(LINE_GLOW_STRENGTH_100,AURORA_GLOW_STRENGTH,AURORA_LINE_BRIGHTNESS_100).contains(key))SavedJson.integer(o,key,0,100);
+            else if(key.equals("spectrumSmoothingScale"))SavedJson.integer(o,key,1,2);
+            else throw SavedJson.invalid();
+        }
+        if(!colour)throw SavedJson.invalid();return fromJson(o);
+    }
+
     static ThemeConfig fromJson(JSONObject o) throws JSONException {
         ThemeConfig t = defaults();
         t.name = o.optString("name", "Theme");

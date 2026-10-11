@@ -90,6 +90,9 @@ public final class MainActivity extends Activity {
     private HistoryData.Result history;
     private ChartView chart;
     private byte[] exportBytes;
+    private PresetStore presets;
+    private JSONObject cachedPreset;
+    private String cachedPresetName;
     private final Runnable poll = this::poll;
     private final Runnable expire = new Runnable() {
         @Override public void run() { if (!active) return; updateLive(); handler.postDelayed(this, 250); }
@@ -99,6 +102,7 @@ public final class MainActivity extends Activity {
         super.onCreate(state); settings = new PrivateSettings(this); screen = new ScreenControl(this, settings.prefs);
         setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         appearance = new AppearanceStore(this,settings.prefs); theme = appearance.active();migrateViewerSettings();
+        presets=new PresetStore(this,settings.prefs);
         theme.fontFamily=settings.prefs.getString("fontFamily",theme.fontFamily);
         locked = settings.prefs.getBoolean("locked", false); hideStatus = settings.prefs.getBoolean("hideStatus", false); persistent = settings.prefs.getBoolean("persistent", false);
         currentPreset = settings.prefs.getString("currentPreset", "System default");
@@ -162,9 +166,9 @@ public final class MainActivity extends Activity {
         if(historyScreen && !settingsScreen){LinearLayout ranges=row();ranges.setPadding(8,0,8,6);for(int i=0;i<HistoryData.RANGES.length;i++){final int n=i;Button b=uiButton(HistoryData.RANGES[i],range==i,()->{range=n;offset=0;settings.prefs.edit().putInt("range",range).apply();build();loadHistory();});trackChange(b,"range");LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(0,32,1);rp.setMargins(0,0,6,0);ranges.addView(b,rp);}root.addView(ranges);}
         content = column();content.setPadding(0,6,0,0); root.addView(content,new LinearLayout.LayoutParams(-1,0,1));
         BottomBar bottom = new BottomBar(this, theme, fullscreen); root.addView(bottom,new LinearLayout.LayoutParams(-1,54));
-        Button presetButton=new ChangedButton(this,theme,"Preset",currentPreset,presetModified(),this::showPresetMenu);presetAnchor=presetButton;bottom.addControl(presetButton,0);
-        boolean themeModified=!theme.sameColours(appearance.names().contains(theme.name)?appearance.load(theme.name):ThemeConfig.defaults());
-        themeAnchor=new ChangedButton(this,theme,"Theme",theme.name,themeModified,()->withThemeStorage(this::showThemeMenu));bottom.addControl(themeAnchor,7);
+        Button presetButton=new ChangedButton(this,theme,"Preset",currentPreset,presetModified(),()->withDownloadsStorage(this::showPresetMenu));presetAnchor=presetButton;bottom.addControl(presetButton,0);
+        boolean themeModified=!theme.sameColours(themeNames().contains(theme.name)?appearance.load(theme.name):ThemeConfig.defaults());
+        themeAnchor=new ChangedButton(this,theme,"Theme",theme.name,themeModified,()->withDownloadsStorage(this::showThemeMenu));bottom.addControl(themeAnchor,7);
         bottom.addControl(uiButton("Live data",!historyScreen && !settingsScreen,() -> { settingsScreen=false; historyScreen=false; historyEpoch++; build(); }),1);
         bottom.addControl(uiButton("Charts",historyScreen && !settingsScreen,() -> { settingsScreen=false; historyScreen=true; build(); loadHistory(); }),2);
         bottom.addControl(trackChange(new EqIconButton(this,theme,"keep","Keep screen on",keepScreen,fullscreen,() -> { keepScreen=!keepScreen; settings.prefs.edit().putBoolean("keepScreen",keepScreen).apply(); screen.setKeep(keepScreen); build(); }),"keepScreen"),3);
@@ -333,7 +337,7 @@ public final class MainActivity extends Activity {
             });
         });
     }
-    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) { super.onRequestPermissionsResult(requestCode, permissions, results); if (requestCode == 37) restartConnection(); if(requestCode==28){Runnable action=storageAction;storageAction=null;if(results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED&&action!=null)action.run();else toast("Storage access is needed to save theme files in Downloads.");} }
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) { super.onRequestPermissionsResult(requestCode, permissions, results); if (requestCode == 37) restartConnection(); if(requestCode==28){Runnable action=storageAction;storageAction=null;if(results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED&&action!=null)action.run();else toast("Storage access is needed to save presets, themes and exports in Downloads.");} }
 
     private MonitorData.Metric selected() {
         for (MonitorData.Metric m : metrics) if (m.id.equals(selectedMetric)) return m;
@@ -538,7 +542,6 @@ public final class MainActivity extends Activity {
         trackChange(setting(display,"Hide connection status",hideStatus,on->{hideStatus=on;settings.prefs.edit().putBoolean("hideStatus",on).apply();status.setVisibility(settingsScreen||on?View.GONE:View.VISIBLE);}),"hideStatus");
         trackChange(setting(display,"Persistent app notification",persistent,on->{persistent=on;settings.prefs.edit().putBoolean("persistent",on).apply();if(on&&Build.VERSION.SDK_INT>=33&&checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},33);persistence(true);}),"persistent");
         trackChange(setting(display,"Display local clock",localClock,on->{localClock=on;settings.prefs.edit().putBoolean("localClock",on).apply();updateLive();}),"localClock");
-        LinearLayout labels=settingsGroup(left,"EXPORT");settingButton(labels,"Export current chart range",this::exportHistory);
         View spacer=new View(this);right.addView(spacer,new LinearLayout.LayoutParams(-1,0,1));
         LinearLayout footer=column();footer.setPadding(6,6,6,6);footer.setBackground(uiBackground(theme.panel,theme.border));right.addView(footer,new LinearLayout.LayoutParams(-1,-2));
         final int[] intervals={0,1,3,6,12,24};final String[] labelsInterval={"Off","1hr","3hr","6hr","12hr","24hr"};
@@ -578,8 +581,8 @@ public final class MainActivity extends Activity {
         for(int i=0;i<names.size();i++){final Runnable action=actions.get(i);Button button=uiButton(names.get(i),false,()->{dialog.dismiss();action.run();});panel.addView(button,new LinearLayout.LayoutParams(-1,dialogDp(34)));}
         showStyledDialog(dialog,panel,460);
     }
-    private void showThemeMenu(){List<String> names=new ArrayList<>();List<Runnable> actions=new ArrayList<>();names.add("SAVE THEME AS…");actions.add(()->saveTheme(null));if(appearance.names().contains(theme.name)&&!theme.sameColours(appearance.load(theme.name))){names.add("UPDATE \""+theme.name+"\"");actions.add(()->saveTheme(theme.name));}names.add("MANAGE THEMES…");actions.add(()->manage(true));names.add("EDIT THEME");actions.add(this::showThemeEditor);names.add("EDIT DISPLAY LABELS");actions.add(this::labelSettings);names.add("System default");actions.add(()->applyTheme(ThemeConfig.defaults()));for(String name:appearance.names()){names.add(name);actions.add(()->applyTheme(appearance.load(name)));}menu("THEMES",names,actions);}
-    private void applyTheme(ThemeConfig value){if(value==null)return;value.fontFamily=theme.fontFamily;theme=value;appearance.active(theme);build();refreshAppearance();}
+    private void showThemeMenu(){List<String> available=themeNames();String issue=appearance.takeProblem();if(issue!=null)toast(issue);List<String> names=new ArrayList<>();List<Runnable> actions=new ArrayList<>();names.add("SAVE THEME AS…");actions.add(()->saveTheme(null));if(themeNames().contains(theme.name)&&!theme.sameColours(appearance.load(theme.name))){names.add("UPDATE \""+theme.name+"\"");actions.add(()->saveTheme(theme.name));}names.add("MANAGE THEMES…");actions.add(()->manage(true));names.add("EDIT THEME");actions.add(this::showThemeEditor);names.add("EDIT DISPLAY LABELS");actions.add(this::labelSettings);names.add("System default");actions.add(()->applyTheme(ThemeConfig.defaults()));for(String name:available){names.add(name);actions.add(()->applyTheme(appearance.load(name)));}menu("THEMES",names,actions);}
+    private void applyTheme(ThemeConfig value){if(value==null){toast("Theme file is unavailable or malformed; current colours were kept.");return;}value.fontFamily=theme.fontFamily;theme=value;appearance.active(theme);build();refreshAppearance();}
     private void confirmOverwrite(String name,Runnable action){
         android.app.Dialog dialog=new android.app.Dialog(this);LinearLayout panel=styledDialogRoot();panel.setPadding(dialogDp(10),dialogDp(7),dialogDp(10),dialogDp(9));
         panel.addView(styledTitle("Save changes to \""+name+"\"?"));
@@ -588,7 +591,7 @@ public final class MainActivity extends Activity {
         cancel.setOnClickListener(v->dialog.dismiss());save.setOnClickListener(v->{dialog.dismiss();action.run();});showStyledDialog(dialog,panel,350);
     }
     private void writeTheme(String name){try{if(name.equals("Default")||name.equals("System default"))throw new IllegalArgumentException("Choose another theme name.");appearance.save(name,theme);theme.name=name;appearance.active(theme);build();refreshAppearance();}catch(Exception e){toast(e.getMessage());}}
-    private void saveTheme(String overwrite){if(overwrite!=null){confirmOverwrite(overwrite,()->writeTheme(overwrite));return;}promptName("SAVE THEME AS","",name->{if(appearance.names().contains(name))confirmOverwrite(name,()->writeTheme(name));else writeTheme(name);});}
+    private void saveTheme(String overwrite){if(overwrite!=null){confirmOverwrite(overwrite,()->writeTheme(overwrite));return;}promptName("SAVE THEME AS","",name->{try{if(appearance.exists(name))confirmOverwrite(name,()->writeTheme(name));else writeTheme(name);}catch(Exception e){toast("Could not access theme files.");}});}
     private void promptName(String title,String initial,java.util.function.Consumer<String> action){
         android.app.Dialog dialog=new android.app.Dialog(this);LinearLayout panel=styledDialogRoot();panel.setPadding(dialogDp(10),dialogDp(7),dialogDp(10),dialogDp(9));panel.addView(styledTitle(title));
         EditText input=new EditText(this);input.setSingleLine();input.setText(initial);input.setSelectAllOnFocus(true);input.setTextColor(theme.buttonTextOn);input.setTypeface(getUiTypeface());input.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,dialogTextSize(13));input.setPadding(dialogDp(9),0,dialogDp(9),0);input.setBackground(roundedBackground(theme.buttonBackground,theme.border,1.1f,5));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dialogDp(38));lp.setMargins(dialogDp(4),dialogDp(3),dialogDp(4),dialogDp(7));panel.addView(input,lp);
@@ -597,7 +600,7 @@ public final class MainActivity extends Activity {
     private void showThemeEditor(){
         if(isFinishing()||isDestroyed())return;
         if(appearanceDialog!=null&&appearanceDialog.isShowing()){appearanceDialog.show();refreshAppearance();clearDialogDim(appearanceDialog);return;}
-        previewBaseline=appearance.names().contains(theme.name)?appearance.load(theme.name):ThemeConfig.defaults();
+        previewBaseline=themeNames().contains(theme.name)?appearance.load(theme.name):ThemeConfig.defaults();
         appearanceView=new ThemeAppearanceView(this,this);
         final android.app.Dialog opened=new android.app.Dialog(this);appearanceDialog=opened;
         opened.setOnDismissListener(d->{if(appearanceDialog==opened){appearanceDialog=null;appearanceView=null;}if(!isFinishing()&&!isDestroyed())previewTheme();});
@@ -632,7 +635,7 @@ public final class MainActivity extends Activity {
     }
     private void editColour(String field,String label){
         final int original=theme.get(field);
-        previewBaseline=appearance.names().contains(theme.name)?appearance.load(theme.name):ThemeConfig.defaults();
+        previewBaseline=themeNames().contains(theme.name)?appearance.load(theme.name):ThemeConfig.defaults();
         if(settingsScreen||historyScreen){settingsScreen=false;historyScreen=false;historyEpoch++;build();}
         if(appearanceDialog!=null)appearanceDialog.hide();
         final android.app.Dialog dialog=new android.app.Dialog(this);colourDialog=dialog;
@@ -674,14 +677,17 @@ public final class MainActivity extends Activity {
                 .put("metric",selectedMetric).put("quantity",quantity).put("bars",bars).put("connection",settings.connectionSnapshot());
         return PresetState.normalize(state);
     }
-    private List<String> presetNames(){List<String> names=new ArrayList<>();for(String key:settings.prefs.getAll().keySet())if(key.startsWith("viewer.preset:"))names.add(key.substring(14));java.util.Collections.sort(names,String.CASE_INSENSITIVE_ORDER);return names;}
+    private List<String> presetNames(){List<String> names=presets.names();currentPreset=settings.prefs.getString("currentPreset",currentPreset);if(presetAnchor instanceof ChangedButton)((ChangedButton)presetAnchor).loadedName(currentPreset);return names;}
+    private List<String> themeNames(){List<String> names=appearance.names();theme.name=appearance.migratedName(theme.name);if(themeAnchor instanceof ChangedButton)((ChangedButton)themeAnchor).loadedName(theme.name);return names;}
     private JSONObject defaultPreset()throws Exception{
         JSONObject state=PresetState.defaults();String baseline=settings.prefs.getString("viewer.defaultConnection",null);
         return state.put("connection",baseline==null?settings.connectionSnapshot():new JSONObject(baseline));
     }
     private JSONObject presetBaseline()throws Exception{
-        JSONObject saved=presetNames().contains(currentPreset)?PresetState.normalize(new JSONObject(settings.prefs.getString("viewer.preset:"+currentPreset,"{}"))):defaultPreset();
-        if(!saved.has("connection"))saved.put("connection",settings.connectionSnapshot());return saved;
+        if(cachedPreset!=null&&currentPreset.equals(cachedPresetName))return cachedPreset;
+        presetNames();JSONObject saved=currentPreset.equals("System default")?defaultPreset():presets.load(currentPreset);
+        if(!saved.has("connection"))saved.put("connection",settings.connectionSnapshot());
+        cachedPreset=saved;cachedPresetName=currentPreset;return saved;
     }
     private java.util.Set<String> presetDifferences(){
         try{JSONObject saved=presetBaseline();java.util.Set<String> changed=PresetState.differences(presetState(),saved);if(liveDashboard!=null)changed.removeIf(key->key.startsWith("label:")&&liveDashboard.originalLabel(key.substring(6))!=null&&!labelModified(key.substring(6),liveDashboard.originalLabel(key.substring(6))));changed.addAll(settings.connectionDifferences(saved.getJSONObject("connection")));return changed;}
@@ -692,16 +698,16 @@ public final class MainActivity extends Activity {
     private void refreshChangedIndicators(){
         presetChanges=presetDifferences();
         if(presetAnchor instanceof ChangedButton)((ChangedButton)presetAnchor).changed(!presetChanges.isEmpty());
-        if(themeAnchor instanceof ChangedButton)((ChangedButton)themeAnchor).changed(!theme.sameColours(appearance.names().contains(theme.name)?appearance.load(theme.name):ThemeConfig.defaults()));
+        if(themeAnchor instanceof ChangedButton)((ChangedButton)themeAnchor).changed(!theme.sameColours(themeNames().contains(theme.name)?appearance.load(theme.name):ThemeConfig.defaults()));
         for(Map.Entry<View,String> entry:changedViews.entrySet())colourChangedView(entry.getKey(),entry.getValue());
         if(liveDashboard!=null&&!settingsScreen&&!historyScreen)liveDashboard.refreshChanges();
     }
-    private void showPresetMenu(){List<String> names=new ArrayList<>();List<Runnable> actions=new ArrayList<>();names.add("SAVE SETTINGS AS…");actions.add(()->savePreset(null));if(presetNames().contains(currentPreset)&&presetModified()){names.add("UPDATE \""+currentPreset+"\"");actions.add(()->savePreset(currentPreset));}names.add("MANAGE PRESETS…");actions.add(()->manage(false));names.add("System default");actions.add(()->loadPreset("System default"));for(String n:presetNames()){names.add(n);actions.add(()->loadPreset(n));}menu("PRESETS",names,actions);}
-    private void writePreset(String name){try{settings.prefs.edit().putString("viewer.preset:"+name,presetState().toString()).putString("currentPreset",name).apply();currentPreset=name;build();}catch(Exception e){toast("Could not save preset.");}}
-    private void savePreset(String overwrite){if(overwrite!=null){confirmOverwrite(overwrite,()->writePreset(overwrite));return;}promptName("SAVE SETTINGS AS","",name->{if(presetNames().contains(name))confirmOverwrite(name,()->writePreset(name));else writePreset(name);});}
+    private void showPresetMenu(){List<String> available=presetNames();String issue=presets.takeProblem();if(issue!=null)toast(issue);List<String> names=new ArrayList<>();List<Runnable> actions=new ArrayList<>();names.add("SAVE SETTINGS AS…");actions.add(()->savePreset(null));if(presetNames().contains(currentPreset)&&presetModified()){names.add("UPDATE \""+currentPreset+"\"");actions.add(()->savePreset(currentPreset));}names.add("MANAGE PRESETS…");actions.add(()->manage(false));names.add("System default");actions.add(()->loadPreset("System default"));for(String n:available){names.add(n);actions.add(()->loadPreset(n));}menu("PRESETS",names,actions);}
+    private void writePreset(String name){try{name=SavedJson.name(name);JSONObject saved=presetState();presets.save(name,saved);settings.prefs.edit().putString("currentPreset",name).apply();currentPreset=name;cachedPreset=saved;cachedPresetName=name;build();}catch(Exception e){toast(e instanceof IllegalArgumentException?e.getMessage():"Could not save preset to Downloads.");}}
+    private void savePreset(String overwrite){if(overwrite!=null){confirmOverwrite(overwrite,()->writePreset(overwrite));return;}promptName("SAVE SETTINGS AS","",name->{try{if(presets.exists(name))confirmOverwrite(name,()->writePreset(name));else writePreset(name);}catch(Exception e){toast("Could not access preset files.");}});}
     private void showPresetValues(String name){
         try{
-            JSONObject state=PresetState.normalize(new JSONObject(settings.prefs.getString("viewer.preset:"+name,"{}")));
+            JSONObject state=presets.load(name);
             StringBuilder values=new StringBuilder("Font: ").append(state.optString("fontFamily"))
                     .append("\nConnection: ").append(state.has("connection")?"Saved privately; token hidden":"Keep current")
                     .append("\nConnection status: ").append(state.optBoolean("hideStatus")?"Hidden":"Shown")
@@ -716,7 +722,7 @@ public final class MainActivity extends Activity {
     private void loadPreset(String name){
         try{
             boolean defaults=name.equals("System default");
-            JSONObject p=defaults?PresetState.defaults():PresetState.normalize(new JSONObject(settings.prefs.getString("viewer.preset:"+name,"{}")));
+            JSONObject p=defaults?PresetState.defaults():presets.load(name);
             JSONObject connection=p.optJSONObject("connection");if(connection==null)connection=settings.connectionSnapshot();
             android.content.SharedPreferences.Editor edit=settings.prefs.edit();settings.stageConnection(edit,connection);
             for(String key:settings.prefs.getAll().keySet())if(key.startsWith("label:")||key.startsWith("gaugeHighlight:")||key.startsWith("elementHighlight:")||key.startsWith("elementHidden:"))edit.remove(key);
@@ -730,23 +736,33 @@ public final class MainActivity extends Activity {
             if(!edit.commit())throw new Exception();
             persistent=p.getBoolean("persistent");
             localClock=p.getBoolean("localClock");hideStatus=p.getBoolean("hideStatus");range=p.getInt("range");defined=p.getBoolean("defined");
-            selectedMetric=p.getString("metric");quantity=p.getString("quantity");bars=p.getBoolean("bars");theme.fontFamily=p.getString("fontFamily");currentPreset=name;offset=0;
+            selectedMetric=p.getString("metric");quantity=p.getString("quantity");bars=p.getBoolean("bars");theme.fontFamily=p.getString("fontFamily");currentPreset=name;offset=0;cachedPreset=null;cachedPresetName=null;
             screen.setKeep(keepScreen);windowMode();persistence(true);updates.schedule();build();restartConnection();if(historyScreen&&!settingsScreen)loadHistory();
-        }catch(Exception e){toast("Could not load preset. Saved connection remains unchanged.");}
+        }catch(Exception e){toast("Could not load preset. File may be malformed or its encrypted connection belongs to another installation. Current settings were kept.");}
     }
     private void manage(boolean themes){
-        List<String> names=new ArrayList<>(themes?appearance.names():presetNames());if(names.isEmpty()){toast(themes?"No saved themes":"No saved presets");return;}
+        List<String> names=new ArrayList<>(themes?themeNames():presetNames());if(names.isEmpty()){toast(themes?"No saved themes":"No saved presets");return;}
         android.app.Dialog dialog=new android.app.Dialog(this);LinearLayout panel=styledDialogRoot();panel.setPadding(dialogDp(9),dialogDp(7),dialogDp(9),dialogDp(9));panel.addView(styledTitle(themes?"MANAGE THEMES":"MANAGE PRESETS"));ScrollView scroll=new ScrollView(this);LinearLayout list=column();scroll.addView(list);LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(-1,Math.min(dialogDp(150),Math.max(dialogDp(36),names.size()*dialogDp(34))));sp.setMargins(0,dialogDp(2),0,dialogDp(6));panel.addView(scroll,sp);
         int[] selected={-1};List<TextView> rows=new ArrayList<>();LinearLayout buttons=row();TextView rename=dialogButton("RENAME",theme.controls),delete=dialogButton("DELETE",0xffd76969),values=themes?null:dialogButton("VIEW VALUES",theme.controls);for(TextView b:new TextView[]{rename,delete,values})if(b!=null){b.setEnabled(false);b.setAlpha(.42f);LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(0,dialogDp(36),1);bp.setMargins(dialogDp(3),0,dialogDp(3),0);buttons.addView(b,bp);}panel.addView(buttons);
-        Runnable refresh=()->{names.clear();names.addAll(themes?appearance.names():presetNames());selected[0]=-1;list.removeAllViews();rows.clear();rename.setEnabled(false);delete.setEnabled(false);rename.setAlpha(.42f);delete.setAlpha(.42f);if(values!=null){values.setEnabled(false);values.setAlpha(.42f);}for(int i=0;i<names.size();i++){int index=i;TextView row=dialogButton(names.get(i),theme.border);row.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);row.setPadding(dialogDp(10),0,dialogDp(6),0);rows.add(row);LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,dialogDp(32));rp.setMargins(dialogDp(2),dialogDp(1),dialogDp(2),dialogDp(1));list.addView(row,rp);row.setOnClickListener(v->{selected[0]=index;for(int j=0;j<rows.size();j++){boolean active=j==index;rows.get(j).setTextColor(active?theme.controls:theme.text);rows.get(j).setBackground(roundedBackground(active?ThemeConfig.blend(theme.buttonBackground,theme.controls,.14f):theme.buttonBackground,active?theme.controls:theme.border,1.1f,5));}rename.setEnabled(true);delete.setEnabled(true);rename.setAlpha(1);delete.setAlpha(1);if(values!=null){values.setEnabled(true);values.setAlpha(1);}});}};
-        refresh.run();rename.setOnClickListener(v->{if(selected[0]<0)return;String old=names.get(selected[0]);promptName(themes?"RENAME THEME":"RENAME PRESET",old,name->{try{if(name.equals(old))return;if(themes){appearance.rename(old,name);if(theme.name.equals(old)){theme.name=name;appearance.active(theme);}}else{if(presetNames().contains(name))throw new IllegalArgumentException("That name already exists.");settings.prefs.edit().putString("viewer.preset:"+name,settings.prefs.getString("viewer.preset:"+old,"{}")).remove("viewer.preset:"+old).apply();if(currentPreset.equals(old)){currentPreset=name;settings.prefs.edit().putString("currentPreset",name).apply();}}build();refresh.run();}catch(Exception e){toast(e.getMessage());}});});
-        delete.setOnClickListener(v->{if(selected[0]<0)return;String name=names.get(selected[0]);themedAlertBuilder().setTitle(themes?"Delete theme?":"Delete preset?").setMessage(name).setNegativeButton("CANCEL",null).setPositiveButton("DELETE",(d,w)->{try{if(themes){appearance.delete(name);if(theme.name.equals(name))applyTheme(ThemeConfig.defaults());}else{settings.prefs.edit().remove("viewer.preset:"+name).apply();if(currentPreset.equals(name)){currentPreset="System default";settings.prefs.edit().putString("currentPreset",currentPreset).apply();}}build();refresh.run();}catch(Exception e){toast(e.getMessage());}}).show();});if(values!=null)values.setOnClickListener(v->{if(selected[0]>=0)showPresetValues(names.get(selected[0]));});showStyledDialog(dialog,panel,370);
+        Runnable refresh=()->{names.clear();names.addAll(themes?themeNames():presetNames());selected[0]=-1;list.removeAllViews();rows.clear();rename.setEnabled(false);delete.setEnabled(false);rename.setAlpha(.42f);delete.setAlpha(.42f);if(values!=null){values.setEnabled(false);values.setAlpha(.42f);}for(int i=0;i<names.size();i++){int index=i;TextView row=dialogButton(names.get(i),theme.border);row.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);row.setPadding(dialogDp(10),0,dialogDp(6),0);rows.add(row);LinearLayout.LayoutParams rp=new LinearLayout.LayoutParams(-1,dialogDp(32));rp.setMargins(dialogDp(2),dialogDp(1),dialogDp(2),dialogDp(1));list.addView(row,rp);row.setOnClickListener(v->{selected[0]=index;for(int j=0;j<rows.size();j++){boolean active=j==index;rows.get(j).setTextColor(active?theme.controls:theme.text);rows.get(j).setBackground(roundedBackground(active?ThemeConfig.blend(theme.buttonBackground,theme.controls,.14f):theme.buttonBackground,active?theme.controls:theme.border,1.1f,5));}rename.setEnabled(true);delete.setEnabled(true);rename.setAlpha(1);delete.setAlpha(1);if(values!=null){values.setEnabled(true);values.setAlpha(1);}});}};
+        refresh.run();rename.setOnClickListener(v->{if(selected[0]<0)return;String old=names.get(selected[0]);promptName(themes?"RENAME THEME":"RENAME PRESET",old,name->{try{if(name.equals(old))return;if(themes){appearance.rename(old,name);if(theme.name.equals(old)){theme.name=name;appearance.active(theme);}}else{presets.rename(old,name);cachedPreset=null;if(currentPreset.equals(old)){currentPreset=name;settings.prefs.edit().putString("currentPreset",name).apply();}}build();refresh.run();}catch(Exception e){toast(e.getMessage());}});});
+        delete.setOnClickListener(v->{if(selected[0]<0)return;String name=names.get(selected[0]);themedAlertBuilder().setTitle(themes?"Delete theme?":"Delete preset?").setMessage(name).setNegativeButton("CANCEL",null).setPositiveButton("DELETE",(d,w)->{try{if(themes){appearance.delete(name);if(theme.name.equals(name))applyTheme(ThemeConfig.defaults());}else{presets.delete(name);cachedPreset=null;if(currentPreset.equals(name)){currentPreset="System default";settings.prefs.edit().putString("currentPreset",currentPreset).apply();}}build();refresh.run();}catch(Exception e){toast(e.getMessage());}}).show();});if(values!=null)values.setOnClickListener(v->{if(selected[0]>=0)showPresetValues(names.get(selected[0]));});showStyledDialog(dialog,panel,370);
     }
     private void exportHistory() {
         if (history == null) { toast("Load a chart range before exporting."); return; }
         exportBytes = HistoryData.csv(history, metricLabel(history.metric)).getBytes(java.nio.charset.StandardCharsets.UTF_8);
         Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("text/csv").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE, "ella-history-" + history.window.resolution + ".csv");
-        try { startActivityForResult(intent, 100); } catch (Exception e) { exportBytes = null; toast("No file picker is available."); }
+        try { startActivityForResult(intent, 100); } catch (RuntimeException e) {
+            byte[] bytes=exportBytes;exportBytes=null;
+            toast(e instanceof android.content.ActivityNotFoundException?"No save dialogue handles CSV files. Saving to Downloads.":"Save dialogue could not open ("+e.getClass().getSimpleName()+"). Saving to Downloads.");
+            exportToDownloads(bytes);
+        }
+    }
+    private void exportToDownloads(byte[] bytes){
+        if(bytes==null)return;
+        String stamp=new java.text.SimpleDateFormat("yyyyMMdd-HHmmss-SSS",Locale.UK).format(new java.util.Date());
+        String filename="ella-history-"+stamp+".csv";
+        withDownloadsStorage(()->historyWorker.execute(()->{try{new DownloadsFiles(this,"exports").write(filename,"text/csv",bytes);handler.post(()->toast("CSV saved to Downloads/ella-monitoring/exports/"+filename));}catch(Exception e){handler.post(()->toast("Could not save CSV to Downloads. Check storage access and space."));}}));
     }
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data); if (requestCode != 100) return;
@@ -759,7 +775,7 @@ public final class MainActivity extends Activity {
             } catch (Exception e) { handler.post(() -> toast("Could not write the export.")); }
         });
     }
-    private void withThemeStorage(Runnable action){
+    private void withDownloadsStorage(Runnable action){
         if(Build.VERSION.SDK_INT<=28&&checkSelfPermission("android.permission.WRITE_EXTERNAL_STORAGE")!=PackageManager.PERMISSION_GRANTED){storageAction=action;requestPermissions(new String[]{"android.permission.WRITE_EXTERNAL_STORAGE"},28);}else action.run();
     }
     private GradientDrawable roundedBackground(int fill,int border,float stroke,float radius){GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(dialogDp(radius));if(stroke>0)d.setStroke(dialogDp(stroke),border);return d;}

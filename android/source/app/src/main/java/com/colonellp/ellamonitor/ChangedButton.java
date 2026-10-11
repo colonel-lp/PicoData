@@ -11,7 +11,8 @@ import android.widget.Button;
 /** EQ-style loaded-name selector with unsaved state and modification dot. */
 final class ChangedButton extends Button {
     private final ThemeConfig theme;
-    private final String label,loadedName;
+    private final String label;
+    private String loadedName;
     private boolean changed;
     private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG);
     ChangedButton(Context context,ThemeConfig theme,String label,String loadedName,boolean changed,Runnable action){
@@ -22,6 +23,7 @@ final class ChangedButton extends Button {
         setOnClickListener(v->action.run());changed(changed);
     }
     void refreshTheme(){GradientDrawable d=(GradientDrawable)getBackground();d.setColor(theme.buttonBackground);d.setStroke(1,theme.controls);changed(changed);}
+    void loadedName(String name){if(name!=null&&!name.equals(loadedName)){loadedName=name;changed(changed);}}
     void changed(boolean value){changed=value;setText(label.toUpperCase(java.util.Locale.UK)+"  •  "+(changed?"UNSAVED":loadedName)+"   ▾");setTextColor(changed?theme.changedIndicator:theme.buttonTextOn);setContentDescription(label+", "+loadedName+(changed?", modified":""));invalidate();}
     @Override protected void onDraw(Canvas canvas){super.onDraw(canvas);if(changed){paint.setColor(theme.changedIndicator);canvas.drawCircle(getWidth()-18,getHeight()/2f,8,paint);}}
 }

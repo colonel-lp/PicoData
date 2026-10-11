@@ -29,6 +29,7 @@ final class GaugeView extends View {
         super.onDraw(canvas);
         float w=getWidth(),h=getHeight();
         boolean soc=kind==GaugeScale.Kind.SOC,angle=unit.equals("°"),battery=kind==GaugeScale.Kind.BATTERY;
+        boolean amps=kind==GaugeScale.Kind.LOAD||kind==GaugeScale.Kind.PV||battery;
         float diameter=Math.max(1,Math.min(w-22,soc?h-18:(h-16)*1.18f));
         float left=(w-diameter)/2,top=Math.max(8,(h-diameter)/2);
         if(angle)top=Math.max(10,(h-diameter*.7f)/2);
@@ -39,32 +40,34 @@ final class GaugeView extends View {
         if(value!=null){
             if(soc){
                 // SOC grows anticlockwise: 0=12, 25=9, 50=6, 100=12 o'clock.
-                int[] bandColors={0xffff4545,0xffffbf45,0xff32dc68};float[] starts={270,180,90};
+                paint.setColor(GaugeScale.socColour(value));
                 paint.setStrokeCap(Paint.Cap.BUTT);
-                for(int i=0;i<3;i++){paint.setColor(bandColors[i]);float sweep=GaugeScale.socBandSweep(value,i);if(sweep!=0)canvas.drawArc(arc,starts[i],sweep,false,paint);}
+                float sweep=GaugeScale.sweep(kind,unit,value);
+                if(sweep!=0)canvas.drawArc(arc,270,sweep,false,paint);
                 paint.setStrokeCap(Paint.Cap.ROUND);
             }else{
                 float sweep=angle?(float)Math.max(-90,Math.min(90,value*18)):GaugeScale.sweep(kind,unit,value);
                 paint.setColor(kind==GaugeScale.Kind.LOAD||value<0?colors.negative:colors.positive);
                 float start=angle||battery?270:145;
                 if(sweep!=0)canvas.drawArc(arc,start,sweep,false,paint);
-                if(angle||battery){
+                if(angle){
                     double radians=Math.toRadians(start+sweep);paint.setColor(colors.text);paint.setStrokeWidth(2);
                     canvas.drawLine(arc.centerX(),arc.centerY(),arc.centerX()+(float)Math.cos(radians)*diameter*.46f,arc.centerY()+(float)Math.sin(radians)*diameter*.46f,paint);
                 }
             }
         }
-        if(angle||battery||kind==GaugeScale.Kind.LOAD||kind==GaugeScale.Kind.PV){
+        float limitBaseline=(angle?top+diameter*.68f:Math.min(h-9,top+diameter*.91f))+6;
+        if(angle||amps){
             paint.setStyle(Paint.Style.FILL);paint.setTextSize(10);paint.setColor(colors.muted);
-            float baseline=angle?top+diameter*.68f:Math.min(h-3,top+diameter*.91f);
+            float baseline=limitBaseline;
             paint.setTextAlign(Paint.Align.LEFT);canvas.drawText(angle?"-5":battery?"-10":"0",left,baseline,paint);
             paint.setTextAlign(Paint.Align.RIGHT);canvas.drawText(angle?"+5":battery?"+10":kind==GaugeScale.Kind.PV?"20":"10",left+diameter,baseline,paint);
         }
         paint.setStyle(Paint.Style.FILL);paint.setColor(value==null?colors.muted:colors.text);paint.setTextAlign(Paint.Align.CENTER);
-        paint.setTypeface(face);paint.setTextSize(Math.min(30*getResources().getDisplayMetrics().scaledDensity,diameter*.24f));
+        paint.setTypeface(face);paint.setTextSize(Math.min(30*getResources().getDisplayMetrics().scaledDensity,diameter*(angle?.20f:.24f)));
         String text=value==null?"—":String.format(Locale.UK,unit.equals("hPa")||unit.equals("%")?"%.0f":"%.2f",value);
-        canvas.drawText(text,w/2,top+diameter*(angle?.83f:soc?.55f:.62f),paint);
+        canvas.drawText(text,w/2,top+diameter*(angle?.83f:soc?.55f:.62f)-(angle||soc?0:6),paint);
         paint.setTypeface(android.graphics.Typeface.DEFAULT);paint.setTextSize(Math.min(14*getResources().getDisplayMetrics().scaledDensity,diameter*.14f));paint.setColor(colors.muted);
-        canvas.drawText(value==null?"":unit,w/2,top+diameter*(angle?.98f:soc?.73f:.80f),paint);
+        canvas.drawText(amps?"amps":value==null?"":unit,w/2,amps?limitBaseline:top+diameter*(angle?.98f:soc?.73f:.80f),paint);
     }
 }

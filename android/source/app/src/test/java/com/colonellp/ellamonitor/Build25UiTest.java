@@ -24,7 +24,7 @@ import static org.junit.Assert.*;
 @Config(sdk=35,qualifiers="w1280dp-h720dp-land-mdpi")
 public class Build25UiTest {
     private static Object editorField(ThemeAppearanceView editor,String name)throws Exception{java.lang.reflect.Field field=ThemeAppearanceView.class.getDeclaredField(name);field.setAccessible(true);return field.get(editor);}
-    @Before public void clear(){RuntimeEnvironment.getApplication().getSharedPreferences("viewer",0).edit().clear().commit();}
+    @Before public void clear(){RuntimeEnvironment.getApplication().getSharedPreferences("viewer",0).edit().clear().commit();ThemeStorageTest.installProvider();}
     @Test public void rawToCatalogueKeepsElementChoicesAndDoesNotDirtyPreset() throws Exception {
         try(ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).setup()) {
             MainActivity a=c.get();ActivityTest.set(a,"metrics",MonitorData.catalogue(ContractTest.catalogue()));ActivityTest.set(a,"live",BindingAndGaugeTest.sample());ActivityTest.set(a,"receivedMono",android.os.SystemClock.elapsedRealtime());ActivityTest.call(a,"updateLive");
