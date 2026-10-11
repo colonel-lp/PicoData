@@ -1,3 +1,14 @@
+## Next-build addition — historical Load [Pico] derived from logged currents — 2026-10-11
+
+Owner confirms that all currents used to calculate the live Load [Pico] gauge are logged.
+
+- [ ] Provide derived historical values for Load [Pico] from those existing logged current components. Its live derivation must not cause the popup to call it live-only or claim no historical data is available.
+- [ ] Use the same component selection and verified signed polarity as the live calculation: Pico electrical metrics with the load role, summed as current times their configured polarity. Preserve actual signs; do not use absolute values or substitute the Pico battery current.
+- [ ] Make derived history available to the requested current/energy summary periods and chart navigation. Derive net charge from the component histories; derive energy from their valid logged/integrated power or voltage/current data with the existing coverage rules. Preserve source attribution, units, period boundaries and historical gaps. This uses existing logged data; do not introduce a new logged aggregate or alter the database schema just to expose the derived history.
+- [ ] Align component history periods and retain missing/partial coverage. Do not treat an absent required component as zero or claim a complete total from incomplete inputs. Samples x/y for the derived gauge must reflect the component data needed for the total, not an inflated sum of independent component counts or a count of aggregated rows.
+
+Read-only source review: PicoData d8796c79d8a8648637813d926cd6655d352be190, MonitorData.display. The live sum uses catalogue-backed Pico load currents and verified polarity, then creates pico:load-sum with a null metric; showElementDetail currently uses that null metric to display the live-only message. The owner's confirmation establishes that the constituent currents have retained history. Record for the next build only; application source and version remain unchanged.
+
 ## Next-build requests — element popups, summaries, font dropdown and text themes — 2026-10-11
 
 Owner supplied this list for the next build. Record only: no application-source changes or version increment are authorized by this list.
