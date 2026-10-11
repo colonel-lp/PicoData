@@ -46,6 +46,7 @@ final class ThemeConfig {
     static final String[] ALL_SPECTRUM_LABELS = {"Aurora", "Bar • coloured", "Bar • simple", "Line • glow", "Line • simple"};
     static final String SLIDERS = "sliders";
     static final String BUTTON_BACKGROUND = "buttonBackground";
+    static final String BUTTON_BORDER = "buttonBorder";
     static final String OFF_BUTTON_BORDER = "offButtonBorder";
 
     String name = "System default";
@@ -77,6 +78,7 @@ final class ThemeConfig {
     int auroraSmoothing = 80;
     int sliders = -12099221;
     int buttonBackground = -16380912;
+    int buttonBorder = controls;
     int offButtonBorder = -14807240;
     int changedIndicator = Color.rgb(255, 194, 87);
 
@@ -137,6 +139,7 @@ final class ThemeConfig {
         t.sliders = Color.rgb(75, 101, 112);
         t.buttonBackground = Color.rgb(18, 36, 47);
         t.offButtonBorder = blend(t.border, t.background, 0.18f);
+        t.buttonBorder = t.controls;
         return t;
     }
 
@@ -183,6 +186,7 @@ final class ThemeConfig {
         t.auroraSmoothing = auroraSmoothing;
         t.sliders = sliders;
         t.buttonBackground = buttonBackground;
+        t.buttonBorder = buttonBorder;
         t.offButtonBorder = offButtonBorder;
         t.changedIndicator = changedIndicator;
         return t;
@@ -209,6 +213,7 @@ final class ThemeConfig {
     }
 
     int get(String field) {
+        if (BUTTON_BORDER.equals(field)) return buttonBorder;
         if (GAUGE_PANEL_1.equals(field)) return gaugePanel1;
         if (GAUGE_OUTLINE_1.equals(field)) return gaugeOutline1;
         if (GAUGE_PANEL_2.equals(field)) return gaugePanel2;
@@ -247,6 +252,7 @@ final class ThemeConfig {
     }
 
     void set(String field, int color) {
+        if (BUTTON_BORDER.equals(field)) { buttonBorder = color; return; }
         if (GAUGE_PANEL_1.equals(field)) { gaugePanel1 = color; return; }
         if (GAUGE_OUTLINE_1.equals(field)) { gaugeOutline1 = color; return; }
         if (GAUGE_PANEL_2.equals(field)) { gaugePanel2 = color; return; }
@@ -285,7 +291,7 @@ final class ThemeConfig {
 
     JSONObject toJson() throws JSONException {
         JSONObject o = new JSONObject();
-        o.put("format", 16);
+        o.put("format", 17);
         o.put(TITLE_TEXT, titleText);
         o.put(GAUGE_PANEL_1, gaugePanel1);
         o.put(GAUGE_OUTLINE_1, gaugeOutline1);
@@ -321,6 +327,7 @@ final class ThemeConfig {
         o.put(SPECTRUM_COLOURS, spectrumColours);
         o.put(SLIDERS, sliders);
         o.put(BUTTON_BACKGROUND, buttonBackground);
+        o.put(BUTTON_BORDER, buttonBorder);
         o.put(OFF_BUTTON_BORDER, offButtonBorder);
         o.put(CHANGED_INDICATOR, changedIndicator);
         return o;
@@ -332,6 +339,7 @@ final class ThemeConfig {
         t.frontEq = o.optInt(FRONT_EQ, t.frontEq);
         t.rearEq = o.optInt(REAR_EQ, t.rearEq);
         t.controls = o.optInt(CONTROLS, t.controls);
+        t.buttonBorder = o.optInt(BUTTON_BORDER, t.controls);
         t.background = o.optInt(BACKGROUND, t.background);
         t.panel = o.optInt(PANEL, t.panel);
         // Older themes used the panel colour for graph and slider surfaces.
@@ -433,6 +441,7 @@ final class ThemeConfig {
                 && aurora4Spectrum == other.aurora4Spectrum
                 && sliders == other.sliders
                 && buttonBackground == other.buttonBackground
+                && buttonBorder == other.buttonBorder
                 && offButtonBorder == other.offButtonBorder
                 && changedIndicator == other.changedIndicator;
     }

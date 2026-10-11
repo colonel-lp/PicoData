@@ -114,11 +114,11 @@ test('live freshness is monotonic and source-specific; derived watts require fre
   api.accept('sbms',{receivedAt,receivedMonotonicMs:0,voltage:12,voltageStatus:'valid',stateOfCharge:65,current:{battery:-3,pv1:1,pv2:0,externalLoad:2.9}});
   let live=(await get('/api/v1/live')).body;assert.equal(live.pico.fresh,true);assert.equal(live.sbms.fresh,true);
   assert.equal(live.measurements.find(m=>m.id==='pico-battery').values.watts,-24);assert.equal(live.measurements.find(m=>m.id==='sbms-pv2').values.watts,0);
-  clock.mono=2100;clock.time=BASE-86400000;live=(await get('/api/v1/live')).body;
+  clock.mono=15100;clock.time=BASE-86400000;live=(await get('/api/v1/live')).body;
   assert.equal(live.pico.fresh,false);assert.equal(live.pico.readings,null);assert.equal(live.sbms.fresh,true);
   assert.equal(live.measurements.find(m=>m.id==='pico-battery').values.current,null);
   assert.equal(live.measurements.find(m=>m.id==='pico-battery').values.voltage,12);
-  clock.mono=3100;api.accept('pico',{receivedAt,receivedMonotonicMs:3100,readings:{101:{type:'battery',current:-2,stateOfCharge:80}}});
+  clock.mono=30100;api.accept('pico',{receivedAt,receivedMonotonicMs:30100,readings:{101:{type:'battery',current:-2,stateOfCharge:80}}});
   live=(await get('/api/v1/live')).body;assert.equal(live.pico.fresh,true);assert.equal(live.sbms.fresh,false);
   assert.equal(live.measurements.find(m=>m.id==='pico-battery').values.current,-2);assert.equal(live.measurements.find(m=>m.id==='pico-battery').values.watts,null);
   logger.active.delete('pico-battery');live=(await get('/api/v1/live')).body;assert.equal(live.measurements.find(m=>m.id==='pico-battery').mappingValid,false);
@@ -151,7 +151,7 @@ test('live SBMS exposes complete broadcast and boolean flags without adding flag
   for(const key of ['flags','broadcast','CFET','tempInt','futureField']) assert.equal(JSON.stringify(history).includes('"'+key+'"'),false);
   assert.equal((await get('/api/v1/metrics')).body.metrics.length,9);
   assert.equal((await get('/api/v1/history/metrics/CFET')).status,404);
-  clock.mono+=3100;assert.equal((await get('/api/v1/live')).body.sbms.reading,null);
+  clock.mono+=30100;assert.equal((await get('/api/v1/live')).body.sbms.reading,null);
   accept();api.status('sbms','disconnected');assert.equal((await get('/api/v1/live')).body.sbms.reading,null);
 });
 
@@ -194,4 +194,21 @@ test('API check reads private credentials without URL tokens; disabled/conflicti
   const conflict=spawnSync(process.execPath,[cli,'--api-config',file,'--no-api'],{encoding:'utf8'});assert.equal(conflict.status,2);
   const noLogging=spawnSync(process.execPath,[cli,'--api-config',file,'--no-logging','--no-mqtt'],{encoding:'utf8'});assert.equal(noLogging.status,1);assert.match(noLogging.stderr,/API setup failed/);
   assert.equal(noLogging.stderr.includes(TOKEN),false);
+});
+
+
+test('live SBMS gaps use the receiver timeout, not the shorter integration cutoff', async t=> {
+  const {api,logger,clock,get}=await setup(t);
+  const reading={receivedAt:new Date(BASE).toISOString(),receivedMonotonicMs:0,voltage:12,voltageStatus:'valid',stateOfCharge:65,current:{battery:-3,pv1:1,pv2:0,externalLoad:2}};
+  api.status('sbms','connected');api.accept('sbms',reading);
+  assert.equal(logger.config.maxGapSeconds.sbms,3);
+  clock.mono=5000;
+  let result=(await get('/api/v1/live')).body;
+  assert.equal(result.sbms.fresh,true);assert.equal(result.sbms.ageSeconds,5);assert.equal(result.sbms.reading.current.battery,-3);
+  api.setLiveTimeout('sbms',6000);clock.mono=6001;
+  result=(await get('/api/v1/live')).body;assert.equal(result.sbms.state,'stale');assert.equal(result.sbms.fresh,false);assert.equal(result.sbms.reading,null);
+  api.accept('sbms',{...reading,receivedMonotonicMs:clock.mono});assert.equal(api.source('sbms').fresh,true);
+  api.status('sbms','disconnected');assert.equal(api.source('sbms').reading,null);
+  assert.equal(logger.config.maxGapSeconds.sbms,3);
+  assert.throws(()=>api.setLiveTimeout('sbms',0));assert.throws(()=>api.setLiveTimeout('unknown',6000));
 });

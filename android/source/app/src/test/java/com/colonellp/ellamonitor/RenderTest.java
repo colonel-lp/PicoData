@@ -41,7 +41,19 @@ public class RenderTest {
             String path=System.getProperty("ella.render.path");if(path!=null){Bitmap settings=Bitmap.createBitmap(1024,600,Bitmap.Config.ARGB_8888);view.draw(new Canvas(settings));try(java.io.OutputStream out=new java.io.FileOutputStream(path.replace(".png","-settings.png"))){settings.compress(Bitmap.CompressFormat.PNG,100,out);}settings.recycle();}
             ActivityTest.call(a,"showThemeEditor");ThemeAppearanceView editor=(ThemeAppearanceView)ActivityTest.field(a,"appearanceView");editor.measure(View.MeasureSpec.makeMeasureSpec(544,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(560,View.MeasureSpec.EXACTLY));editor.layout(0,0,544,560);
             if(path!=null){Bitmap colours=Bitmap.createBitmap(544,560,Bitmap.Config.ARGB_8888);editor.draw(new Canvas(colours));try(java.io.OutputStream out=new java.io.FileOutputStream(path.replace(".png","-colours.png"))){assertTrue(colours.compress(Bitmap.CompressFormat.PNG,100,out));}colours.recycle();}
+            a.dismissThemeAppearanceDialog();
+            android.app.AlertDialog detail=DisplayRevisionTest.popup(DisplayRevisionTest.readout(a,"Battery [Pico]"));PresetAndColourTest.idle();
+            if(path!=null)renderDialog(detail,path.replace(".png","-popup.png"));detail.dismiss();
+            CompanionLayoutTest.invoke(a,"confirmOverwrite",new Class<?>[]{String.class,Runnable.class},"Synthetic preset",(Runnable)()->{});
+            android.app.Dialog confirmation=PresetAndColourTest.picker();PresetAndColourTest.idle();
+            if(path!=null)renderDialog(confirmation,path.replace(".png","-save.png"));confirmation.dismiss();
         }
+    }
+    private static void renderDialog(android.app.Dialog dialog,String path)throws Exception{
+        View decor=dialog.getWindow().getDecorView();int width=dialog.getWindow().getAttributes().width;
+        decor.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(540,View.MeasureSpec.AT_MOST));decor.layout(0,0,width,decor.getMeasuredHeight());
+        Bitmap bitmap=Bitmap.createBitmap(width,decor.getHeight(),Bitmap.Config.ARGB_8888);decor.draw(new Canvas(bitmap));
+        try(java.io.OutputStream out=new java.io.FileOutputStream(path)){assertTrue(bitmap.compress(Bitmap.CompressFormat.PNG,100,out));}bitmap.recycle();
     }
 }
 

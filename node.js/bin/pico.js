@@ -73,7 +73,7 @@ if (mqttDisabled || sbmsDisabled) api?.status('sbms','disabled');
 if (!mqttDisabled) {
   try {
     const config = readMqttConfig(mqttConfigPath);
-    if (!sbmsDisabled) sbms = new SbmsReceiver(parseSbmsOptions(config));
+    if (!sbmsDisabled) { sbms = new SbmsReceiver(parseSbmsOptions(config)); api?.setLiveTimeout('sbms',sbms.staleTimeoutMs); }
     publisher = new MqttPublisher(config, { resubscribe: !sbms });
     publisher.on('status', status => console.error(new Date().toISOString(), JSON.stringify(status)));
     publisher.start();
@@ -82,6 +82,8 @@ if (!mqttDisabled) {
       api?.status('sbms',status.state);
       if (status.state !== 'connected') logger?.unavailable('sbms');
     });
+    // Invalid JSON creates a logging gap without discarding an unexpired live display.
+    sbms?.on('rejected',()=>logger?.unavailable('sbms'));
     sbms?.start(publisher.client);
     options.legacyPythonOutput = true;
   } catch {
@@ -93,6 +95,7 @@ if (!mqttDisabled) {
 // reconnects/config refreshes to remain together in one capture.
 const recording = recordPath ? fs.createWriteStream(recordPath, { flags: 'a', mode: 0o600 }) : null;
 const client = new PicoClient(options);
+api?.setLiveTimeout('pico',client.options.staleAfterMs);
 const writeRecord = (kind, value) => recording?.write(JSON.stringify({ kind, ...value }) + '\n');
 sbms?.on('readings', reading => {
   logger?.acceptSbms(reading);

@@ -65,6 +65,15 @@ final class PrivateSettings {
         edit.putString("address",address);
     }
     String label(String id, String original) { return prefs.getString("label:" + id, original); }
+    private boolean hasElementSettings(String id) {
+        for (String key : new String[]{"label:","elementHighlight:","gaugeHighlight:","elementHidden:"}) if (prefs.contains(key + id)) return true;
+        return false;
+    }
+    String instrumentBinding(MonitorData.Datum datum) {
+        if (!datum.id.startsWith("raw:") || datum.metric == null || hasElementSettings(datum.id)) return datum.id;
+        String catalogueId = datum.metric.alias + ":" + datum.quantity;
+        return hasElementSettings(catalogueId) ? catalogueId : datum.id;
+    }
     void setLabel(String id, String value) { prefs.edit().putString("label:" + id, value).apply(); }
     void resetLabel(String id) { prefs.edit().remove("label:" + id).apply(); }
     int highlight(String id) { return Math.max(0,Math.min(2,prefs.getInt("elementHighlight:"+id,prefs.getBoolean("gaugeHighlight:"+id,false)?1:0))); }

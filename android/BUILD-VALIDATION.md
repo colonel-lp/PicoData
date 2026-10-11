@@ -1,5 +1,23 @@
 # Build validation
 
+## Android 0.25 and Pi collector 0.7.2 — 2026-10-11
+
+Source parent: PicoData 8cb6d2e43820542f1c5317e3f034ed33ea52b64d. Read-only EQ reference: Joying-EQ-DSP 2ce2fc16a02e05692960675a9913d687b556a8a0. Android versionName 0.25 / versionCode 7; owner compiles Ella-monitoring-v0.25.apk. Package/signing identity, minimum API 27 and compile/target API 37 are unchanged.
+
+Application Java/resources and test sources compile with the existing JDK 25 daemon configuration. The final focused testDebugUnitTest + lintDebug run passes **34 tests, zero failures/errors/skips**, covering ContractTest, BindingAndGaugeTest, DisplayRevisionTest, Build25UiTest and RenderTest. Framework tests use a temporary JDK 17 test launcher and local dependency/proxy settings; these are not committed project changes. Lint passes with **zero errors and 53 warnings**. Debug/release public filename providers both resolve to Ella-monitoring-v0.25.apk in a configuration-only check. No app APK assembly, signing, installation or release publication occurs.
+
+- Test raw pressure/temperature readings becoming catalogue-backed, stale/recovery, genuinely distinct equal-label sensors, changed raw metadata and preservation of raw/catalogue saved labels, highlights, visibility and preset modification state. Barometer remains available independently of SBMS freshness; the temperature sorter is unchanged.
+- Check the signed Inverter sum, fixed Load/PV/Battery ranges, zero-origin signed arcs, drawing-only clamping, SOC anticlockwise direction/band limits and unchanged environmental instrument roles.
+- Check compact footer controls in landscape and rotated portrait viewport sizes, exclusive highlights/swatches/hide, aligned control bounds and Close behavior. Save confirmations share the approved padding and equal-height/equal-weight buttons; cancel and save actions remain correct.
+- Check independent Button border serialization/copy/difference/old-theme fallback and unchanged bottom-bar colour roles; Font moves to Edit theme while remaining preset state. Existing preview/rollback/editor-return, source freshness and stable-view tests stay included.
+- Inspect native synthetic renders of the dashboard, Settings, colour editor, element popup and save confirmation. V[P]/V[S] now fit the cell-voltage text size using compact default notation; their 10px side padding and boxes remain unchanged. Footer controls have 6px gaps; other existing popup padding is retained. Renders contain invented values only and are not device evidence.
+
+A broader intermediate run executed 69 tests with the footer geometry assertion failing; it was corrected to compare aligned control bounds rather than assume a fixed top coordinate after framework window remeasurement. The corrected UI checks pass. Other broad attempts stalled during framework setup and were stopped. The final passing claim above is the focused 34-test run, not a complete 69-test suite result. Existing Java 8 source/target and Gradle deprecation warnings remain visible; SDK targets are not lowered.
+
+Collector 0.7.2: **npm test passes 78 tests, zero failures/skips**; edited CLI/API/SBMS files also pass syntax checks. New synthetic checks cover accepted SBMS data surviving a short gap beyond the integration cutoff, receiver-configured live expiry, true stale/disconnect/recovery and an isolated malformed payload that cannot renew its deadline. Existing logging coverage, gap/energy, MQTT wire, Pico/Python parity and CLI tests remain included. HistoryLogger and its configured maxGapSeconds implementation are unchanged; rejection still immediately interrupts logging coverage. Database schema, MQTT settings/output and pinned dependencies are preserved.
+
+The viewer remains compatible with collector 0.7.1; the Pi must use 0.7.2 to benefit from the live-deadline/rejection correction. This demonstrates software display-policy fixes, not a cause or fix for actual device/Wi-Fi connection loss. Owner phone/head-unit fit, live SBMS/Pico cadence and network/broker/device recovery still need verification. No real Pi, SBMS or Android hardware test is claimed. Private runtime readings, identities, addresses, accounts and diagnostics are excluded.
+
 ## Android 0.24 — display controls, live preview and stable polling, 2026-10-10
 
 Source parent: PicoData 351e3859a12db457c47f07e0961a2fd8eece692d. Read-only EQ reference: Joying-EQ-DSP 2ce2fc16a02e05692960675a9913d687b556a8a0 (picker preview/dismissal and colour-list flow). VersionName 0.24 / versionCode 6. Preserve the owner's latest Node-RED and Android Studio changes, including daemon JVM criteria for JDK 25.

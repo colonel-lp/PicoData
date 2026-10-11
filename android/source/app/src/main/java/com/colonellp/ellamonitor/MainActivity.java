@@ -250,11 +250,13 @@ public final class MainActivity extends Activity {
         if (settings == null || status == null) return;
         Map<String, MonitorData.Datum> next = MonitorData.display(metrics, live, live == null ? 0 : (SystemClock.elapsedRealtime() - receivedMono) / 1000d);
         // Retain metadata/layout when source snapshots disappear, but never retain their current values.
-        for (MonitorData.Datum old : readings.values()) if (!next.containsKey(old.id) && old.metric == null && old.id.startsWith("raw:")) {
-            String sensorPrefix=old.id.substring(0,old.id.indexOf(':',4)+1);
-            boolean replacement=false;for(String id:next.keySet())if(id.startsWith(sensorPrefix)){replacement=true;break;}
-            if(!replacement)next.put(old.id,new MonitorData.Datum(old.id,old.name,old.unit,old.group,old.quantity,null,null,null,old.receivedAt));
+        MonitorData.retainRawBindings(readings, next);
+        Map<String, MonitorData.Datum> bound = new LinkedHashMap<>();
+        for (MonitorData.Datum datum : next.values()) {
+            String id = settings.instrumentBinding(datum);
+            bound.put(id, id.equals(datum.id) ? datum : new MonitorData.Datum(id,datum.name,datum.unit,datum.group,datum.quantity,datum.value,datum.flag,datum.metric,datum.receivedAt));
         }
+        next = bound;
         boolean changed = liveDashboard!=null&&!liveDashboard.accepts(next); readings = next;
         if (!historyScreen && !settingsScreen) { if (changed || liveDashboard == null) buildDashboard(); else liveDashboard.update(readings); }
         if (live == null) status.setText(connectionState);
@@ -405,32 +407,45 @@ public final class MainActivity extends Activity {
     private void showDetail(MonitorData.Datum d,String fallback){showDetail(d,fallback,false);}
     private void showDetail(MonitorData.Datum d, String fallback,boolean gauge) {showElementDetail(d==null?"pending:"+fallback:d.id,d,fallback,gauge);}
     private void showElementDetail(String id,MonitorData.Datum d,String fallback,boolean gauge) {
-        if (d == null) { LinearLayout empty=column();empty.addView(uiText("—",14,theme.text));addElementOptions(empty,id);themedAlertBuilder().setTitle(settings.label(id,fallback)).setView(empty).setPositiveButton("Close",null).show(); return; }
-        LinearLayout view = column(); addElementOptions(view,id);view.addView(text("Snapshot at tap: " + formatted(d) + "\nReceived: " + (d.receivedAt.isEmpty() ? "—" : d.receivedAt) + "\nOriginal label: " + d.name, 15, palette.text));
-        if (d.metric == null) view.addView(text("Live only. No history is recorded for this element." + (d.id.contains("timeRemaining") ? " Time estimate follows Node-RED using Pico nominal/remaining capacity and raw battery current." : ""), 14, palette.muted));
+        LinearLayout view=column();final AlertDialog[] popup=new AlertDialog[1];
+        if(d==null)view.addView(uiText("—",14,theme.text));
         else {
-            view.addView(text("Source: " + d.metric.source + " · " + d.metric.id + "\nChoose retained history:", 13, palette.muted));
-            TextView summary = text("Choose a summary period.", 14, palette.text); view.addView(summary);
-            LinearLayout choices = row(); view.addView(choices);
-            final AlertDialog[] popup = new AlertDialog[1];
-            for (int i = 0; i < 4; i++) { final int n = i; choices.addView(button(new String[]{"Hour", "Day", "Week", "Month"}[i], false, () -> loadSummary(d.metric, n, summary, popup[0]))); }
-            popup[0] = themedAlertBuilder().setTitle(settings.label(d.id, d.name)).setView(view).setPositiveButton("Close", null)
-                    .setNeutralButton("Chart", (a, b) -> { selectedMetric = d.metric.id; quantity = d.quantity;settings.prefs.edit().putString("metric",selectedMetric).putString("quantity",quantity).apply(); offset = 0; historyScreen = true; build(); loadHistory(); }).create();
-            popup[0].setOnDismissListener(a -> { summaryEpoch++; if (summaryClient != null) summaryClient.cancel(); }); popup[0].show(); return;
+            view.addView(text("Snapshot at tap: "+formatted(d)+"\nReceived: "+(d.receivedAt.isEmpty()?"—":d.receivedAt)+"\nOriginal label: "+d.name,15,palette.text));
+            if(d.metric==null)view.addView(text("Live only. No history is recorded for this element."+(d.id.contains("timeRemaining")?" Time estimate follows Node-RED using Pico nominal/remaining capacity and raw battery current.":""),14,palette.muted));
+            else {
+                view.addView(text("Source: "+d.metric.source+" · "+d.metric.id+"\nChoose retained history:",13,palette.muted));
+                TextView summary=text("Choose a summary period.",14,palette.text);view.addView(summary);
+                LinearLayout periods=row();view.addView(periods);
+                for(int i=0;i<4;i++){final int period=i;periods.addView(button(new String[]{"Hour","Day","Week","Month"}[i],false,()->loadSummary(d.metric,period,summary,popup[0])));}
+                TextView chart=dialogButton("CHART",theme.controls);view.addView(chart,new LinearLayout.LayoutParams(-1,dialogDp(35)));
+                chart.setOnClickListener(v->{popup[0].dismiss();selectedMetric=d.metric.id;quantity=d.quantity;settings.prefs.edit().putString("metric",selectedMetric).putString("quantity",quantity).apply();offset=0;historyScreen=true;build();loadHistory();});
+            }
         }
-        themedAlertBuilder().setTitle(settings.label(d.id, d.name)).setView(view).setPositiveButton("Close", null).show();
+        addElementOptions(view,id,()->popup[0].dismiss());
+        popup[0]=themedAlertBuilder().setTitle(settings.label(id,d==null?fallback:d.name)).setView(view).create();
+        popup[0].setOnDismissListener(a->{summaryEpoch++;if(summaryClient!=null)summaryClient.cancel();removeTrackedChildren(view);});
+        popup[0].show();
+        // Framework styling is shared; the four footer controls use compact dialog text.
+        ViewGroup footer=(ViewGroup)view.getChildAt(view.getChildCount()-1);
+        for(int i=0;i<footer.getChildCount();i++)((TextView)footer.getChildAt(i)).setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,dialogTextSize(11.5f));
+        refreshChangedIndicators();
     }
-    private void addElementOptions(LinearLayout view,String id){
-        LinearLayout options=column();view.addView(options);final boolean[] syncing={false};final CheckBox[] choices=new CheckBox[2];
+    private void addElementOptions(LinearLayout view,String id,Runnable close){
+        LinearLayout options=row();options.setBaselineAligned(false);options.setGravity(Gravity.CENTER_VERTICAL);view.addView(options);final boolean[] syncing={false};final CheckBox[] choices=new CheckBox[2];
         for(int i=0;i<2;i++){final int choice=i+1;
             choices[i]=trackChange(setting(options,"Highlight "+choice,settings.highlight(id)==choice,on->{
                 if(syncing[0])return;settings.setHighlight(id,on?choice:settings.highlight(id)==choice?0:settings.highlight(id));
                 syncing[0]=true;for(int j=0;j<2;j++)choices[j].setChecked(settings.highlight(id)==j+1);syncing[0]=false;
                 if(liveDashboard!=null)liveDashboard.refreshChanges();
             }),"elementHighlight:"+id);
-            android.graphics.drawable.GradientDrawable swatch=roundedBackground(choice==1?theme.gaugeHighlight:theme.highlight2,theme.border,1,3);swatch.setBounds(0,0,dialogDp(22),dialogDp(22));choices[i].setCompoundDrawables(null,null,swatch,null);
+            android.graphics.drawable.GradientDrawable swatch=roundedBackground(choice==1?theme.gaugeHighlight:theme.highlight2,theme.border,1,3);swatch.setBounds(0,0,dialogDp(14),dialogDp(14));choices[i].setCompoundDrawables(null,null,swatch,null);
+            choices[i].setButtonDrawable(new CheckboxDrawable(theme,dialogDp(18)));
+            LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dialogDp(38),1.3f);if(i>0)lp.setMargins(dialogDp(6),0,0,0);choices[i].setLayoutParams(lp);
         }
-        trackChange(setting(options,"Hide contents",settings.hidden(id),on->{android.content.SharedPreferences.Editor edit=settings.prefs.edit();if(on)edit.putBoolean("elementHidden:"+id,true);else edit.remove("elementHidden:"+id);edit.apply();if(liveDashboard!=null)liveDashboard.refreshChanges();}),"elementHidden:"+id);
+        CheckBox hide=trackChange(setting(options,"Hide contents",settings.hidden(id),on->{android.content.SharedPreferences.Editor edit=settings.prefs.edit();if(on)edit.putBoolean("elementHidden:"+id,true);else edit.remove("elementHidden:"+id);edit.apply();if(liveDashboard!=null)liveDashboard.refreshChanges();}),"elementHidden:"+id);
+        hide.setButtonDrawable(new CheckboxDrawable(theme,dialogDp(18)));
+        LinearLayout.LayoutParams hp=new LinearLayout.LayoutParams(0,dialogDp(38),1.3f);hp.setMargins(dialogDp(6),0,0,0);hide.setLayoutParams(hp);
+        TextView button=dialogButton("CLOSE",theme.controls);LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,dialogDp(38),.8f);cp.setMargins(dialogDp(6),0,0,0);options.addView(button,cp);button.setOnClickListener(v->close.run());
     }
     private void clearDialogDim(android.app.Dialog dialog){if(dialog.getWindow()!=null){dialog.getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);android.view.WindowManager.LayoutParams lp=dialog.getWindow().getAttributes();lp.dimAmount=0;dialog.getWindow().setAttributes(lp);}}
     private volatile int summaryEpoch;
@@ -523,7 +538,6 @@ public final class MainActivity extends Activity {
         trackChange(setting(display,"Hide connection status",hideStatus,on->{hideStatus=on;settings.prefs.edit().putBoolean("hideStatus",on).apply();status.setVisibility(settingsScreen||on?View.GONE:View.VISIBLE);}),"hideStatus");
         trackChange(setting(display,"Persistent app notification",persistent,on->{persistent=on;settings.prefs.edit().putBoolean("persistent",on).apply();if(on&&Build.VERSION.SDK_INT>=33&&checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},33);persistence(true);}),"persistent");
         trackChange(setting(display,"Display local clock",localClock,on->{localClock=on;settings.prefs.edit().putBoolean("localClock",on).apply();updateLive();}),"localClock");
-        Button fontButton=uiButton("Font: "+getFontDisplayName()+"  ▾",true,()->{});trackChange(fontButton,"fontFamily");display.addView(fontButton,new LinearLayout.LayoutParams(-1,38));fontButton.setOnClickListener(v->showFontMenu(fontButton,null));
         LinearLayout labels=settingsGroup(left,"EXPORT");settingButton(labels,"Export current chart range",this::exportHistory);
         View spacer=new View(this);right.addView(spacer,new LinearLayout.LayoutParams(-1,0,1));
         LinearLayout footer=column();footer.setPadding(6,6,6,6);footer.setBackground(uiBackground(theme.panel,theme.border));right.addView(footer,new LinearLayout.LayoutParams(-1,-2));
@@ -566,7 +580,13 @@ public final class MainActivity extends Activity {
     }
     private void showThemeMenu(){List<String> names=new ArrayList<>();List<Runnable> actions=new ArrayList<>();names.add("SAVE THEME AS…");actions.add(()->saveTheme(null));if(appearance.names().contains(theme.name)&&!theme.sameColours(appearance.load(theme.name))){names.add("UPDATE \""+theme.name+"\"");actions.add(()->saveTheme(theme.name));}names.add("MANAGE THEMES…");actions.add(()->manage(true));names.add("EDIT THEME");actions.add(this::showThemeEditor);names.add("EDIT DISPLAY LABELS");actions.add(this::labelSettings);names.add("System default");actions.add(()->applyTheme(ThemeConfig.defaults()));for(String name:appearance.names()){names.add(name);actions.add(()->applyTheme(appearance.load(name)));}menu("THEMES",names,actions);}
     private void applyTheme(ThemeConfig value){if(value==null)return;value.fontFamily=theme.fontFamily;theme=value;appearance.active(theme);build();refreshAppearance();}
-    private void confirmOverwrite(String name,Runnable action){themed(themedAlertBuilder().setTitle("Save changes to \""+name+"\"?").setMessage("Overwrite the saved settings?").setNegativeButton("CANCEL",null).setPositiveButton("SAVE CHANGES",(d,w)->action.run()).create());}
+    private void confirmOverwrite(String name,Runnable action){
+        android.app.Dialog dialog=new android.app.Dialog(this);LinearLayout panel=styledDialogRoot();panel.setPadding(dialogDp(10),dialogDp(7),dialogDp(10),dialogDp(9));
+        panel.addView(styledTitle("Save changes to \""+name+"\"?"));
+        TextView message=uiText("Overwrite the saved values?",dialogTextSize(13),theme.text);message.setGravity(Gravity.CENTER);LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(-1,-2);mp.setMargins(dialogDp(4),dialogDp(3),dialogDp(4),dialogDp(7));panel.addView(message,mp);
+        LinearLayout buttons=row();TextView cancel=dialogButton("CANCEL",theme.border),save=dialogButton("SAVE CHANGES",theme.controls);buttons.addView(cancel,new LinearLayout.LayoutParams(0,dialogDp(35),1));LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(0,dialogDp(35),1);bp.setMargins(dialogDp(6),0,0,0);buttons.addView(save,bp);panel.addView(buttons);
+        cancel.setOnClickListener(v->dialog.dismiss());save.setOnClickListener(v->{dialog.dismiss();action.run();});showStyledDialog(dialog,panel,350);
+    }
     private void writeTheme(String name){try{if(name.equals("Default")||name.equals("System default"))throw new IllegalArgumentException("Choose another theme name.");appearance.save(name,theme);theme.name=name;appearance.active(theme);build();refreshAppearance();}catch(Exception e){toast(e.getMessage());}}
     private void saveTheme(String overwrite){if(overwrite!=null){confirmOverwrite(overwrite,()->writeTheme(overwrite));return;}promptName("SAVE THEME AS","",name->{if(appearance.names().contains(name))confirmOverwrite(name,()->writeTheme(name));else writeTheme(name);});}
     private void promptName(String title,String initial,java.util.function.Consumer<String> action){
@@ -590,9 +610,10 @@ public final class MainActivity extends Activity {
     float dialogTextSize(float n){return n*(viewport==null?getResources().getDisplayMetrics().density:viewport.scale);}
     android.content.SharedPreferences viewerPreferences(){return settings.prefs;}
     String getFontDisplayName(){String[] f={"sans-serif","sans-serif-condensed","sans-serif-medium","sans-serif-light","monospace"},labels={"SANS","CONDENSED","MEDIUM","LIGHT","MONOSPACE"};for(int i=0;i<f.length;i++)if(f[i].equals(theme.fontFamily))return labels[i];return "SANS";}
+    boolean isFontChanged(){return presetChanges.contains("fontFamily");}
     void dismissThemeAppearanceDialog(){if(appearanceDialog!=null)appearanceDialog.dismiss();}
     void editThemeAppearanceColour(String field,String label){editColour(field,label);}
-    void showFontMenu(View anchor,android.graphics.RectF position){String[] families={"sans-serif","sans-serif-condensed","sans-serif-medium","sans-serif-light","monospace"};List<String> labels=java.util.Arrays.asList("SANS","CONDENSED","MEDIUM","LIGHT","MONOSPACE");List<Runnable> actions=new ArrayList<>();for(String family:families)actions.add(()->{theme.fontFamily=family;settings.prefs.edit().putString("fontFamily",family).apply();build();refreshAppearance();refreshChangedIndicators();});anchoredMenu(anchor,position,false,labels,actions,java.util.Arrays.asList(families).indexOf(theme.fontFamily));}
+    void showFontMenu(View anchor,android.graphics.RectF position){String[] families={"sans-serif","sans-serif-condensed","sans-serif-medium","sans-serif-light","monospace"};List<String> labels=java.util.Arrays.asList("SANS","CONDENSED","MEDIUM","LIGHT","MONOSPACE");List<Runnable> actions=new ArrayList<>();for(String family:families)actions.add(()->{theme.fontFamily=family;settings.prefs.edit().putString("fontFamily",family).apply();build();refreshAppearance();refreshChangedIndicators();});anchoredMenu(anchor,position,anchor instanceof ThemeAppearanceView,labels,actions,java.util.Arrays.asList(families).indexOf(theme.fontFamily));}
     private void refreshAppearance(){if(appearanceView!=null)appearanceView.invalidate();if(appearanceDialog!=null&&appearanceDialog.getWindow()!=null)appearanceDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);}
     private void previewTheme(){
         if(root!=null)root.setBackgroundColor(theme.background);

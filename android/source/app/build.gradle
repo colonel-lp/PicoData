@@ -6,8 +6,8 @@ android {
         applicationId 'com.colonellp.ellamonitor.preview'
         minSdk 27
         targetSdk 37
-        versionCode 6
-        versionName '0.24'
+        versionCode 7
+        versionName '0.25'
     }
     buildFeatures { buildConfig true }
     compileOptions {

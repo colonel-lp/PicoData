@@ -54,6 +54,29 @@ final class MonitorData {
             this.id = id; this.name = name; this.unit = unit; this.group = group; this.quantity = quantity;
             this.value = value; this.flag = flag; this.metric = metric; this.receivedAt = receivedAt;
         }
+        String physicalKey() {
+            if (metric != null) return metric.source + ":" + metric.definition.optString("sensorId") + ":" + quantity;
+            if (id.startsWith("raw:")) { int end = id.indexOf(':', 4); if (end > 4) return "pico:" + id.substring(4, end) + ":" + quantity; }
+            return "";
+        }
+    }
+    /** Preserve raw sensor settings when its catalogue/history mapping arrives. Never keep old values. */
+    static void retainRawBindings(Map<String, Datum> previous, Map<String, Datum> next) {
+        for (Datum old : previous.values()) if (old.id.startsWith("raw:") && !next.containsKey(old.id)) {
+            String prefix = old.id.substring(0, old.id.indexOf(':', 4) + 1);
+            Datum replacement = null; boolean reconfigured = false;
+            for (Datum candidate : next.values()) {
+                if (candidate.id.startsWith(prefix)) reconfigured = true;
+                if (!old.physicalKey().isEmpty() && old.physicalKey().equals(candidate.physicalKey())) replacement = candidate;
+            }
+            // A changed raw metadata fingerprint must not inherit the old sensor's settings.
+            if (reconfigured) continue;
+            if (replacement != null) {
+                next.remove(replacement.id);
+                next.put(old.id, new Datum(old.id, replacement.name, replacement.unit, replacement.group, replacement.quantity,
+                        replacement.value, replacement.flag, replacement.metric, replacement.receivedAt));
+            } else next.put(old.id, new Datum(old.id, old.name, old.unit, old.group, old.quantity, null, null, old.metric, old.receivedAt));
+        }
     }
     static Map<String, Datum> display(List<Metric> metrics, JSONObject live, double elapsed) {
         Map<String, Datum> result = new LinkedHashMap<>();
@@ -75,7 +98,11 @@ final class MonitorData {
                 Double value = available ? number(values, field) : null;
                 if ((field.equals("watts") || field.equals("voltage")) && m.definition.optString("voltage").equals("sbms") && !sFresh) value = null;
                 String unit = field.equals("current") ? "A" : field.equals("watts") ? "W" : field.equals("stateOfCharge") ? "%" : field.equals("temperature") ? "°C" : field.equals("pressure") ? "hPa" : "V";
-                add(result, m.alias + ":" + field, m.name + " · " + fieldName(field), unit, group, field, value, null, m, record.optString("receivedAt", ""));
+                // Raw metadata already supplies a stable settings identity for these Pico instruments.
+                JSONObject sensor = rawPico.optJSONObject(m.definition.optString("sensorId"));
+                String binding = m.source.equals("pico") && (m.kind.equals("temperature") || m.kind.equals("barometer")) && sensor != null
+                        ? rawBinding(m.definition.optString("sensorId"), sensor) : m.alias;
+                add(result, binding + ":" + field, m.name + " · " + fieldName(field), unit, group, field, value, null, m, record.optString("receivedAt", ""));
             }
             if (group.equals("loads")) {
                 loadCount++; Double v = available ? number(values, "current") : null, polarity = number(m.definition, "polarity");
@@ -97,7 +124,7 @@ final class MonitorData {
         Double batteryCurrent=null;
         for(Datum d:result.values())if(d.metric!=null&&d.metric.channel.equals("picoBattery")&&d.quantity.equals("current"))batteryCurrent=d.value;
         Double load=result.get("pico:load-sum").value;
-        add(result,"pico:inverter","Inverter","A","loads","current",batteryCurrent!=null&&load!=null?batteryCurrent-load:null,null,null,pico.optString("receivedAt"));
+        add(result,"pico:inverter","Inverter","A","loads","current",batteryCurrent!=null&&load!=null?batteryCurrent+load:null,null,null,pico.optString("receivedAt"));
         JSONObject flags = object(object(sbms, "reading"), "flags");
         for (String key : new String[]{"CFET", "DFET", "OVLK", "UVLK", "EOC", "IOT", "LVC", "CELF"}) {
             Object value = flags.opt(key); add(result, "flag:" + key, key, "", "flags", key, null, sFresh && value instanceof Boolean ? (Boolean)value : null, null, sbms.optString("receivedAt"));

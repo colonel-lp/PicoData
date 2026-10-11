@@ -28,7 +28,7 @@ final class ThemeAppearanceView extends View {
         ThemeConfig.GAUGE_PANEL_2, ThemeConfig.GAUGE_OUTLINE_2,
         ThemeConfig.FRONT_EQ, ThemeConfig.REAR_EQ,
         ThemeConfig.HIGHLIGHT_1, ThemeConfig.HIGHLIGHT_2,
-        ThemeConfig.BUTTON_BACKGROUND, null,
+        ThemeConfig.BUTTON_BACKGROUND, ThemeConfig.BUTTON_BORDER,
         ThemeConfig.BUTTON_TEXT_ON, ThemeConfig.CONTROLS,
         ThemeConfig.BUTTON_TEXT_OFF, ThemeConfig.OFF_BUTTON_BORDER
     };
@@ -36,11 +36,12 @@ final class ThemeAppearanceView extends View {
         "BACKGROUND", "TEXT", "PANELS", "BORDERS", "TITLE TEXT", "TITLE BACKGROUND",
         "TITLE OUTLINE", "CHANGED INDICATOR", "INDICATOR BACKGROUND", "VOLTAGES BACKGROUND",
         "GAUGE PANEL 1", "GAUGE PANEL 1 OUTLINE", "GAUGE PANEL 2", "GAUGE PANEL 2 OUTLINE",
-        "GAUGE POSITIVE", "GAUGE NEGATIVE", "HIGHLIGHT 1", "HIGHLIGHT 2", "BUTTON BACKGROUND", "",
+        "GAUGE POSITIVE", "GAUGE NEGATIVE", "HIGHLIGHT 1", "HIGHLIGHT 2", "BUTTON BACKGROUND", "BUTTON BORDER",
         "BUTTON ON TEXT", "BUTTON ON BORDER", "BUTTON OFF TEXT", "BUTTON OFF BORDER"
     };
     private final RectF[] colourButtons = new RectF[colourFields.length];
-    private final RectF backButton = new RectF(20, 508, 518, 548);
+    private final RectF fontButton = new RectF(20, 508, 260, 548);
+    private final RectF backButton = new RectF(278, 508, 518, 548);
 
     ThemeAppearanceView(Context context, MainActivity host) {
         super(context);
@@ -82,6 +83,8 @@ final class ThemeAppearanceView extends View {
             if (colourFields[i] == null) drawEmptyButton(canvas, colourButtons[i], t);
             else drawColourButton(canvas, colourButtons[i], colourLabels[i], t.get(colourFields[i]), t);
         }
+        drawSelector(canvas, fontButton, "FONT: " + host.getFontDisplayName() + "  ▾", t, Paint.Align.CENTER);
+        if(host.isFontChanged()) centredText(canvas,"FONT: " + host.getFontDisplayName() + "  ▾",fontButton.centerX(),fontButton.centerY(),12.8f,t.changedIndicator,Paint.Align.CENTER);
         drawSelector(canvas, backButton, "BACK", t, Paint.Align.CENTER);
         canvas.restore();
     }
@@ -148,6 +151,7 @@ final class ThemeAppearanceView extends View {
                 return true;
             }
         }
+        if (fontButton.contains(x, y)) { host.showFontMenu(this, fontButton); return true; }
         if (backButton.contains(x, y)) { host.dismissThemeAppearanceDialog(); return true; }
         return true;
     }

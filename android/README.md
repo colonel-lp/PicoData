@@ -1,8 +1,8 @@
 # Ella Monitoring Android preview
 
-Version **0.24** (build 6). Native Java viewer for the existing [Pi collector 0.7.1 API](../node.js/API.md). Minimum Android 8.1 / API 27; compile/target API 37. The Pi remains the always-on collector and logger. This build does not require a collector update.
+Version **0.25** (build 7). Native Java viewer for the existing [Pi collector 0.7.2 API](../node.js/API.md). Minimum Android 8.1 / API 27; compile/target API 37. The Pi remains the always-on collector and logger. The viewer also works with collector 0.7.1; update the Pi source to 0.7.2 for the live-freshness correction. Logging, the database schema and MQTT output are unchanged.
 
-**Owner-built update:** compile `Ella-monitoring-v0.24.apk` in Android Studio and use the same signing key as the installed app to update in place and preserve settings. The package is unchanged. The earlier 0.1.0 key is different and still requires reinstalling. This remains the existing development package; a separate production identity is not introduced.
+**Owner-built update:** compile `Ella-monitoring-v0.25.apk` in Android Studio and use the same signing key as the installed app to update in place and preserve settings. The package is unchanged. The earlier 0.1.0 key is different and still requires reinstalling. This remains the existing development package; a separate production identity is not introduced.
 
 ## First connection
 
@@ -49,7 +49,7 @@ cd android/source
 ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
 ```
 
-Android Studio/Gradle produces `app/build/outputs/apk/debug/Ella-monitoring-v0.24.apk` (and the same filename in the release output directory). This source-only delivery does not include an assembled APK. Keep development signing material private. Use the same private signing key as your installed version, and verify package/version/certificate when compiling an update. The app uses the PicoData GitHub release feed; APK assets must be named Ella-monitoring-vX.XX.apk. A source commit alone does not create an APK release. Rebuilding elsewhere with another debug key will require uninstalling the existing preview (which clears its settings), so the retained key must be preserved for future updates.
+Android Studio/Gradle produces `app/build/outputs/apk/debug/Ella-monitoring-v0.25.apk` (and the same filename in the release output directory). This source-only delivery does not include an assembled APK. Keep development signing material private. Use the same private signing key as your installed version, and verify package/version/certificate when compiling an update. The app uses the PicoData GitHub release feed; APK assets must be named Ella-monitoring-vX.XX.apk. A source commit alone does not create an APK release. Rebuilding elsewhere with another debug key will require uninstalling the existing preview (which clears its settings), so the retained key must be preserved for future updates.
 
 The app adds no third-party runtime dependency: HTTP/JSON, UI, storage encryption and plotting use Android/Java APIs. JUnit, a test-only JSON implementation and Robolectric are test dependencies. The standard Gradle wrapper retains its generated Apache 2.0 notices. Appearance, scaling, vector controls, the colour wheel and FYT screen behaviour are adapted from the owner's [EQ app reference](APP-PLAN.md#source-references-for-reuse); no audio/DSP operations or vendor implementation/assets are copied. No SignalK/Pico protocol port is distributed inside this APK.
 

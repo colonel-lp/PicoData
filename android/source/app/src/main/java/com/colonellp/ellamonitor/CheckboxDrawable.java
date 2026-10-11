@@ -11,9 +11,11 @@ import android.graphics.drawable.Drawable;
 final class CheckboxDrawable extends Drawable {
     private final ThemeConfig theme;
     private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    CheckboxDrawable(ThemeConfig theme) { this.theme = theme; }
-    @Override public int getIntrinsicWidth() { return 24; }
-    @Override public int getIntrinsicHeight() { return 24; }
+    private final int size;
+    CheckboxDrawable(ThemeConfig theme) { this(theme,24); }
+    CheckboxDrawable(ThemeConfig theme,int size) { this.theme = theme;this.size=size; }
+    @Override public int getIntrinsicWidth() { return size; }
+    @Override public int getIntrinsicHeight() { return size; }
     @Override public boolean isStateful() { return true; }
     @Override protected boolean onStateChange(int[] state) { invalidateSelf(); return true; }
     @Override public void draw(Canvas canvas) {

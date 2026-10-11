@@ -12,6 +12,7 @@ class ReadingApi {
     this.tokenHash = createHash('sha256').update(config.token).digest();
     this.startedAt = new Date(now()).toISOString();
     this.sources = Object.fromEntries(['pico','sbms'].map(source=>[source,{state:'waiting-data',latest:null,receivedAt:null}]));
+    this.liveTimeoutMs = {pico:15000,sbms:30000};
     this.loggingState = 'started'; this.budget = 60; this.budgetAt = monotonic();
   }
   configurePico(sensorList) { this.sensorList = sensorList; this.sources.pico.latest = null; }
@@ -25,10 +26,14 @@ class ReadingApi {
     if (!this.sources[source]) return;
     this.sources[source].latest = reading; this.sources[source].receivedAt = reading.receivedAt;
   }
+  setLiveTimeout(source, milliseconds) {
+    if (!Object.hasOwn(this.liveTimeoutMs,source) || !Number.isFinite(milliseconds) || milliseconds<=0) throw Error('Invalid live timeout');
+    this.liveTimeoutMs[source] = milliseconds;
+  }
   source(source) {
     const s = this.sources[source], age = s.latest ? (this.monotonic()-s.latest.receivedMonotonicMs)/1000 : null;
-    const fresh = s.state==='connected' && age !== null && age>=0 && age<=this.logger.config.maxGapSeconds[source];
-    return {state:s.state,fresh,receivedAt:s.receivedAt,ageSeconds:age===null ? null : Math.max(0,age),
+    const fresh = s.state==='connected' && age !== null && age>=0 && age<=this.liveTimeoutMs[source]/1000;
+    return {state:s.state==='connected' && !fresh ? 'stale' : s.state,fresh,receivedAt:s.receivedAt,ageSeconds:age===null ? null : Math.max(0,age),
       ...(source==='pico' ? {readings:fresh ? s.latest.readings : null} : {reading:fresh ? {
         voltage:s.latest.voltage,voltageStatus:s.latest.voltageStatus,stateOfCharge:s.latest.stateOfCharge,current:s.latest.current,sourceTime:s.latest.sourceTime,
         flags:s.latest.flags ?? null,broadcast:s.latest.broadcast ?? null

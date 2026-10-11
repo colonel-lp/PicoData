@@ -1,6 +1,6 @@
 # Live dashboard
 
-Updated in **0.24 / build 6**.
+Updated in **0.25 / build 7**.
 
 The Node-RED arrangement uses a 1024px-wide logical landscape canvas with uniform width-based control scale; usable height varies with system bars. The bottom bar stays 54 logical pixels high with 40px controls and 6px top padding in both fullscreen states. Portrait windows retain a rotated landscape canvas when Android ignores sensor-landscape orientation. Fullscreen omits hidden system-bar insets while keeping cutout/keyboard safety. The app-wide title is removed; the Ella Monitoring dashboard title is restored above the flags, consuming central gauge height only. Currents:, Temps: and Ella Monitoring have separate theme title backgrounds/outlines; the connection-status line is optional and always absent on Settings.
 
@@ -18,6 +18,12 @@ In 0.22 the central gauge array has its own padded bounding box. Independent Gau
 
 In 0.23 the three headings have a separate Title text role. Edited dashboard labels/headings and gauge-highlight settings differing from the selected preset use Changed indicator colour; measurements and fixed flag status colours remain unchanged. Theme changes do not dirty presets. Automatic chart fallback leaves the saved selection unchanged; actual chart edits refresh selector/item indication immediately.
 
-In 0.24 V[P]/V[S] end at logical x=624, leaving 6px inside the summary box at x=630; the cell box starts at x=636 with its own 6px inset. Inverter is the final evenly spaced current row: the signed displayed Battery [Pico] current minus the displayed Load [Pico] sum. Either unavailable input makes it unavailable. It is live derived data with no history metric. Existing load arithmetic, runtime and logged channels are unchanged.
+In 0.24 V[P]/V[S] end at logical x=624, leaving 6px inside the summary box at x=630; the cell box starts at x=636 with its own 6px inset. Inverter is the final evenly spaced current row: the signed displayed Battery [Pico] current plus the displayed Load [Pico] sum (corrected in 0.25). Either unavailable input makes it unavailable. It is live derived data with no history metric. Existing load arithmetic, runtime and logged channels are unchanged.
 
 Indicator background colours the flags bounding box; Voltages background colours both lower summary/cell boxes. Individual button backgrounds, outlines and fixed flag meanings remain independently applied. See [live-connection.md](live-connection.md) for independent freshness and stable-view polling.
+
+In 0.25 Load scales are fixed at 0–10 A with Gauge negative arcs; PV1/PV2 are 0–20 A. Battery currents are −10 to +10 A, with a needle, central zero and an arc only from zero to the clamped current. Negative/positive currents use their respective gauge theme colours. SOC uses a complete anticlockwise ring: red 0–25%, amber 25–50%, green 50–100%, starting/ending at 12 o'clock. Numeric source values are never clamped or recalculated by these scale changes. LPG, water, pressure and Pitch/Roll retain their previous ranges.
+
+V[P]/V[S] now use the same 14px logical centred label/value text as cell voltages; all retain 10px text side padding and existing boxes. Default V[P]/V[S] text is compact so those narrower boxes fit the full 14px text without automatic shrinkage; customised labels still use the existing fit behavior. Main-page readout normal/pressed outlines use the independent Button border role. Gauge-panel/title outlines and bottom-bar on/off theming remain separate.
+
+Element popup Highlight 1/2, Hide contents and Close are on the final horizontal row, with compact scaled checkboxes, colour swatches and 6px gaps between controls. Outer popup padding remains unchanged. Summary periods and Chart remain available above that footer. Only the two save-change confirmation dialogs change padding; other dashboard/popup/editor padding remains as approved.

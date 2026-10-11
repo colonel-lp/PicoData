@@ -1,4 +1,4 @@
-# Local readings and history API — collector 0.7.0
+# Local readings and history API — collector 0.7.2
 
 The existing collector can serve authenticated, read-only JSON through Node's built-in HTTP/HTTPS server. No additional npm dependency, database server or service is added. Only the Pi opens SQLite; Android/browser clients request JSON. Existing collection, logging, MQTT JSON and retention are unchanged. The database remains schema 2; this update does not require a history migration or new logging selection.
 
@@ -66,7 +66,7 @@ Since collector 0.7.1, `sbms.reading.flags` provides the monitor boolean states,
 
 `sbms.reading.broadcast` preserves the complete accepted MQTT JSON in original names and units, including `time`, `soc`, `cellsMV`, `tempInt`, `tempExt`, `currentMA`, `ad2`, `ad3`, `ad4`, `heat1`, `heat2`, all original `flags` (including numeric `delta`) and additional publisher fields. Raw currents/cells remain mA/mV; the existing normalized `current` and `voltage` remain A/V. Raw optional fields are passed through, so use normalized `flags` for boolean display. No additional broadcast fields are automatically logged. Changed flags/auxiliary values within the same source-clock second are delivered; a complete repeat with reordered keys still does not renew freshness.
 
-Freshness uses monotonic elapsed time and the logger's source-specific limits (default Pico 2 seconds/SBMS 3 seconds), independently of the transports' longer recovery timers. Disconnect/configuration changes invalidate affected snapshots immediately. Retained/exact-repeat SBMS messages remain filtered by the existing receiver. An unavailable source's last receipt can still be reported, but its old values are not served as current.
+Freshness uses monotonic elapsed time and each receiver's live stale deadline (default Pico 15 seconds/SBMS 30 seconds). Logging integration still uses its shorter source-specific maxGapSeconds (default Pico 2 seconds/SBMS 3 seconds); display persistence adds no history coverage. Disconnect/configuration changes invalidate affected snapshots immediately. Retained/exact-repeat SBMS messages remain filtered by the existing receiver. An unavailable source's last receipt can still be reported, but its old values are not served as current.
 
 Each selected `measurements` entry has `id`, `fresh`, `mappingValid`, receipt/voltage receipt timestamps and named `values`. Electrical values are `current` (A), `voltage` (V), `watts` (W), plus relevant-device `stateOfCharge` (%) for batteries. Voltage/temperature/pressure values are `voltage`, `temperature` (°C) or `pressure` (hPa). A live current and SOC can remain available when voltage/watts are null. Valid zero current produces zero watts when voltage is available. The freshness flag concerns the metric's own source; the fields/timestamps independently show cross-source voltage availability. A rejected configured Pico binding cannot supply selected live measurements.
 
@@ -110,3 +110,10 @@ Automated checks cover authenticated HTTP/HTTPS, read-only SQLite, simultaneous 
 Test LAN requests/restarts on the Pi and privately measure request memory/latency alongside unattended logging before claiming hardware performance. Android implementation remains next; its target versions, screens, graphs, discovery, credentials and offline behaviour still need agreement. Future USB storage should include consistent SQLite backups. Local SD/Android/cloud destination and schedule/retention are undecided; automatic backup or Google Drive access is not implemented here.
 
 References: [Node HTTP server](https://nodejs.org/download/release/v22.13.0/docs/api/http.html), [Node SQLite read-only connections](https://nodejs.org/download/release/v22.13.0/docs/api/sqlite.html), [Node TLS](https://nodejs.org/download/release/v22.13.0/docs/api/tls.html).
+
+
+### Live deadlines in 0.7.2
+
+API freshness uses the acquisition receiver deadline, independently of logging.maxGapSeconds. Defaults are Pico 15 seconds and SBMS 30 seconds; the existing sbms_stale_seconds option also sets the SBMS API deadline. An expired connected sample is reported as state=stale, fresh=false, with null readings/reading. Monotonic age and last accepted receipt timestamps remain truthful. Actual disconnects immediately clear readings.
+
+One rejected SBMS JSON message neither renews nor immediately discards a still-unexpired accepted live reading. The receiver emits rejected and diagnostic events, and the collector CLI immediately ends that source's logging coverage. The next valid nonduplicate sample recovers normally. Retained messages and complete repeats cannot renew live freshness. Integration continues to use the unchanged configured maxGapSeconds; a longer display deadline adds no history duration/energy coverage. MQTT protocol errors and device/network connection loss are separate unresolved causes, not fixed by this display policy.

@@ -125,7 +125,13 @@ class SbmsReceiver extends EventEmitter {
     if (packet?.retain) { this.emit('diagnostic', 'retained-ignored'); return; }
     let reading;
     try { reading = decodeSbms(payload, { activeCells: this.activeCells, receivedAt: this.now(), monotonicMs: this.monotonic() }); }
-    catch { this.status('invalid-message'); return; }
+    catch {
+      // A rejected payload is not a new acquisition and cannot renew freshness.
+      // Keep the previous accepted display until its original stale deadline.
+      this.emit('diagnostic', 'invalid-message'); this.emit('rejected');
+      if (!this.latest) this.status('invalid-message');
+      return;
+    }
     const identity = reading.broadcast;
     // Include live flags/auxiliary values so changes within one source-clock
     // second are delivered. Reordered object keys are still an exact repeat.

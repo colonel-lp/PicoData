@@ -258,3 +258,16 @@ test('CLI rejects SBMS flag/config mistakes without credentials and can disable 
   assert.equal(code, 0, stderr); assert.equal(subscribed, false); assert.equal(stdout, '');
   assert.ok(stderr.includes('"source":"mqtt","state":"connected"')); assert.equal(stderr.includes('"source":"sbms"'), false);
 });
+
+
+test('one malformed payload keeps the accepted display but never renews its stale deadline', async t=> {
+  const client=fakeClient(),receiver=new SbmsReceiver({staleTimeoutMs:60});t.after(()=>receiver.stop());
+  let accepted=0,rejected=0;receiver.on('readings',()=>accepted++);receiver.on('rejected',()=>rejected++);
+  receiver.start(client);client.emit('message','/Ella/sbms',bytes(fixture()),{});
+  const original=receiver.latest,stale=status(receiver,'stale');
+  client.emit('message','/Ella/sbms',Buffer.from('bad-json'),{});
+  assert.equal(receiver.state,'connected');assert.equal(receiver.latest,original);assert.equal(accepted,1);assert.equal(rejected,1);
+  await stale;assert.equal(receiver.latest,null);
+  client.emit('message','/Ella/sbms',bytes(fixture(2)),{});assert.equal(receiver.state,'connected');assert.equal(accepted,2);
+  client.connected=false;client.emit('close');assert.equal(receiver.latest,null);assert.equal(receiver.state,'disconnected');
+});

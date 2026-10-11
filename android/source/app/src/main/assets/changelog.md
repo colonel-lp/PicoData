@@ -1,5 +1,20 @@
 # Android changelog
 
+## 0.25 — 2026-10-11
+
+Android source version 0.25 / versionCode 7. Owner-built output: Ella-monitoring-v0.25.apk. Prepare source only; package/signing identity and SDK targets are unchanged. Collector 0.7.2 supplies the accompanying live-freshness correction; the app remains compatible with 0.7.1.
+
+- Fix the Pico raw-to-catalogue transition that could add an unavailable duplicate temperature and bind the barometer to an obsolete copy. Keep a single physical instrument with its history mapping, saved labels/highlights/visibility and existing temperature order. Preserve independent stale handling and distinguish genuinely different sensors with the same label.
+- Correct Inverter to the signed Battery [Pico] plus Load [Pico] sum. Either unavailable input still shows a dash; no new logging/history is added.
+- Use fixed Load 0–10 A and PV1/PV2 0–20 A scales. Both Load arcs use Gauge negative. Both Battery currents use −10 to +10 A, with a middle zero/needle and colour only from zero to the indicated value: negative/positive theme colours by sign.
+- Draw both SOC gauges as full circles increasing anticlockwise: 0% at 12 o'clock, 25% at 9, 50% at 6, and 100% at 12. Filled bands are red 0–25%, amber 25–50% and green 50–100%; the actual source percentage remains displayed.
+- Put Highlight 1, Highlight 2, Hide contents and Close in one element-popup footer row. Keep exclusive choices, swatches and preset settings, plus existing summary/chart actions. Use compact scaled footer controls with 6px gaps between them; leave existing outer and unrelated popup padding unchanged.
+- Add Button border as a separate saved/live-preview colour for main-page readout outlines. Bottom-bar on/off colours, gauge-panel outlines, title outlines and fixed flag status colours retain their own roles.
+- Move Font to Edit theme's bottom-left dropdown, with choices above and Back at bottom right. Preserve the existing editor spacing and colour-picker return path. Font remains a preset setting; themes contain colours only.
+- Match both save-change confirmation dialogs to the approved name/theme/preset dialog padding and equal-sized buttons. Leave other dialog and dashboard padding unchanged.
+- Increase V[P]/V[S] label and value text to the same centred text size as cell voltages, retaining three-decimal voltage formatting and 10px side padding. Compact default V[P]/V[S] notation fits that size without shrinking the text.
+- Collector 0.7.2 separates live display deadlines from logging integration gaps and rejects isolated malformed JSON without clearing an unexpired accepted display. Real stale/disconnects still clear data. Device/Wi-Fi dropout cause and physical-device verification remain open.
+
 ## 0.24 — 2026-10-10
 
 Android source version 0.24 / versionCode 6. Owner-built APK output: Ella-monitoring-v0.24.apk. Package/signing identity, collector/API/database/MQTT contracts and SDK targets are unchanged. This delivery prepares source only.

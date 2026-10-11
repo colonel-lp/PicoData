@@ -88,8 +88,8 @@ public class DisplayRevisionTest {
     }
     @Test public void collectorFreshnessDoesNotGetASecondShortAgeCutoffAndInverterKeepsSigns()throws Exception{
         JSONObject l=ContractTest.live();l.getJSONObject("sbms").put("ageSeconds",2.9);
-        Map<String,MonitorData.Datum> data=MonitorData.display(MonitorData.catalogue(ContractTest.catalogue()),l,.8);assertNotNull(ContractTest.find(data,"sbmsBattery","current").value);assertEquals(-5,data.get("pico:inverter").value,0);
-        l.getJSONObject("sbms").put("fresh",false);data=MonitorData.display(MonitorData.catalogue(ContractTest.catalogue()),l,0);assertNull(ContractTest.find(data,"sbmsBattery","current").value);assertEquals(-5,data.get("pico:inverter").value,0);
+        Map<String,MonitorData.Datum> data=MonitorData.display(MonitorData.catalogue(ContractTest.catalogue()),l,.8);assertNotNull(ContractTest.find(data,"sbmsBattery","current").value);assertEquals(0,data.get("pico:inverter").value,0);
+        l.getJSONObject("sbms").put("fresh",false);data=MonitorData.display(MonitorData.catalogue(ContractTest.catalogue()),l,0);assertNull(ContractTest.find(data,"sbmsBattery","current").value);assertEquals(0,data.get("pico:inverter").value,0);
         l.getJSONObject("pico").put("fresh",false);assertNull(MonitorData.display(MonitorData.catalogue(ContractTest.catalogue()),l,0).get("pico:inverter").value);assertFalse(MonitorData.fresh(ContractTest.source(new JSONObject(),"reading",.1),3.1));
     }
     @Test public void addedColoursRoundTripAndEditorOrdersChangedBesideTitleOutline()throws Exception{

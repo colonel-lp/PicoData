@@ -1,5 +1,11 @@
 # Pico base changelog
 
+## 0.7.2 — 2026-10-11
+
+- Separate live API display freshness from logging integration maxGapSeconds. Use the actual receivers' stale deadlines: Pico 15 seconds by default; SBMS 30 seconds or its existing sbms_stale_seconds setting. Preserve receipt age/timestamps and report expired data as stale/null.
+- Reject isolated malformed SBMS JSON without clearing an unexpired accepted live reading or renewing its deadline. Emit rejection/diagnostic events; the CLI immediately cuts logging coverage at a rejected payload. Retained/repeated messages still cannot renew freshness; actual disconnect/stale states still clear readings.
+- Preserve database schema, logging gap limits, calculations, MQTT publishing/subscription settings, payloads and pinned dependencies. No broker/router/device reconfiguration or real Wi-Fi fix is claimed.
+
 ## 0.7.1 — 2026-10-09
 
 - Expose the complete accepted SBMS MQTT broadcast through the live API in original names/units, alongside existing normalized battery values.
