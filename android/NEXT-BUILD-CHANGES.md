@@ -1,3 +1,12 @@
+## Completed same-version correction — SOC depletion direction — 2026-10-11
+
+Owner reported that both SOC gauges still operated clockwise and explicitly requested an immediate fix. Retain 0.26 / build 8.
+
+- [x] Fix the moving edge's direction when SOC falls. A negative sweep starting at a fixed 12 o'clock made its endpoint move clockwise during depletion. Anchor the arc's end at 12 o'clock instead and move its start anticlockwise: falling from full, 75% places the moving edge at 9, 50% at 6 and 25% at 3 o'clock.
+- [x] Retain one whole remaining arc, unrounded green/amber/red thresholds, numerical readings and all other gauge appearance. Update the existing drawing assertion to describe the corrected geometry.
+
+Source parent: PicoData b6da1b3b5dc82d39b55b7e80df487e3fb86d7012. Focused source review only; no tests, lint, compilation or device checks run under the simple-UI fast-edit rule.
+
 ## Completed same-version correction — voltage text and equal internal spacing — 2026-10-11
 
 Owner explicitly requested the file changes immediately and instructed that no tests be performed. Implemented in 0.26 / build 8; no new build/version increment.

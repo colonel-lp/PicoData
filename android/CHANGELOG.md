@@ -2,6 +2,7 @@
 
 ## 0.26 — 2026-10-11
 
+- Same-version SOC direction correction: anchor the remaining arc's end at 12 o'clock so its moving edge depletes anticlockwise as SOC falls (75% at 9, 50% at 6, 25% at 3 o'clock). Retain the whole-arc threshold colours and actual SOC value. No tests or compilation run for this correction.
 - Same-version correction: V[P]/V[S] and cell-voltage labels/values use the SBMS voltage's 14px logical text size with equal measured left, middle and right gaps. Shorten long custom labels rather than shrink voltage text; preserve other layout/padding. Tests were omitted at the owner's request.
 - Remove pointers from both Battery current gauges. Both SOC gauges use one anticlockwise remaining arc: green at 50–100%, amber from 25% to below 50%, red below 25%, selected before rounding the number.
 - Reduce Pitch/Roll live text; move gauge limit labels down 6px. The six current gauges show centred amps on the limit row and move their live values up 6px. Barometer, LPG and Water live values move up 6px. Preserve other layout/padding and source calculations.

@@ -32,9 +32,9 @@ public class Build26GaugeTest {
         Capture pitch=draw(GaugeScale.Kind.DEFAULT,"°",1d);assertEquals(1,pitch.lines);assertTrue(pitch.named("1.00").size<draw(GaugeScale.Kind.BATTERY,"A",1d).named("1.00").size);
         assertEquals(pitch.named("-5").y,pitch.named("+5").y,0);
     }
-    @Test public void socUsesOneAnticlockwiseRemainingArcAtExactUnroundedThresholds(){
-        for(double value:new double[]{100,50,49.9,25,24.9}){
-            Capture c=draw(GaugeScale.Kind.SOC,"%",value);assertEquals(2,c.arcs.size());Arc remaining=c.arcs.get(1);assertEquals(270,remaining.start,0);assertEquals(-value*3.6,remaining.sweep,.001);assertEquals(value>=50?0xff32dc68:value>=25?0xffffbf45:0xffff4545,remaining.colour);
+    @Test public void socDepletesAnticlockwiseAtExactUnroundedThresholds(){
+        for(double value:new double[]{100,75,50,49.9,25,24.9}){
+            Capture c=draw(GaugeScale.Kind.SOC,"%",value);assertEquals(2,c.arcs.size());Arc remaining=c.arcs.get(1);assertEquals((270+value*3.6)%360,remaining.start,.001);assertEquals(270,(remaining.start+remaining.sweep+360)%360,.001);assertEquals(-value*3.6,remaining.sweep,.001);assertEquals(value>=50?0xff32dc68:value>=25?0xffffbf45:0xffff4545,remaining.colour);
         }
         assertEquals(1,draw(GaugeScale.Kind.SOC,"%",0d).arcs.size());assertEquals(1,draw(GaugeScale.Kind.SOC,"%",null).arcs.size());
     }

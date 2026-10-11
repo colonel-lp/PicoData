@@ -39,11 +39,11 @@ final class GaugeView extends View {
         canvas.drawArc(arc,angle?180:soc?270:145,angle?180:soc?-360:250,false,paint);
         if(value!=null){
             if(soc){
-                // SOC grows anticlockwise: 0=12, 25=9, 50=6, 100=12 o'clock.
+                // Keep the arc's end at 12 o'clock; its start moves anticlockwise as SOC falls.
                 paint.setColor(GaugeScale.socColour(value));
                 paint.setStrokeCap(Paint.Cap.BUTT);
                 float sweep=GaugeScale.sweep(kind,unit,value);
-                if(sweep!=0)canvas.drawArc(arc,270,sweep,false,paint);
+                if(sweep!=0)canvas.drawArc(arc,(270-sweep)%360,sweep,false,paint);
                 paint.setStrokeCap(Paint.Cap.ROUND);
             }else{
                 float sweep=angle?(float)Math.max(-90,Math.min(90,value*18)):GaugeScale.sweep(kind,unit,value);

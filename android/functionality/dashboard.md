@@ -2,6 +2,8 @@
 
 Updated in **0.26 / build 8**.
 
+Same-version SOC direction correction: the remaining arc ends at 12 o'clock; its start moves anticlockwise as SOC falls. From full, the moving edge reaches 9 o'clock at 75%, 6 at 50% and 3 at 25%. This supersedes the fixed-start direction described earlier. The remaining arc still uses one threshold-selected colour and displays the actual source SOC.
+
 Same-version voltage correction: V[P], V[S] and cell-voltage labels/values are drawn separately at the SBMS voltage readout's 14px logical text size. Their left inset, label/value gap and right inset are equal, calculated from each full cell width and measured fragment widths. This supersedes fixed 10px visible side padding for these cells only; delta voltage and other layout/padding retain their existing behavior. Long renamed labels are ellipsized instead of shrinking the voltage. Owner requested no tests for this correction.
 
 The Node-RED arrangement uses a 1024px-wide logical landscape canvas with uniform width-based control scale; usable height varies with system bars. The bottom bar stays 54 logical pixels high with 40px controls and 6px top padding in both fullscreen states. Portrait windows retain a rotated landscape canvas when Android ignores sensor-landscape orientation. Fullscreen omits hidden system-bar insets while keeping cutout/keyboard safety. The app-wide title is removed; the Ella Monitoring dashboard title is restored above the flags, consuming central gauge height only. Currents:, Temps: and Ella Monitoring have separate theme title backgrounds/outlines; the connection-status line is optional and always absent on Settings.

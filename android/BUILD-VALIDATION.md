@@ -1,5 +1,13 @@
 # Build validation
 
+## Android 0.26 — same-version SOC depletion direction correction, 2026-10-11
+
+Source parent: PicoData b6da1b3b5dc82d39b55b7e80df487e3fb86d7012. Owner authorized an immediate simple UI fix; versionName 0.26 / versionCode 8 and output filename remain unchanged.
+
+Source review found that a fixed 12 o'clock start and negative remaining sweep made the moving endpoint travel clockwise as SOC fell. GaugeView now anchors the remaining arc's end at 12 o'clock and moves its start anticlockwise during depletion. Falling from full, the moving edge is at 9 o'clock at 75%, 6 at 50% and 3 at 25%. Both SOC gauges share this drawing path; threshold colours, raw percentages and other gauges remain unchanged. The existing recording-Canvas assertion is updated to the new start/fixed-end geometry.
+
+No tests, lint, compilation, APK assembly or device checks were run. Earlier passing results below apply to their recorded revisions, not this correction.
+
 ## Android 0.26 — same-version voltage text/spacing correction, 2026-10-11
 
 Source parent: PicoData 5c8f065ad40fcd8cb58765e143df71f5bac3c6b5. Owner explicitly authorized immediate LiveDashboard.java edits and requested no tests. VersionName 0.26 / versionCode 8 and output filename Ella-monitoring-v0.26.apk remain unchanged.
