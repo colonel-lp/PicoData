@@ -1,3 +1,12 @@
+## Next-build request — voltage text and equal internal spacing — 2026-10-11
+
+Owner requested instructions for changing these cells; no new application build or immediate source edit was requested.
+
+- [ ] Make V[P], V[S] and cell-voltage label/value text match the SBMS voltage readout's actual drawn text size. Current valueSize requests 14px for all of them, but the combined label/value string can trigger drawText auto-shrinking in narrower cells. Preserve three-decimal values, units, custom labels, themed colours, highlights, hidden contents and screen scaling.
+- [ ] Measure and draw the label and voltage separately so the left text inset, label-to-value gap and right text inset are equal within each voltage cell. Derive the three gaps from cell width minus both measured text widths; do not approximate spacing with literal spaces. Account for long renamed labels without shrinking the voltage text. This is the specifically requested internal spacing location; preserve unrelated padding and bounding-box layout.
+
+Read-only source review: PicoData 25c28165b445bd4b0cfa038b83343e63763f3a0c, LiveDashboard.Readout and drawText. Record the request for the next authorized source build; version remains 0.26 / build 8.
+
 ## Authorized source build 0.26 — 2026-10-11
 
 Owner requested the next source build from the pending list. Android versionName **0.26** / versionCode **8**, with **Ella-monitoring-v0.26.apk** configured as the owner-built APK filename. Implemented the completed export, gauge and preset-file items below; validation is recorded in BUILD-VALIDATION.md. No app APK assembly/signing/publication here. Pi collector remains 0.7.2; the SBMS investigation below remains open because no controlled device/network result has been supplied.
