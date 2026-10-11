@@ -1,3 +1,18 @@
+## Next-build requests — gauge appearance and text positions — 2026-10-11
+
+Recorded after source 0.25; pending the next authorized source build.
+
+- [ ] Remove the pointers from both Battery current gauges (Pico and SBMS). Retain their existing zero-centred negative/positive arcs and scales.
+- [ ] Both SOC gauges must operate anticlockwise. Colour the entire remaining-SOC arc with one colour selected from the actual SOC: **green at 50–100%**, **amber at 25% to below 50%**, **red below 25% down to 0%**. This supersedes the separate red/amber/green arc segments implemented in 0.25. Keep the existing full-circle scale and change the remaining arc's whole colour only when a threshold is crossed; do not round SOC before deciding the colour. Check 50%, 49.9%, 25%, 24.9%, zero and full.
+- [ ] Make the live values on Pitch and Roll a little smaller. Preserve their pointers, zero-origin shading and −5 to +5 scales.
+- [ ] Move the displayed limit values on gauges, including Pitch and Roll, **down 6px**.
+- [ ] On all six current gauges (two Load, PV1, PV2, two Battery), replace the unit **A** with **amps**, centred on the same baseline as the repositioned limit values.
+- [ ] Move the central live value on all six current gauges **up 6px**.
+- [ ] Move the Barometer live reading **up 6px**.
+- [ ] Move the LPG and Water live values **up 6px**.
+
+Apply these text offsets in the established reference layout with existing screen scaling; check fitting/alignment without moving the gauge boards or changing unrelated padding. Current GitHub GaugeView/GaugeScale at e44ae68629b7462ea5d85d6f23025def33cf077d already draw SOC anticlockwise but use multiple fixed colour bands; the requested single threshold-selected remaining-arc colour is still pending. Preserve source readings, calculations, unavailable dashes and unrelated theming.
+
 ## Next-build requests — preset files and validation — 2026-10-11
 
 Recorded after source 0.25. This is a storage request and validation investigation; no application changes or version increment are authorized by this question.
