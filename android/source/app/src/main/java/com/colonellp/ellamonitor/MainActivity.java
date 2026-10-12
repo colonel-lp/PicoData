@@ -51,6 +51,10 @@ import java.util.concurrent.Executors;
 public final class MainActivity extends Activity {
     private static final String LAN_PERMISSION = "android.permission.ACCESS_LOCAL_NETWORK";
     private final Handler handler = new Handler(Looper.getMainLooper());
+    private final ExecutorService popupWorker=Executors.newFixedThreadPool(2),viewSettingsWorker=Executors.newSingleThreadExecutor();
+    private PopupSettingsStore popupSettings;
+    private volatile ApiClient popupMonthClient;
+    private final Runnable savePopupSettings=()->withDownloadsStorage(()->viewSettingsWorker.execute(()->{try{popupSettings.save();}catch(Exception e){handler.post(()->{if(MainActivity.this.active)toast(e.getMessage());});}}));
     private final ExecutorService liveWorker = Executors.newSingleThreadExecutor(), historyWorker = Executors.newSingleThreadExecutor(), metadataWorker=Executors.newSingleThreadExecutor();
     private PrivateSettings settings;
     private ScreenControl screen;
@@ -103,7 +107,7 @@ public final class MainActivity extends Activity {
         super.onCreate(state); settings = new PrivateSettings(this); screen = new ScreenControl(this, settings.prefs);
         setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         appearance = new AppearanceStore(this,settings.prefs); theme = appearance.active();migrateViewerSettings();
-        presets=new PresetStore(this,settings.prefs);
+        presets=new PresetStore(this,settings.prefs);popupSettings=new PopupSettingsStore(this);
         theme.fontFamily=settings.prefs.getString("fontFamily",theme.fontFamily);
         locked = settings.prefs.getBoolean("locked", false); hideStatus = settings.prefs.getBoolean("hideStatus", false); persistent = settings.prefs.getBoolean("persistent", false);
         currentPreset = settings.prefs.getString("currentPreset", "System default");
@@ -124,11 +128,12 @@ public final class MainActivity extends Activity {
     @Override public void onWindowFocusChanged(boolean focus) { super.onWindowFocusChanged(focus); if (focus && screen != null) { screen.apply(); windowMode(); } }
     @Override protected void onStop() {
         dismissAnchoredMenu();
+        if(Build.VERSION.SDK_INT>=29||checkSelfPermission("android.permission.WRITE_EXTERNAL_STORAGE")==PackageManager.PERMISSION_GRANTED)flushPopupSettings();
         active = false; epoch++; historyEpoch++; handler.removeCallbacks(poll); handler.removeCallbacks(expire);
-        if (liveClient != null) liveClient.cancel(); if (metadataClient!=null)metadataClient.cancel();metadataLoading=false; if (historyClient != null) historyClient.cancel(); if (summaryClient != null) summaryClient.cancel();
+        if (liveClient != null) liveClient.cancel(); if (metadataClient!=null)metadataClient.cancel();metadataLoading=false; if (historyClient != null) historyClient.cancel(); if (summaryClient != null) summaryClient.cancel();if(popupMonthClient!=null)popupMonthClient.cancel();
         live = null; history = null; historyLoading = false; screen.stop(); persistence(false); super.onStop();
     }
-    @Override protected void onDestroy() { if(colourDialog!=null)colourDialog.dismiss();if(appearanceDialog!=null){appearanceDialog.setOnDismissListener(null);appearanceDialog.dismiss();} if(updates!=null)updates.destroy();liveWorker.shutdownNow(); historyWorker.shutdownNow();metadataWorker.shutdownNow(); super.onDestroy(); }
+    @Override protected void onDestroy() { if(colourDialog!=null)colourDialog.dismiss();if(appearanceDialog!=null){appearanceDialog.setOnDismissListener(null);appearanceDialog.dismiss();} if(updates!=null)updates.destroy();handler.removeCallbacks(savePopupSettings);popupWorker.shutdownNow();viewSettingsWorker.shutdown();liveWorker.shutdownNow(); historyWorker.shutdownNow();metadataWorker.shutdownNow(); super.onDestroy(); }
 
     private int dp(float value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private LinearLayout column() { LinearLayout v = new LinearLayout(this); v.setOrientation(LinearLayout.VERTICAL); return v; }
@@ -286,7 +291,7 @@ public final class MainActivity extends Activity {
     private ApiClient client() throws Exception { return new ApiClient(settings.prefs.getString("address", ""), settings.token(), this::open); }
     private boolean allowed() { return Build.VERSION.SDK_INT < 37 || checkSelfPermission(LAN_PERMISSION) == PackageManager.PERMISSION_GRANTED; }
     private void restartConnection() {
-        epoch++; historyEpoch++; summaryEpoch++;if(summaryClient!=null)summaryClient.cancel();polls = 0; live = null; collectorStatus = null; history = null; historyLoading = false; piNowAt = 0; metrics = new ArrayList<>(); readings = new LinkedHashMap<>();
+        epoch++; historyEpoch++; summaryEpoch++;if(summaryClient!=null)summaryClient.cancel();if(popupMonthClient!=null)popupMonthClient.cancel();polls = 0; live = null; collectorStatus = null; history = null; historyLoading = false; piNowAt = 0; metrics = new ArrayList<>(); readings = new LinkedHashMap<>();
         handler.removeCallbacks(poll); if (liveClient != null) liveClient.cancel(); if (metadataClient!=null)metadataClient.cancel();metadataLoading=false; if (historyClient != null) historyClient.cancel();
         if (!active) return;
         if (!allowed()) { connectionState = "Local network permission is needed. Open Settings to connect."; updateLive(); return; }
@@ -341,13 +346,14 @@ public final class MainActivity extends Activity {
     }
     @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) { super.onRequestPermissionsResult(requestCode, permissions, results); if (requestCode == 37) restartConnection(); if(requestCode==28){Runnable action=storageAction;storageAction=null;if(results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED&&action!=null)action.run();else toast("Storage access is needed to save presets, themes and exports in Downloads.");} }
 
-    private List<MonitorData.Metric> historyMetrics(){List<MonitorData.Metric> result=new ArrayList<>(metrics);for(boolean inverter:new boolean[]{false,true}){MonitorData.Metric derived=DerivedHistory.metric(metrics,inverter);if(derived!=null)result.add(derived);}return result;}
+    private List<MonitorData.Metric> historyMetrics(){List<MonitorData.Metric> result=new ArrayList<>(metrics);for(boolean inverter:new boolean[]{false,true}){MonitorData.Metric derived=DerivedHistory.metric(metrics,inverter);if(derived!=null)result.add(derived);}MonitorData.Metric bms=DerivedHistory.bmsLoad(metrics);if(bms!=null)result.add(bms);return result;}
     private MonitorData.Metric selected() {
         for (MonitorData.Metric m : historyMetrics()) if (m.id.equals(selectedMetric)) return m;
         for (MonitorData.Metric m : metrics) if (m.channel.equals("sbmsBattery")) return m;
         if (!metrics.isEmpty()) return metrics.get(0); return null;
     }
-    private String metricLabel(MonitorData.Metric m) { if(DerivedHistory.isDerived(m))return settings.label(m.id.equals("derived:pico-load")?"pico:load-sum":"pico:inverter",m.name)+" · "+MonitorData.fieldName(quantityFor(m));return settings.label(m.alias + ":" + quantityFor(m), m.name + " · " + MonitorData.fieldName(quantityFor(m))); }
+    private String derivedDisplayId(MonitorData.Metric m){for(MonitorData.Datum d:readings.values())if(d.metric!=null&&d.metric.id.equals(m.id)&&d.quantity.equals("current"))return d.id;return m.id.equals("derived:pico-load")?"pico:load-sum":m.id.equals("derived:sbms-load")?"sbms:load-sum":"pico:inverter";}
+    private String metricLabel(MonitorData.Metric m) { if(DerivedHistory.isDerived(m))return settings.label(derivedDisplayId(m),m.name)+" · "+MonitorData.fieldName(quantityFor(m));if(m.channel.equals("externalLoad"))return m.name+" · raw externalLoad · "+MonitorData.fieldName(quantityFor(m));return settings.label(m.alias + ":" + quantityFor(m), m.name + " · " + MonitorData.fieldName(quantityFor(m))); }
     private String quantityFor(MonitorData.Metric m) { return m.kind.equals("electrical") ? quantity.equals("Wh") ? "watts" : quantity.equals("Ah") ? "current" : quantity : m.kind.equals("barometer") ? "pressure" : m.kind; }
     private String unit(MonitorData.Metric m) { return m.kind.equals("electrical") ? quantity.equals("watts") ? "W" : quantity.equals("current") ? "A" : quantity.equals("voltage") ? "V" : quantity.equals("stateOfCharge") ? "%" : quantity : m.kind.equals("barometer") ? "hPa" : m.kind.equals("temperature") ? "°C" : "V"; }
     private void buildHistory() {
@@ -399,12 +405,12 @@ public final class MainActivity extends Activity {
         chart.show(history, quantity, bars, localClock, this::inspect);
         if (history == null) return;
         boolean verified = MonitorData.number(history.metric.definition, "polarity") != null;
-        String direction = bars ? verified ? "  ·  green in / amber out" + (history.metric.role.equals("battery") ? " (net battery flow)" : "") : "  ·  unclassified signed net bars" : "";
+        String direction = bars ? PopupHistory.positiveCurrent(history.metric,quantity)?history.metric.role.equals("load")?"  ·  usage magnitude":"  ·  supply magnitude":verified ? "  ·  green in / amber out" + (history.metric.role.equals("battery") ? " (net battery flow)" : "") : "  ·  unclassified signed net bars" : "";
         historyNote.setText(metricLabel(history.metric) + " · " + unit(history.metric) + " · " + history.window.resolution + " · " + history.rows.size() + " recorded periods" + direction + "\n" + clock(history.window.from) + " → " + clock(history.window.to) + "\nCheckpoint: " + history.savedAt + "\nWhole UTC buckets; edge/partial buckets are not prorated. Tap a point for coverage.");
     }
     private void inspect(HistoryData.Record r) {
         if (history == null) return;
-        Double value = r.value(quantity, history.metric.kind), coverage = r.coverage(quantity, history.metric.kind);
+        Double value = PopupHistory.displayValue(history.metric,quantity,r.value(quantity, history.metric.kind)), coverage = r.coverage(quantity, history.metric.kind);
         String message = clock(r.start) + " → " + clock(r.end) + "\n" + (value == null ? "—" : String.format(Locale.UK, "%.3f %s", value, unit(history.metric)))
                 + "\nCoverage: " + (coverage == null ? "last reading / no duration coverage" : String.format(Locale.UK, "%.2f / %.0f seconds", coverage, (r.end.toEpochMilli() - r.start.toEpochMilli()) / 1000d))
                 + "\n" + (r.partial ? "Partial checkpoint" : "Closed bucket; coverage may contain gaps") + "\nSource: " + history.metric.source + " · " + history.metric.id;
@@ -413,34 +419,83 @@ public final class MainActivity extends Activity {
     }
     private void showDetail(MonitorData.Datum d,String fallback){showDetail(d,fallback,false);}
     private void showDetail(MonitorData.Datum d, String fallback,boolean gauge) {showElementDetail(d==null?"pending:"+fallback:d.id,d,fallback,gauge);}
-    private void showElementDetail(String id,MonitorData.Datum d,String fallback,boolean gauge) {
-        android.app.Dialog popup=new android.app.Dialog(this);
-        LinearLayout panel=styledDialogRoot();panel.setPadding(dialogDp(6),dialogDp(6),dialogDp(6),dialogDp(6));
-        TextView title=uiText(settings.label(id,fallback),dialogTextSize(22),theme.titleText);title.setGravity(Gravity.CENTER);title.setTypeface(Typeface.create(theme.fontFamily,Typeface.BOLD));panel.addView(title,new LinearLayout.LayoutParams(-1,dialogDp(38)));
-        MonitorData.Metric metric=d==null?null:d.metric;
-        GaugeScale.Kind kind=GaugeScale.kind("gauges",fallback);
-        boolean current=d!=null?d.quantity.equals("current"):gauge&&(kind==GaugeScale.Kind.LOAD||kind==GaugeScale.Kind.PV||kind==GaugeScale.Kind.BATTERY);
-        TextView values=null,samples=null;final int[] period={0};final boolean[] fixed={false};
-        if(current){
-            values=uiText("Current: —\nEnergy: —",dialogTextSize(16),theme.text);values.setGravity(Gravity.CENTER);popupRow(panel,values);
-            samples=uiText("Samples —/—",dialogTextSize(11.5f),theme.text);samples.setGravity(Gravity.CENTER);popupRow(panel,samples);
-            LinearLayout periods=row();periods.setBaselineAligned(false);popupRow(panel,periods);
-            TextView body=values,count=samples;List<TextView> buttons=new ArrayList<>();
-            Runnable reload=()->{
-                for(int i=0;i<4;i++){buttons.get(i).setText(SummaryPeriods.label(now(),i,fixed[0],ZoneId.systemDefault()));popupButtonState(buttons.get(i),period[0]==i);}
-                buttons.get(4).setText(fixed[0]?"Fixed":"Rolling");popupButtonState(buttons.get(4),fixed[0]);
-                loadElementSummary(metric,period[0],fixed[0],body,count,popup);
-            };
-            for(int i=0;i<4;i++){final int choice=i;TextView button=popupButton("",false,()->{period[0]=choice;reload.run();});buttons.add(button);popupControl(periods,button,i);}
-            TextView mode=popupButton("Rolling",false,()->{fixed[0]=!fixed[0];reload.run();});buttons.add(mode);popupControl(periods,mode,4);
-            // Load after the dialog is visible; late results are rejected on dismissal.
-            popup.setOnShowListener(dialog->reload.run());
+    private void showElementDetail(String id,MonitorData.Datum d,String fallback,boolean gauge){new ElementPopup(id,d,fallback,gauge).show();}
+    private final class ElementPopup {
+        final String id,field;final MonitorData.Metric metric;final boolean current,positive;
+        final android.app.Dialog dialog=new android.app.Dialog(MainActivity.this);
+        final LinearLayout panel=styledDialogRoot();final PopupSelection selection;
+        final TextView[][] periods=new TextView[2][4];TextView amps,energy,samples,caption,line,sum,quantityButton;
+        PopupChartView graph;android.widget.FrameLayout graphFrame;HistoryData.Result data;PopupHistory.Plan plan;
+        java.util.List<java.time.YearMonth> months;boolean loadingMonths;
+        ElementPopup(String key,MonitorData.Datum datum,String fallback,boolean gauge){
+            id=key;metric=PopupHistory.binding(id,datum,metrics);field=datum==null?"current":datum.quantity.equals("starterVoltage")?"voltage":datum.quantity;
+            GaugeScale.Kind kind=GaugeScale.kind("gauges",fallback);current=datum!=null?datum.quantity.equals("current"):gauge&&(kind==GaugeScale.Kind.LOAD||kind==GaugeScale.Kind.PV||kind==GaugeScale.Kind.BATTERY);
+            positive=current&&(metric==null||!metric.role.equals("battery"));selection=popupSettings.get(id);
+            String saved=settings.label(id,fallback),title=saved.equals(fallback)?PopupHistory.title(id,datum,fallback):saved;
+            if(datum!=null&&datum.unit.equals("°C")&&!title.toLowerCase(Locale.UK).endsWith("temperature"))title+=" temperature";
+            panel.setPadding(dialogDp(6),dialogDp(6),dialogDp(6),dialogDp(6));TextView heading=uiText(title,dialogTextSize(22),theme.titleText);heading.setGravity(Gravity.CENTER);heading.setTypeface(Typeface.create(theme.fontFamily,Typeface.BOLD));panel.addView(heading,new LinearLayout.LayoutParams(-1,dialogDp(38)));
+            boolean history=current||metric!=null&&(field.equals("stateOfCharge")||field.equals("voltage")||metric.kind.equals("voltage")||metric.kind.equals("barometer")||metric.kind.equals("temperature"));
+            if(current){LinearLayout values=column();values.setGravity(Gravity.CENTER);amps=summaryLine(values,"Current:");energy=summaryLine(values,"Energy:");popupRow(panel,values);}
+            if(history){
+                plan=PopupHistory.plan(now(),selection,ZoneId.systemDefault());if(metric!=null&&!PopupHistory.supports(metric,plan.query.resolution)){selection.period=1;selection.fixed=false;}
+                samples=uiText("Samples: —/—",dialogTextSize(11.5f),theme.text);samples.setGravity(Gravity.CENTER);popupRow(panel,samples);
+                caption=uiText("",dialogTextSize(11.5f),theme.text);caption.setGravity(Gravity.CENTER);popupRow(panel,caption);
+                android.widget.FrameLayout frame=new android.widget.FrameLayout(MainActivity.this);graphFrame=frame;graph=new PopupChartView(MainActivity.this,theme,dialogTextSize(1));frame.addView(graph,new android.widget.FrameLayout.LayoutParams(-1,-1));
+                LinearLayout controls=row();controls.setBaselineAligned(false);
+                if(current){quantityButton=popupButton(selection.power?"W":"A",selection.power,()->{selection.power=!selection.power;remember();draw();});chartControl(controls,quantityButton,0);}
+                line=popupButton(selection.bars?"Bar":"Line",selection.bars,()->{selection.bars=!selection.bars;remember();draw();});chartControl(controls,line,controls.getChildCount());
+                sum=popupButton("Sum",current&&selection.sum,()->{if(current){selection.sum=!selection.sum;remember();draw();}});sum.setEnabled(current);sum.setAlpha(current?1:.4f);chartControl(controls,sum,controls.getChildCount());
+                android.widget.FrameLayout.LayoutParams cp=new android.widget.FrameLayout.LayoutParams(-2,dialogDp(38),Gravity.TOP|Gravity.RIGHT);cp.setMargins(dialogDp(6),dialogDp(6),dialogDp(6),0);frame.addView(controls,cp);
+                LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(-1,dialogDp(200));fp.topMargin=dialogDp(6);panel.addView(frame,fp);
+                for(int row=0;row<2;row++){final boolean fixed=row==1;LinearLayout buttons=row();buttons.setBaselineAligned(false);TextView label=uiText(fixed?"Fixed data":"Rolling data",dialogTextSize(11.5f),theme.text);label.setGravity(Gravity.CENTER);popupControl(buttons,label,0);
+                    for(int p=0;p<4;p++){final int period=p;TextView button=popupButton("",false,()->{if(fixed&&period==3){chooseMonth();return;}selection.fixed=fixed;selection.period=period;remember();reload();});periods[row][p]=button;popupControl(buttons,button,p+1);}popupRow(panel,buttons);
+                }
+                dialog.setOnShowListener(v->{reload();loadMonths();});
+            }
+            LinearLayout footer=row();footer.setBaselineAligned(false);popupRow(panel,footer);addElementOptions(footer,id,()->dialog.dismiss(),metric,field);
+            dialog.setOnDismissListener(v->{summaryEpoch++;if(summaryClient!=null)summaryClient.cancel();if(popupMonthClient!=null)popupMonthClient.cancel();dismissAnchoredMenu();removeTrackedChildren(panel);flushPopupSettings();});
         }
-        LinearLayout footer=row();footer.setBaselineAligned(false);popupRow(panel,footer);
-        addElementOptions(footer,id,()->popup.dismiss(),metric,d==null?"current":d.quantity);
-        popup.setOnDismissListener(dialog->{summaryEpoch++;if(summaryClient!=null)summaryClient.cancel();removeTrackedChildren(panel);});
-        showStyledDialog(popup,panel,560);refreshChangedIndicators();
+        TextView summaryLine(LinearLayout values,String label){LinearLayout line=row();line.setGravity(Gravity.CENTER);TextView name=uiText(label,dialogTextSize(16),theme.text);name.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);line.addView(name,new LinearLayout.LayoutParams(dialogDp(80),dialogDp(20)));TextView value=uiText("—",dialogTextSize(16),theme.text);value.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);value.setPadding(dialogDp(6),0,0,0);value.setSingleLine();line.addView(value,new LinearLayout.LayoutParams(dialogDp(180),dialogDp(20)));values.addView(line);return value;}
+        void chartControl(LinearLayout row,TextView button,int index){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(dialogDp(54),dialogDp(38));if(index>0)lp.leftMargin=dialogDp(6);row.addView(button,lp);}
+        void show(){
+            if(graphFrame!=null){int width=Math.max(1,Math.min(dialogDp(560),viewport.getWidth()-dialogDp(30))),height=Math.max(1,viewport.getHeight()-dialogDp(24));panel.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));int excess=Math.max(0,panel.getMeasuredHeight()-height);graphFrame.getLayoutParams().height=Math.max(dialogDp(128),dialogDp(200)-excess);}
+            showStyledDialog(dialog,panel,560);refreshChangedIndicators();
+        }
+        void remember(){try{popupSettings.put(id,selection);handler.removeCallbacks(savePopupSettings);handler.postDelayed(savePopupSettings,250);}catch(Exception e){toast(e.getMessage());}}
+        void updateButtons(){
+            java.time.YearMonth selected=selection.month.isEmpty()?java.time.YearMonth.from(now().atZone(ZoneId.systemDefault())).minusMonths(1):java.time.YearMonth.parse(selection.month);
+            for(int r=0;r<2;r++)for(int p=0;p<4;p++){TextView button=periods[r][p];String name=SummaryPeriods.label(now(),p,r==1,ZoneId.systemDefault());if(r==1&&p==3)name=PopupHistory.monthLabel(selected,now(),ZoneId.systemDefault())+" ▾";
+                button.setText(name);popupButtonState(button,selection.fixed==(r==1)&&selection.period==p);boolean available=PopupHistory.supports(metric,p==0?"minute":p<3?"hour":"day")&&(r==0||p!=3||months==null||!months.isEmpty());button.setEnabled(available);button.setAlpha(available?1:.4f);
+            }
+        }
+        void reload(){
+            plan=PopupHistory.plan(now(),selection,ZoneId.systemDefault());updateButtons();caption.setText(PopupHistory.caption(plan,selection.fixed));data=null;draw();
+            final int generation=++summaryEpoch,connection=epoch;if(summaryClient!=null)summaryClient.cancel();final PopupHistory.Plan requested=plan;
+            if(!PopupHistory.supports(metric,plan.query.resolution)||!plan.query.to.isAfter(plan.query.from))return;
+            popupWorker.execute(()->{try{if(!active||generation!=summaryEpoch||connection!=epoch)return;ApiClient client=client();summaryClient=client;HistoryData.Result result=HistoryData.fetch(client,metric,requested.query);
+                handler.post(()->{if(active&&dialog.isShowing()&&generation==summaryEpoch&&connection==epoch){data=result;draw();}});
+            }catch(Exception ignored){handler.post(()->{if(active&&dialog.isShowing()&&generation==summaryEpoch&&connection==epoch)draw();});}});
+        }
+        void draw(){
+            if(graph==null)return;String q=current?(selection.power?"watts":"current"):field;PopupHistory.Series series=data==null?null:PopupHistory.series(data,plan,q,current&&selection.sum,positive);graph.show(plan,series,selection.bars);
+            samples.setText(data==null?"Samples: —/"+SummaryPeriods.expected(plan.query,plan.zone):current?SummaryPeriods.totals(data).samples():"Samples: "+series.captured+"/"+series.expected);
+            if(current){SummaryPeriods.Totals t=data==null?new SummaryPeriods.Totals():SummaryPeriods.totals(data);amps.setText(amount(t.charge,"Ah"));energy.setText(amount(t.energy,"Wh"));quantityButton.setText(selection.power?"W":"A");popupButtonState(quantityButton,selection.power);}
+            line.setText(selection.bars?"Bar":"Line");popupButtonState(line,selection.bars);popupButtonState(sum,current&&selection.sum);
+        }
+        String amount(Double value,String unit){return value==null?"—":String.format(Locale.UK,"%.3f %s",positive?Math.abs(value):value,unit);}
+        void loadMonths(){
+            if(metric==null||loadingMonths)return;loadingMonths=true;final int connection=epoch;
+            popupWorker.execute(()->{try{if(!active||connection!=epoch)return;ApiClient client=client();popupMonthClient=client;java.util.List<java.time.YearMonth> recorded=PopupHistory.months(client,metric,now(),ZoneId.systemDefault(),field);java.time.YearMonth current=java.time.YearMonth.from(now().atZone(ZoneId.systemDefault()));recorded.removeIf(m->!m.isBefore(current));
+                handler.post(()->{if(active&&dialog.isShowing()&&connection==epoch){months=recorded;loadingMonths=false;updateButtons();}});
+            }catch(Exception e){handler.post(()->{if(active&&dialog.isShowing()&&connection==epoch){loadingMonths=false;months=new ArrayList<>();updateButtons();}});}});
+        }
+        void chooseMonth(){
+            if(months==null){toast("Recorded months are loading.");return;}if(months.isEmpty())return;
+            List<String> labels=new ArrayList<>();List<Runnable> actions=new ArrayList<>();for(java.time.YearMonth month:months){labels.add(PopupHistory.monthLabel(month,now(),ZoneId.systemDefault()));actions.add(()->{selection.month=month.toString();selection.fixed=true;selection.period=3;remember();reload();});}
+            anchoredMenu(periods[1][3],true,labels,actions,months.indexOf(selection.month.isEmpty()?java.time.YearMonth.from(now().atZone(ZoneId.systemDefault())).minusMonths(1):java.time.YearMonth.parse(selection.month)));
+        }
     }
+    private void flushPopupSettings(){if(popupSettings!=null&&popupSettings.hasChanges()&&!viewSettingsWorker.isShutdown()){handler.removeCallbacks(savePopupSettings);savePopupSettings.run();}}
     private void popupRow(LinearLayout panel,View child){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dialogDp(6),0,0);panel.addView(child,lp);}
     private TextView popupButton(String label,boolean selected,Runnable action){TextView button=uiText(label,dialogTextSize(11.5f),theme.buttonTextOn);button.setGravity(Gravity.CENTER);button.setSingleLine();button.setEllipsize(TextUtils.TruncateAt.END);button.setPadding(dialogDp(6),0,dialogDp(6),0);button.setFocusable(true);button.setClickable(true);popupButtonState(button,selected);button.setOnClickListener(v->action.run());return button;}
     private void popupButtonState(TextView button,boolean selected){button.setActivated(selected);button.setTextColor(theme.buttonTextOn);android.graphics.drawable.StateListDrawable states=new android.graphics.drawable.StateListDrawable();states.addState(new int[]{android.R.attr.state_pressed},roundedBackground(ThemeConfig.blend(theme.buttonBackground,theme.controls,.12f),theme.controls,1.1f,5));states.addState(new int[]{android.R.attr.state_focused},roundedBackground(ThemeConfig.blend(theme.buttonBackground,theme.controls,.12f),theme.controls,1.1f,5));states.addState(new int[]{},roundedBackground(selected?ThemeConfig.blend(theme.buttonBackground,theme.controls,.12f):theme.buttonBackground,selected?theme.controls:theme.offButtonBorder,1.1f,5));button.setBackground(states);}
@@ -456,12 +511,6 @@ public final class MainActivity extends Activity {
     }
     private void clearDialogDim(android.app.Dialog dialog){if(dialog.getWindow()!=null){dialog.getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);android.view.WindowManager.LayoutParams lp=dialog.getWindow().getAttributes();lp.dimAmount=0;dialog.getWindow().setAttributes(lp);}}
     private volatile int summaryEpoch;
-    private void loadElementSummary(MonitorData.Metric metric,int period,boolean fixed,TextView values,TextView samples,android.app.Dialog popup){
-        final int generation=++summaryEpoch,connectionGeneration=epoch;if(summaryClient!=null)summaryClient.cancel();
-        HistoryData.Window window=SummaryPeriods.window(now(),period,fixed,ZoneId.systemDefault());values.setText("Current: —\nEnergy: —");samples.setText("Samples —/"+SummaryPeriods.expected(window));if(metric==null||!window.to.isAfter(window.from))return;
-        historyWorker.execute(()->{try{if(!active||connectionGeneration!=epoch||generation!=summaryEpoch)return;ApiClient client=client();summaryClient=client;HistoryData.Result result=HistoryData.fetch(client,metric,window);SummaryPeriods.Totals totals=SummaryPeriods.totals(result);handler.post(()->{if(active&&popup.isShowing()&&connectionGeneration==epoch&&generation==summaryEpoch){values.setText(totals.text());samples.setText(totals.samples());}});}catch(Exception e){handler.post(()->{if(popup.isShowing()&&generation==summaryEpoch){values.setText("Current: —\nEnergy: —");samples.setText("Samples —/"+SummaryPeriods.expected(window));}});}});
-    }
-    private String summary(HistoryData.Result result){SummaryPeriods.Totals totals=SummaryPeriods.totals(result);return totals.text()+"\n"+totals.samples();}
     private void editLabel(String id, String original) {
         android.app.Dialog dialog=new android.app.Dialog(this);LinearLayout panel=styledDialogRoot();panel.setPadding(dialogDp(9),dialogDp(9),dialogDp(9),dialogDp(9));
         EditText input=new EditText(this);input.setText(settings.label(id,original));input.setSingleLine();input.setSelectAllOnFocus(true);input.setTextColor(theme.text);input.setTypeface(getUiTypeface());input.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,dialogTextSize(13));input.setPadding(dialogDp(8),0,dialogDp(8),0);input.setBackground(roundedBackground(theme.buttonBackground,theme.border,1,5));panel.addView(input,new LinearLayout.LayoutParams(-1,dialogDp(36)));

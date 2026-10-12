@@ -1,6 +1,6 @@
 # Settings and persistence
 
-Updated in **0.27 / build 9**.
+Updated in **0.28 / build 10**.
 
 Settings is the grouped two-column Connection and Display & App page with an untitled bottom-right control block. Connection retains encrypted private-token/manual-origin setup and foreground reconnection. Credentials disable screenshots and token view-state saving. The page content has no connection-status line or embedded theme controls. The bottom bar retains the Theme dropdown beside Preset, including while Settings is open. Hide connection status applies to monitoring pages; the app-wide title is removed. Local-clock display preserves UTC chart history boundaries; calendar summaries use the device timezone in 0.27. The bottom-right block has Updates: plus a reserved position in its top row, Changelog / Update and Back in its lower row, and the version at the bottom. Updates frequency choices open above their button.
 
@@ -19,3 +19,8 @@ In 0.24 element highlight/hidden-content preferences are preset state, including
 Keep screen awake, Full screen and Lock retain their current app-wide states when loading any preset or System default. They are excluded from preset storage and changed-item indication; ordinary preference persistence remains.
 
 In 0.26 Settings no longer contains an Export group/button. Chart CSV export still opens ACTION_CREATE_DOCUMENT; a missing handler or another runtime launch failure uses Downloads/ella-monitoring/exports with the same CSV bytes and a timestamped filename. Feedback distinguishes the launch exception type without exposing credentials/runtime details. Ordinary picker cancellation performs no fallback write. The shared Downloads permission gate covers preset/theme saves and fallback exports on API 27/28; API 29+ uses owned MediaStore Downloads entries. No document picker is required to save preset/theme files.
+
+
+In 0.28 popup/future chart display choices have separate global ownership: period, Rolling/Fixed, recorded month, A/W, Line/Bar and Sum are individually keyed in Downloads/ella-monitoring/display-settings.json. The chart-display private preferences cache stores only those choices and pending IDs, outside viewer preferences/preset comparison. Highlight/Hide remains in presets; colours remain in themes. Named presets and theme files/format are unchanged.
+
+The global file uses format 1 with a maximum 128 identities and the shared 64 KB strict JSON/UTF-8 limits. Known selection fields/types/ranges/months are validated; unknown fields, credentials and malformed entries are rejected. Malformed existing files are not overwritten by autosave. Choices are cached immediately, written on a separate worker after a short debounce and flushed on popup close/background when storage access is granted. Pending cached choices survive restarts and merge with the valid file before saving. IO does not hold the UI selection lock; choices changed during a write remain pending. Existing Downloads permission, rollback and picker-free paths are reused. Actual provider/device behavior remains to verify.

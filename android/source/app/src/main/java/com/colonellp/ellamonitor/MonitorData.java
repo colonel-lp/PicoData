@@ -125,6 +125,12 @@ final class MonitorData {
         for(Datum d:result.values())if(d.metric!=null&&d.metric.channel.equals("picoBattery")&&d.quantity.equals("current"))batteryCurrent=d.value;
         Double load=result.get("pico:load-sum").value;
         add(result,"pico:inverter","Inverter","A","loads","current",batteryCurrent!=null&&load!=null?batteryCurrent+load:null,null,DerivedHistory.metric(metrics,true),pico.optString("receivedAt"));
+        Metric bmsLoad=DerivedHistory.bmsLoad(metrics);Datum bmsBattery=null,pv1=null,external=null;
+        for(Datum d:result.values())if(d.metric!=null&&d.quantity.equals("current")){if(d.metric.channel.equals("sbmsBattery"))bmsBattery=d;if(d.metric.channel.equals("pv1"))pv1=d;if(d.metric.channel.equals("externalLoad"))external=d;}
+        // Retain the gauge's existing display/settings identity. Its separate
+        // derived metric is explicit; raw externalLoad history is unchanged.
+        String bmsId=external==null?"sbms:load-sum":external.id;
+        add(result,bmsId,"Load Σ [BMS]","A","battery","current",bmsBattery!=null&&pv1!=null&&bmsBattery.value!=null&&pv1.value!=null?pv1.value-bmsBattery.value:null,null,bmsLoad,sbms.optString("receivedAt"));
         JSONObject flags = object(object(sbms, "reading"), "flags");
         for (String key : new String[]{"CFET", "DFET", "OVLK", "UVLK", "EOC", "IOT", "LVC", "CELF"}) {
             Object value = flags.opt(key); add(result, "flag:" + key, key, "", "flags", key, null, sFresh && value instanceof Boolean ? (Boolean)value : null, null, sbms.optString("receivedAt"));

@@ -17,7 +17,7 @@ final class DownloadsFiles {
     final String folder;
     DownloadsFiles(Context context,String folder){this.context=context;this.folder=folder;}
     private File directory(){return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),"ella-monitoring/"+folder);}
-    private String relative(){return "Download/ella-monitoring/"+folder+"/";}
+    private String relative(){return "Download/ella-monitoring/"+(folder.isEmpty()?"":folder+"/");}
     Map<String,Uri> files() throws Exception {
         Map<String,Uri> result=new LinkedHashMap<>();
         if(Build.VERSION.SDK_INT>=29){

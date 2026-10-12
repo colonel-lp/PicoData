@@ -52,7 +52,7 @@ final class GaugeView extends View {
                 if(sweep!=0)canvas.drawArc(arc,start,sweep,false,paint);
                 if(angle){
                     double radians=Math.toRadians(start+sweep);paint.setColor(colors.text);paint.setStrokeWidth(2);
-                    canvas.drawLine(arc.centerX(),arc.centerY(),arc.centerX()+(float)Math.cos(radians)*diameter*.46f,arc.centerY()+(float)Math.sin(radians)*diameter*.46f,paint);
+                    canvas.drawLine(arc.centerX(),arc.centerY(),arc.centerX()+(float)Math.cos(radians)*Math.max(0,diameter*.5f-Math.max(5,diameter*.07f)/2-3),arc.centerY()+(float)Math.sin(radians)*Math.max(0,diameter*.5f-Math.max(5,diameter*.07f)/2-3),paint);
                 }
             }
         }

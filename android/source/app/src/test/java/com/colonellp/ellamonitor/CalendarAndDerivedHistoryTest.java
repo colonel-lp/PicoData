@@ -29,7 +29,7 @@ public class CalendarAndDerivedHistoryTest {
         return new HistoryData.Result(metric("input","load",-1),window,Arrays.asList(rows),saved);
     }
     @Test public void oneMinuteIntoHourIsNotATrailingHour(){HistoryData.Window w=SummaryPeriods.window(now,0,false,utc);assertEquals(Instant.parse("2026-10-11T13:00:00Z"),w.from);assertEquals(now,w.to);assertEquals(1,SummaryPeriods.expected(w));}
-    @Test public void todayStartsAtMidnight(){HistoryData.Window w=SummaryPeriods.window(now,1,false,utc);assertEquals(Instant.parse("2026-10-11T00:00:00Z"),w.from);assertEquals(781,SummaryPeriods.expected(w));}
+    @Test public void todayStartsAtMidnight(){HistoryData.Window w=SummaryPeriods.window(now,1,false,utc);assertEquals(Instant.parse("2026-10-11T00:00:00Z"),w.from);assertEquals(14,SummaryPeriods.expected(w));}
     @Test public void weekStartsOnMonday(){assertEquals(Instant.parse("2026-10-05T00:00:00Z"),SummaryPeriods.window(now,2,false,utc).from);}
     @Test public void monthStartsOnFirst(){assertEquals(Instant.parse("2026-10-01T00:00:00Z"),SummaryPeriods.window(now,3,false,utc).from);assertEquals("October",SummaryPeriods.label(now,3,false,utc));assertEquals("September",SummaryPeriods.label(now,3,true,utc));}
     @Test public void fixedPeriodsAreThePreviousCalendarPeriods(){
@@ -45,7 +45,7 @@ public class CalendarAndDerivedHistoryTest {
     @Test public void expectedCountsIncludeOnlyElapsedSlots(){HistoryData.Window w=SummaryPeriods.window(Instant.parse("2026-10-11T13:01:01Z"),0,false,utc);assertEquals(2,SummaryPeriods.expected(w));}
     @Test public void samplesCountEntriesNotRawPublisherSamples()throws Exception {
         SummaryPeriods.Totals t=SummaryPeriods.totals(result(hour(),now.toString(),row("2026-10-11T13:00:00Z",60,-2,24,false,100),row("2026-10-11T13:02:00Z",60,0,0,false,200)));
-        assertEquals("Samples 2/60",t.samples());assertEquals(-2d/60,t.charge,1e-9);assertEquals(.4,t.energy,1e-9);assertTrue(t.text().startsWith("Current: -0.033 Ah\nEnergy: 0.400 Wh"));
+        assertEquals("Samples: 2/60",t.samples());assertEquals(-2d/60,t.charge,1e-9);assertEquals(.4,t.energy,1e-9);assertTrue(t.text().startsWith("Current: -0.033 Ah\nEnergy: 0.400 Wh"));
     }
     @Test public void missingEnergyDoesNotEraseCurrentOrBecomeZero()throws Exception {
         SummaryPeriods.Totals t=SummaryPeriods.totals(result(hour(),now.toString(),row("2026-10-11T13:00:00Z",20,-3,null,false,1)));assertEquals(-1d/60,t.charge,1e-9);assertNull(t.energy);assertEquals(1,t.captured);assertTrue(t.text().contains("Energy: —"));

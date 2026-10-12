@@ -15,7 +15,7 @@ final class SummaryPeriods {
         else start=at.toLocalDate().withDayOfMonth(1).atStartOfDay(zone);
         ZonedDateTime end=at;
         if(fixed){end=start;start=period==0?start.minusHours(1):period==1?start.minusDays(1):period==2?start.minusWeeks(1):start.minusMonths(1);}
-        String resolution=period==0||period==1&&!fixed?"minute":period==1||period==2&&!fixed?"hour":"day";
+        String resolution=period==0?"minute":period<3?"hour":"day";
         return new HistoryData.Window(start.toInstant(),end.toInstant(),resolution);
     }
     static String label(Instant now,int period,boolean fixed,ZoneId zone){
@@ -25,7 +25,11 @@ final class SummaryPeriods {
         return now.atZone(zone).minusMonths(fixed?1:0).format(DateTimeFormatter.ofPattern("MMMM",Locale.UK));
     }
     static long expected(HistoryData.Window window){
+        return expected(window,ZoneId.systemDefault());
+    }
+    static long expected(HistoryData.Window window,ZoneId zone){
         if(!window.to.isAfter(window.from))return 0;
+        if(window.resolution.equals("day"))return ChronoUnit.DAYS.between(window.from.atZone(zone).toLocalDate(),window.to.minusMillis(1).atZone(zone).toLocalDate())+1;
         long size=window.resolution.equals("minute")?60000:window.resolution.equals("hour")?3600000:86400000;
         return Math.floorDiv(window.to.toEpochMilli()-1,size)-Math.floorDiv(window.from.toEpochMilli(),size)+1;
     }
@@ -41,7 +45,7 @@ final class SummaryPeriods {
         Double charge,energy;
         long captured,expected;
         String text(){return "Current: "+(charge==null?"—":String.format(Locale.UK,"%.3f Ah",charge))+"\nEnergy: "+(energy==null?"—":String.format(Locale.UK,"%.3f Wh",energy));}
-        String samples(){return "Samples "+captured+"/"+expected;}
+        String samples(){return "Samples: "+captured+"/"+expected;}
     }
     static Totals totals(HistoryData.Result result){
         Totals total=new Totals();total.expected=expected(result.window);

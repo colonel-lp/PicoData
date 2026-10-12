@@ -6,6 +6,13 @@ import java.util.*;
 
 /** Read-only totals from the logged inputs of a live derived current. */
 final class DerivedHistory {
+    static MonitorData.Metric bmsLoad(List<MonitorData.Metric> metrics){
+        try{MonitorData.Metric battery=null,pv=null;for(MonitorData.Metric m:metrics){if(m.channel.equals("sbmsBattery"))battery=m;if(m.channel.equals("pv1"))pv=m;}
+            if(battery==null||pv==null)return null;
+            return new MonitorData.Metric(new JSONObject().put("id","derived:sbms-load").put("name","Load Σ [BMS]").put("source","sbms").put("kind","electrical").put("role","load").put("batteryChannel","sbmsLoad").put("derived",true)
+                .put("components",new JSONArray().put(new JSONObject().put("metric",pv.definition).put("factor",1)).put(new JSONObject().put("metric",battery.definition).put("factor",-1))));
+        }catch(Exception e){return null;}
+    }
     static MonitorData.Metric metric(List<MonitorData.Metric> metrics,boolean inverter){
         try{
             JSONArray components=new JSONArray();
@@ -49,16 +56,22 @@ final class DerivedHistory {
                 Double av=row.value("current","electrical"),ac=row.coverage("current","electrical"),wv=row.value("watts","electrical"),pc=row.coverage("watts","electrical");
                 // Partial/mismatched input coverage does not establish a common
                 // time interval. Never fill absent components with zero.
-                if(av==null||ac==null||Math.abs(ac-seconds)>.05){current=false;break;}
+                // Battery/PV1 share one validated SBMS snapshot and freshness
+                // lifetime. Matched coverage/timestamps also retain real gaps.
+                Double firstCoverage=first.coverage("current","electrical"),lastAt=MonitorData.number(row.raw,"currentLastAt"),firstAt=MonitorData.number(first.raw,"currentLastAt");
+                boolean cohort=metric.id.equals("derived:sbms-load")&&lastAt!=null&&lastAt.equals(firstAt)&&firstCoverage!=null&&ac!=null&&Math.abs(ac-firstCoverage)<.05&&row.raw.optLong("samples",-1)==first.raw.optLong("samples",-2);
+                if(av==null||ac==null||ac<=0||ac>seconds+.05||Math.abs(ac-seconds)>.05&&!cohort){current=false;break;}
                 a+=av*factors[i];Double charge=row.value("Ah","electrical");ah+=(charge==null?av*ac/3600:charge)*factors[i];
-                if(wv==null||pc==null||Math.abs(pc-seconds)>.05)power=false;
+                Double firstPower=first.coverage("watts","electrical"),voltAt=MonitorData.number(row.raw,"voltageLastAt"),firstVoltAt=MonitorData.number(first.raw,"voltageLastAt");
+                boolean commonPower=cohort&&voltAt!=null&&voltAt.equals(firstVoltAt)&&firstPower!=null&&pc!=null&&Math.abs(pc-firstPower)<.05;
+                if(wv==null||pc==null||pc<=0||pc>seconds+.05||Math.abs(pc-seconds)>.05&&!commonPower)power=false;
                 else{w+=wv*factors[i];Double energy=row.value("Wh","electrical");wh+=(energy==null?wv*pc/3600:energy)*factors[i];}
                 samples=Math.min(samples,row.raw.optLong("samples",0));
             }
             if(!current)continue;
             JSONObject row=new JSONObject().put("start",first.start.toString()).put("end",first.end.toString()).put("partial",partial)
                     .put("values",new JSONArray().put(power?w:JSONObject.NULL).put(a).put(JSONObject.NULL))
-                    .put("ampCoverageSeconds",seconds).put("powerCoverageSeconds",power?seconds:0).put("voltCoverageSeconds",0)
+                    .put("ampCoverageSeconds",first.coverage("current","electrical")).put("powerCoverageSeconds",power?first.coverage("watts","electrical"):0).put("voltCoverageSeconds",0)
                     .put("netAh",ah).put("netWh",power?wh:JSONObject.NULL).put("samples",samples==Long.MAX_VALUE?0:samples);
             result.add(new HistoryData.Record(row));
         }

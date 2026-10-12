@@ -1,6 +1,6 @@
 # Appearance and viewer presets
 
-Updated in **0.27 / build 9**.
+Updated in **0.28 / build 10**.
 
 Themes contain colour roles only, with name/format metadata. Named files remain in Downloads/ella-monitoring/themes; older themes are read compatibly. Font belongs to viewer settings/presets and is selected at the bottom left of Edit theme, with Back at the right and its choices opening above. Choosing/editing a theme preserves the font and affects only the Theme modification indication. Preset save/load/update does not include or restore colours/theme selection.
 
@@ -34,3 +34,8 @@ Legacy writes use temporary files and rename; MediaStore replacements retain the
 In 0.27 the picker names the ordinary dashboard text role Labels. All main-page non-title labels, values, limits, units and unavailable dashes use it; actual button text uses Button on text. Button off text is absent from the picker, new theme serialization and colour comparison. Older supplied off-text fields still validate/load compatibly but have no active role. Other on/off borders, title colours and fixed status glyph colours retain their roles. Colour-only format 17 remains readable/writable.
 
 The Font PopupWindow is owned by the theme-dialog anchor's window token, opens above its button and is retained only while open. Dismissal clears the reference; closing Edit theme, opening a colour picker or backgrounding dismisses the menu. Font remains preset state. Element popups use equal-height on/off themed buttons for highlight choices, visibility, periods and mode, with one highlight selection and visible colour swatches.
+
+
+In 0.28 popup/future chart display choices have separate global ownership: period, Rolling/Fixed, recorded month, A/W, Line/Bar and Sum are individually keyed in Downloads/ella-monitoring/display-settings.json. The chart-display private preferences cache stores only those choices and pending IDs, outside viewer preferences/preset comparison. Highlight/Hide remains in presets; colours remain in themes. Named presets and theme files/format are unchanged.
+
+The global file uses format 1 with a maximum 128 identities and the shared 64 KB strict JSON/UTF-8 limits. Known selection fields/types/ranges/months are validated; unknown fields, credentials and malformed entries are rejected. Malformed existing files are not overwritten by autosave. Choices are cached immediately, written on a separate worker after a short debounce and flushed on popup close/background when storage access is granted. Pending cached choices survive restarts and merge with the valid file before saving. IO does not hold the UI selection lock; choices changed during a write remain pending. Existing Downloads permission, rollback and picker-free paths are reused. Actual provider/device behavior remains to verify.

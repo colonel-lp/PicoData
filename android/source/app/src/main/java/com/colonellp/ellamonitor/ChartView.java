@@ -34,8 +34,8 @@ final class ChartView extends View {
         if (data == null || data.rows.isEmpty()) { paint.setColor(colors.muted); paint.setTextAlign(Paint.Align.CENTER); canvas.drawText("No recorded data in this period", getWidth() / 2f, getHeight() / 2f, paint); return; }
         double min = 0, max = 0; boolean found = false;
         for (HistoryData.Record row : data.rows) {
-            Double v = row.value(quantity, data.metric.kind); if (v != null) { min = found ? Math.min(min, v) : v; max = found ? Math.max(max, v) : v; found = true; }
-            if (bars) {
+            Double v = PopupHistory.displayValue(data.metric,quantity,row.value(quantity, data.metric.kind)); if (v != null) { min = found ? Math.min(min, v) : v; max = found ? Math.max(max, v) : v; found = true; }
+            if (bars&&!PopupHistory.positiveCurrent(data.metric,quantity)) {
                 Double forward = MonitorData.number(row.raw, forwardKey), reverse = MonitorData.number(row.raw, reverseKey);
                 if (forward != null) { min = Math.min(min, -forward); max = Math.max(max, forward); }
                 if (reverse != null) { min = Math.min(min, -reverse); max = Math.max(max, reverse); }
@@ -44,6 +44,7 @@ final class ChartView extends View {
         if (bars) { min = Math.min(0, min); max = Math.max(0, max); }
         if (!found) { paint.setColor(colors.muted); paint.setTextAlign(Paint.Align.CENTER); canvas.drawText("—", getWidth() / 2f, getHeight() / 2f, paint); return; }
         double padding = Math.max(.1, (max - min) * .1); min -= padding; max += padding;
+        if(PopupHistory.positiveCurrent(data.metric,quantity))min=0;
         double start = milliseconds(data.window.from), span = milliseconds(data.window.to) - start;
         for (int i = 0; i <= 4; i++) {
             float y = top + (bottom - top) * i / 4; paint.setColor(colors.border); canvas.drawLine(left, y, right, y, paint);
@@ -52,7 +53,7 @@ final class ChartView extends View {
         canvas.save(); canvas.clipRect(left, top, right, bottom);
         path.reset(); boolean connected = false; java.time.Instant previousEnd = null;
         for (HistoryData.Record row : data.rows) {
-            Double value = row.value(quantity, data.metric.kind), coverage = row.coverage(quantity, data.metric.kind);
+            Double value = PopupHistory.displayValue(data.metric,quantity,row.value(quantity, data.metric.kind)), coverage = row.coverage(quantity, data.metric.kind);
             float x = left + (float)((milliseconds(row.start) + milliseconds(row.end)) / 2 - start) / (float)span * (right - left);
             if (value == null || (coverage != null && coverage <= 0)) { connected = false; previousEnd = null; continue; }
             float y = bottom - (float)((value - min) / (max - min)) * (bottom - top);
@@ -60,7 +61,9 @@ final class ChartView extends View {
                 float a = left + (float)(milliseconds(row.start) - start) / (float)span * (right - left), b = left + (float)(milliseconds(row.end) - start) / (float)span * (right - left);
                 float zero = bottom - (float)((0 - min) / (max - min)) * (bottom - top);
                 Double forward = MonitorData.number(row.raw, forwardKey), reverse = MonitorData.number(row.raw, reverseKey);
-                if (forward != null && reverse != null) {
+                if(PopupHistory.positiveCurrent(data.metric,quantity)){
+                    paint.setColor(data.metric.role.equals("load")?colors.negative:colors.positive);canvas.drawRect(a+density,Math.min(y,zero),Math.max(a+2*density,b-density),Math.max(y,zero),paint);
+                }else if (forward != null && reverse != null) {
                     boolean load = data.metric.role.equals("load"); double incoming = load ? reverse : forward, outgoing = load ? forward : reverse;
                     paint.setColor(colors.positive); canvas.drawRect(a + density, bottom - (float)((incoming - min) / (max - min)) * (bottom - top), Math.max(a + 2 * density, b - density), zero, paint);
                     paint.setColor(colors.negative); canvas.drawRect(a + density, zero, Math.max(a + 2 * density, b - density), bottom - (float)((-outgoing - min) / (max - min)) * (bottom - top), paint);
