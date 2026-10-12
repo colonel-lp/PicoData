@@ -17,6 +17,7 @@ These instructions apply throughout `colonel-lp/PicoData`, branch `main`. Read t
 ## Repository workflow
 
 - Application source, Pi collector and project documents: `colonel-lp/PicoData`, branch `main`. Android project: `android/source/`. Android documents: `android/`. Pi collector and operational documents: `node.js/`.
+- The owner's Pi installation is updated with the existing Pi-local `~/update-pico.sh`: temporary sparse clone of PicoData's `node.js`, copy into `~/PicoData/node.js`, `npm ci --omit=dev`, then restart `pico-mqtt.service`. Use that established invocation in owner update instructions. Do not assume `~/PicoData` is a Git checkout or substitute direct `git pull` there. The script's copy target is only `node.js`; parent `logging.json`, `api.json`, `mqtt` and `history` stay outside it. Do not replace the updater or change its paths without a request.
 - The owner selects PicoData for Android updates; source remains android/source and APK update checks use PicoData releases. Retain the existing preview package/signing key. Do not introduce a separate production identity or EQ private-source/public-release split without a request.
 - Use the latest GitHub source. Verify the branch head before editing and before pushing; do not rely on an old workspace or overwrite newer owner changes.
 - Use the connected GitHub tools when available. When a build is authorized, commit and push the agreed changes and verify the resulting GitHub files.

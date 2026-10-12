@@ -178,13 +178,12 @@ Follow [API.md](API.md) to create private parent `PicoData/api.json` and access 
 
 ## Apply the 0.7.3 retention update
 
-Stop the existing service so its pending checkpoint is flushed, pull the source update and start the same service:
+Use the existing Pi-local updater:
 
 ```bash
-cd ~/PicoData
-sudo systemctl stop pico-mqtt.service
-git pull --ff-only
-sudo systemctl start pico-mqtt.service
+~/update-pico.sh
 ```
 
-If the pull fails, resolve it before starting the old collector, whose older expiry policy still applies. Retain the existing private logging/API/MQTT configuration, history directory and database path. No selection generation, database deletion/migration or dependency change is required. The update affects expiry only; previously expired rows cannot be recovered by extending retention. Longer detail accumulates going forward. Android source remains 0.27 / build 9 and continues to use the same API contract. See LOGGING.md for the updated table and API.md for retention metadata versus default query windows.
+The established script makes a temporary sparse clone of colonel-lp/PicoData, selects node.js, copies that source into ~/PicoData/node.js, runs npm ci --omit=dev there and restarts pico-mqtt.service. It updates the installed work folder rather than requiring ~/PicoData to be a Git checkout. Its copy target is only the node.js directory; the parent logging.json, api.json, mqtt and history directory remain in place. The temporary clone is removed by its EXIT trap.
+
+Keep the existing private configuration and database path. No selection generation, database deletion/migration or manual git pull in the installed folder is required. This corrects the earlier generic stop/pull/start instruction, which did not match the owner's installation. The update affects expiry only; previously expired rows cannot be recovered by extending retention. Longer detail accumulates going forward. Android source remains 0.27 / build 9 and continues to use the same API contract. See LOGGING.md for the updated table and API.md for retention metadata versus default query windows.

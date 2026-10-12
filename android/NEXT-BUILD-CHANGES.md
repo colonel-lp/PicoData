@@ -1,3 +1,8 @@
+## Corrected Pi update instructions — 2026-10-12
+
+- [x] Use the owner's existing ~/update-pico.sh for collector updates. The user supplied its script: temporary sparse clone, node.js copy into ~/PicoData/node.js, npm ci --omit=dev and pico-mqtt.service restart. The parent configuration/history files are outside the copy target. Correct the README and future-work instructions instead of assuming the installed folder is a Git checkout.
+- [x] Retain collector 0.7.3 and Android 0.27 / build 9. This documentation correction does not modify the updater, application/collector source or logging policy.
+
 ## Implemented collector change — extended retention — 2026-10-12
 
 Owner subsequently authorizes an exception to the earlier keep-retention instruction: electrical hours 15 days and daily history indefinite, preserving current logs. Implemented immediately in collector source 0.7.3; Android remains 0.27 / build 9. This does not authorize new logged fields or minute/environmental sampling changes.
