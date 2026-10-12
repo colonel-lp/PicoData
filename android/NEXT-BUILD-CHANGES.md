@@ -1,3 +1,16 @@
+## Next-build correction — Load [BMS] calculation/source binding — 2026-10-12
+
+Owner reports Load [BMS] falling to zero as PV1 rises and requests the difference between Battery [BMS] and PV1. Record for the next authorized Android build; no version/application/collector source change yet.
+
+- [ ] Replace the Load [BMS] gauge's current direct externalLoad binding with the requested derived current: PV1 current minus Battery [BMS] current, in amps. Positive battery current means charging; negative means discharge. Use PV1 only as requested, preserving the signed inputs and their mA-to-A conversion.
+- [ ] Follow the verified Node-RED path: raw battery/PV1 currentMA values join, subtract battery minus PV1, then divide by -1000. This is PV1_A - battery_A, not battery_A - PV1_A.
+- [ ] Example checks: PV1 0 A / battery -3 A gives load 3 A; PV1 2 A / battery -1 A gives load 3 A; PV1 5 A / battery +2 A gives load 3 A. Cover valid zero, charging/discharging, missing/stale input and fresh same-source snapshot cases. Do not force unavailable inputs to zero or introduce a clamp that hides sign/binding errors.
+- [ ] Make the derived Load [BMS] popup summaries, A/W/Sum views, charts and CSV use the same PV1-minus-battery logged components, signed Ah/Wh arithmetic and compatible coverage/gap handling. Both inputs are already logged; no new aggregate logging is needed.
+- [ ] Preserve existing display aliases, Highlight/Hide choices and future per-popup global selections when changing the gauge's binding. Keep the raw externalLoad channel's identity, recorded history and documented meaning distinct; do not relabel or overwrite it as the derived total.
+- [ ] Leave MQTT/Node-RED, SBMS decoding, collector 0.7.3, logging fields, source signs, database and retention unchanged. Apply the pending positive current-draw presentation at display level without altering battery +/- or source arithmetic.
+
+Source review at PicoData d309ea3866445f2753c08a6b41d8cd54d3e6f6f6: LiveDashboard currently selects externalLoad for Load Σ [BMS]; MonitorData passes through the matching API current, and the decoder exposes currentMA.extLoad / 1000. The owner Node-RED flow instead uses its joined battery/PV1 subtraction and -1000 divider. Existing init-logging documents positive battery current as charge. This finding concerns the gauge's source selection; it does not establish a fault in saved raw externalLoad records.
+
 ## Corrected Pi update instructions — 2026-10-12
 
 - [x] Use the owner's existing ~/update-pico.sh for collector updates. The user supplied its script: temporary sparse clone, node.js copy into ~/PicoData/node.js, npm ci --omit=dev and pico-mqtt.service restart. The parent configuration/history files are outside the copy target. Correct the README and future-work instructions instead of assuming the installed folder is a Git checkout.
