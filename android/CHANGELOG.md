@@ -2,6 +2,8 @@
 
 ## 0.28 — 2026-10-12
 
+- Same-version test compilation correction: construct PopupHistoryTest's synthetic JSON response outside the IOException-only connection factory, so Android's checked JSONException is handled by the test method. Retain 0.28 / versionCode 10 and existing application/toolchain settings.
+
 - Add individual popup graphs with full calendar axes: hour/minute points and 10-minute ticks; day/hour points and 2-hour ticks; Monday–Sunday week/six-hour groups and day ticks; month/daily points with weekly and daily divisions. Y ticks are whole numbers with a zero baseline, retaining negative battery/temperature values and measured precision. Future time, absent readings and incomplete coverage stay gaps.
 - Replace Rolling/Fixed toggle with labelled Rolling data and Fixed data rows above the unchanged Highlight 1 / Highlight 2 / Hide / Chart / Close footer. Keep 38px logical controls, 11.5px text and 6px gaps. Align Current:/Energy: colons, add Samples: and period captions, and count contributing recorded entries rather than six-hour graph points. Normal full-week counts are hourly (168), avoiding the prior x/8 UTC-day error; DST and actual retention remain explicit.
 - Fixed month is a scrollable menu of recorded prior daily-history months, with two-digit years for earlier-year entries. Add A/W, Line/Bar and cumulative Sum graph controls; Sum integrates Ah/Wh for current/energy and is disabled for SOC, voltage, pressure and temperatures. Do not reconstruct absent minute/daily detail or prorate crossing UTC buckets.

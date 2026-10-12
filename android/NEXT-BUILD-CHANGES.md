@@ -1,3 +1,9 @@
+## Completed same-version correction — unit-test JSONException — 2026-10-12
+
+- [x] Fix the five checked JSONException compilation errors in PopupHistoryTest: construct the synthetic JSON response in the test method before the IOException-only connection-factory lambda. Keep the response, assertions and production code unchanged.
+- [x] Retain source 0.28 / versionCode 10 and Ella-monitoring-v0.28.apk. The Gradle minor-version and Java-8 deprecation messages are warnings; no toolchain/version change is required. UpdateTest.java was listed without a separate error detail; its checked JSON calls are already in methods declaring Exception.
+- [x] Correct the validation gap: compile the focused sources with actual Android checked-JSONException declarations ahead of test JSON classes. See BUILD-VALIDATION.md for the before/after check and focused test results.
+
 ## Completed in 0.28 — 2026-10-12
 
 The owner authorized “Next build”. Prepared source 0.28 / versionCode 10 for the owner to compile Ella-monitoring-v0.28.apk; no APK assembled. Implemented the pending popup graphs/two-row periods/captions/month menu/global choices, default titles/Pitch-Roll pointer and Load [BMS] correction. Preserve collector 0.7.3, current logs and its already-authorized 15-day hours/indefinite days.

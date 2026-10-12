@@ -1,5 +1,17 @@
 # Build validation
 
+## Android 0.28 — same-version checked-JSONException test correction, 2026-10-12
+
+Source parent: PicoData 4c25aae05f853b4a782bbcf1f405fa3006758cb7. The owner reported five unreported JSONException errors in PopupHistoryTest during compileDebugUnitTestJavaWithJavac. Move the synthetic response JSON construction from the ApiClient connection-factory lambda to the enclosing test method, which already declares Exception. The factory permits only IOException; Android JSON construction can throw checked JSONException. Payload and assertions are unchanged. Retain versionName 0.28 / versionCode 10, filename Ella-monitoring-v0.28.apk and all production/toolchain settings.
+
+The previous 0.28 source compilation check used the test JSON implementation ahead of Android JSON declarations. Its unchecked JSONException hid these test-factory errors; that check did not establish compatibility with Android's checked JSON API. The prior passing host-JVM behavioral tests remain valid, but the earlier compilation claim had this limitation.
+
+The focused replacement check puts the actual Android API 35 org.json reference classes first. PopupHistoryTest and its current model/helper dependencies compile with Eclipse Java compiler source/target 8, using the existing compiled Android collaborators, legacy Android context/preference references and JUnit declarations. The unchanged old PopupHistoryTest reproduces exactly five unhandled JSONException errors with those same Android JSON declarations; the corrected source compiles without errors. This is a focused Java source check, not a fresh SDK 37/Gradle resource build or complete test-source compilation.
+
+All 47 focused host-JVM tests pass again: CalendarAndDerivedHistoryTest, PopupHistoryTest, BmsLoadTest and PopupSettingsStoreTest. The executable host checks use the separate test JSON implementation and synthetic inputs/storage; no owner devices, readings or database are involved. UpdateTest.java was named in the supplied output without a separate error detail. Source review finds its JSON operations already within methods declaring Exception; it is not changed or included in this focused compilation subset.
+
+The Gradle minor-version and Java-8 compatibility notices are warnings, not these checked-exception errors. No whole-app suite, lint, SDK/toolchain change, APK assembly/signing/publication, installation or hardware verification is performed. Repository and bundled complete changelogs remain identical.
+
 ## Android 0.28 — popup graphs, global view choices and Load [BMS], 2026-10-12
 
 Source parent: PicoData 472bf10e831402eb4f9a3adc383039e268a26f57. VersionName 0.28 / versionCode 10; owner compiles Ella-monitoring-v0.28.apk. Retain application package/signing identity, API 27 minimum/API 37 compile and target, AGP/Gradle/JDK configuration and collector 0.7.3. No Pi/logging/schema/retention change is included.
