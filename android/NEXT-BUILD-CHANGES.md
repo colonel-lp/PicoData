@@ -1,3 +1,10 @@
+## Completed same-version correction — test compilation — 2026-10-12
+
+Owner reported cannot find symbol TextView in CompanionLayoutTest.java when compiling unit-test sources.
+
+- [x] Add the missing android.widget.TextView import for the highlight-button test, introduced during the 0.27 checkbox-to-button conversion. Retain versionName 0.27 / versionCode 9 and Ella-monitoring-v0.27.apk.
+- [x] Leave Gradle/JDK/Java compatibility configuration unchanged: the supplied newer-Gradle and Java-8 deprecation messages are warnings, not this missing-symbol error. UpdateTest.java is named in the supplied output, but no separate error detail was provided for it.
+
 ## Completed in 0.27 — addition — historical Load [Pico] derived from logged currents — 2026-10-11
 
 Owner confirms that all currents used to calculate the live Load [Pico] gauge are logged.

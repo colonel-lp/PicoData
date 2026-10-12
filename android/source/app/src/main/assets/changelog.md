@@ -2,6 +2,8 @@
 
 ## 0.27 — 2026-10-11
 
+- Same-version compilation correction (2026-10-12): add the missing TextView import in CompanionLayoutTest for the new highlight button. Retain versionName 0.27 / versionCode 9 and existing Gradle/Java settings.
+
 - Redesign element popups with a larger centred title and equal-height themed buttons. Highlight 1/2 are exclusive buttons with colour swatches; Hide, Chart and Close share the bottom row, with Chart directly before Close. Buttons and their bounding box have 6px scaled gaps. Other approved dialog/dashboard padding is retained.
 - Current popups show only Current (signed net Ah), Energy (signed net Wh), Samples x/y and calendar-period controls. Rolling uses the current hour, midnight, Monday or month start through now in the device timezone; Fixed uses the previous calendar hour/day/week/month. Month buttons show the month name. SOC and other readouts have title/footer only.
 - Following the owner's build-time clarification, Samples counts recorded contributing history entries versus expected minute/hour/day slots for the selected elapsed/full period, not raw publisher sample counts. Retention, missing records and unavailable boundary buckets stay gaps; no out-of-period integral is prorated or included. Entry counts do not guarantee complete duration/power coverage.

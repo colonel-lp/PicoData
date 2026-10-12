@@ -1,5 +1,13 @@
 # Build validation
 
+## Android 0.27 — same-version test compilation correction, 2026-10-12
+
+Source parent: PicoData 82ac414782de5b0a8ac3e81989d9c35044d1a0c6. Retain versionName 0.27 / versionCode 9 and Ella-monitoring-v0.27.apk.
+
+The owner reported two cannot find symbol TextView errors in CompanionLayoutTest.java. The highlight-button test introduced in 0.27 lacked its android.widget.TextView import; add that import only. The supplied newer-Gradle and source/target-8 deprecation notices are warnings. UpdateTest.java was named without a separate error message; no update implementation/test logic is changed.
+
+All application Java sources and all 14 unit-test source files, including CompanionLayoutTest and UpdateTest, pass Eclipse Java compiler source/target-8 compilation against Android API 35 reference classes, the declared Robolectric 4.16/JUnit/JSON libraries and existing generated resource/BuildConfig classes. This is a Java source compilation check, not a fresh SDK 37/Gradle resource build. No test execution, lint, APK assembly, signing, installation or hardware checks are performed. Gradle/JDK/Java compatibility settings remain unchanged.
+
 ## Android 0.27 — element popups, calendar summaries and derived history, 2026-10-11
 
 Source parent: PicoData a3ef6d92f7475a1ef9902f2bc0f990b74b5711c4. VersionName 0.27 / versionCode 9; owner compiles Ella-monitoring-v0.27.apk. Package/signing identity, minimum API 27, compile/target API 37, Gradle/JDK configuration and collector 0.7.2 are unchanged.

@@ -4,6 +4,7 @@ import android.app.Dialog;
 import android.graphics.Color;
 import android.view.View;
 import android.widget.CheckBox;
+import android.widget.TextView;
 import org.json.JSONObject;
 import org.junit.Before;
 import org.junit.Test;
