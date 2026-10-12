@@ -1,3 +1,39 @@
+## Next-build requests — popup charts, captions, titles and global view state — 2026-10-12
+
+Record for the next authorized build; no application/collector changes or version increment yet. This extends the pending two-row period controls above the 0.27 footer. Chart-enabled SOC/voltage/capacity/environmental popups now need period controls, superseding their earlier title/footer-only treatment.
+
+### Layout and titles
+
+- [ ] Shift the Current: line left so its colon aligns with Energy:; retain the requested text sizes and values.
+- [ ] Change the summary label to Samples:.
+- [ ] Correct misleading Last week Samples x/8. Source review confirms SummaryPeriods.expected counts intersecting UTC day buckets for a device-local calendar week: a BST Monday-to-Monday week intersects eight UTC days, while included omits closed crossing buckets. Align sampling/count semantics with the selected calendar period and actual retained data; do not label eight UTC intersections as eight local days or invent missing readings.
+- [ ] Put the popup graph above the buttons, the same width as the button rows. Retain existing requested button sizes, theme and spacing; no unrelated padding changes.
+- [ ] Supply the requested popup titles: SBMS0 Voltage; Remaining Battery Capacity; Time Remaining; Voltage Pico for V[P]; Voltage Starter Battery for V[S]; Cell [1], Cell [2], etc. Add temperature after the temperature popup label. Keep source bindings/calculations distinct from display captions.
+- [ ] Shorten Pitch/Roll needles so their tips end a couple of logical pixels inside the coloured band's inner edge, with existing scaling; preserve the measured angle, scale and coloured arc.
+
+### Graph periods and controls
+
+- [ ] This hour / Last hour: show the full selected hour, 10-minute x-axis divisions and minute readings.
+- [ ] Today / Yesterday: show the full selected day, 2-hour x-axis divisions and hourly readings.
+- [ ] This week / Last week: show the whole Monday–Sunday week, daily x-axis divisions and 6-hour readings. Six-hour plot groups may be derived from recorded hourly data with valid coverage; there is currently no stored/API 6-hour resolution.
+- [ ] Month: show the full selected calendar month, weekly major divisions plus smaller day divisions and daily readings. Preserve the pending scrollable Fixed month dropdown with two-digit years for previous-year months.
+- [ ] Scale the y-axis to the plotted data with whole-number tick labels; its origin is always zero. Preserve measured precision instead of rounding data to integer ticks. Handling of negative readings needs clarification below.
+- [ ] Add themed graph controls at top right: Line/Bar and Sum. Sum switches to cumulative values and rescales the y-axis. Clarify plotted quantity and meaningful cumulative arithmetic before implementation.
+- [ ] Add graphs/time-period controls for current popups and the requested SOC, Pico/SBMS voltage, remaining Ah, barometer and logged temperatures. Do not invent history for live-only fields. Starter/cell/time popup title requests alone do not establish their chart data sources.
+- [ ] Keep the agreed Samples captured/expected recorded-entry semantics, distinguishing underlying logged hourly entries from derived 6-hour plot groups. Handle gaps, partial elapsed periods and retention explicitly; a plot point is not a newly recorded sample.
+- [ ] Remember every popup's display selections and save them in a single global file under Downloads/ella-monitoring, keyed to stable element identity. This includes the requested period/chart view choices. Clarify whether existing preset-owned Highlight/Hide choices are to move to that global file too; do not silently change preset ownership.
+
+### Data prerequisites and questions to settle
+
+- [ ] Current graph quantity: establish whether it displays current A, power W, per-period Ah/Wh or a selectable quantity. For A/W, meaningful cumulative output integrates recorded duration/coverage into Ah/Wh. Clarify whether Sum should be unavailable for SOC/voltage/capacity/pressure/temperature, rather than blindly adding non-additive readings.
+- [ ] Negative values: establish whether zero is a baseline with negative currents/temperatures below it; do not clip valid negatives or silently change their signs.
+- [ ] History retention: electrical hourly data currently lasts 7 days, so it cannot supply a full preceding calendar week of 6-hour points throughout the current week. Electrical daily data lasts one calendar month, so older selectable months cannot supply daily curves from monthly totals. Suggested decision for this feature: retain hours for 15 days and daily readings indefinitely (or an owner-chosen horizon); old expired detail cannot be recovered.
+- [ ] Pressure/logged temperatures currently have hour/day history only. The requested minute-resolution hour plots would need new minute recording going forward, or an explicitly approved coarser display. Do not fabricate minute values from an hourly last reading.
+- [ ] Remaining battery capacity Ah is live-only in MonitorData and absent from the combined battery history fields. Raw Pico battery voltage V[P] has no attached history metric in the app; Pico electrical history's documented voltage/power reference is SBMS, while secondaryVoltage is a separately selected raw Pico voltage. Verify exact sensor identity before using a historical voltage; record raw Pico voltage/capacity independently if required, without altering the existing power reference or substituting SBMS voltage.
+- [ ] Global file ownership: decide whether it stores only period/Line-Bar/Sum view selections or also per-element Highlight/Hide choices already owned by presets. Keep saved colours in themes and credentials out of this view-state file.
+
+Source reviewed at PicoData b9603a828ccebe5e7f68f025e5ec10bcc889e8c9: SummaryPeriods.java, MonitorData.java, GaugeView.java, node.js/LOGGING.md, history-reader.js, battery-history.js and history-config.js. These are source findings, not new hardware/database measurements.
+
 ## Next-build requests — popup period rows and recorded periods — 2026-10-12
 
 Owner requests these for the next build. This records the list only; retain source 0.27 / build 9 until a new build is authorized. The two-row design supersedes the 0.27 Rolling/Fixed toggle.
