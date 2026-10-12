@@ -79,7 +79,7 @@ Each selected `measurements` entry has `id`, `fresh`, `mappingValid`, receipt/vo
 | `to` | Exclusive bucket-start cutoff, default current Pi UTC time. |
 | `limit` | 1–1000 rows; default 500. |
 
-Default windows end at `to`: minute 24 hours; electrical hour 7 days; environmental hour/calendar-day one calendar month; month one year. Explicit ranges can request retained older daily environmental/monthly electrical records. From must precede to. Invalid dates, offset/local timestamps, unknown/repeated query parameters and unsupported resolutions are rejected. Windows select whole intervals; integrals are not prorated for an unaligned cutoff.
+Default windows end at `to`: minute 24 hours; electrical hour 7 days; environmental hour/calendar-day one calendar month; month one year. Explicit ranges can request any retained older daily/monthly records, including electrical days retained indefinitely since 0.7.3. From must precede to. Invalid dates, offset/local timestamps, unknown/repeated query parameters and unsupported resolutions are rejected. Windows select whole intervals; integrals are not prorated for an unaligned cutoff.
 
 Rows are oldest first. `next` is null at the end, otherwise a query object (`from`, `to`, `resolution`, `limit`) for the next page. Use it as URL parameters on the same route. It continues after the last returned interval without duplicates. Each response reads metadata/rows within one SQLite read transaction; multiple pages are separate snapshots, so refresh the current partial interval as logging advances.
 
@@ -117,3 +117,8 @@ References: [Node HTTP server](https://nodejs.org/download/release/v22.13.0/docs
 API freshness uses the acquisition receiver deadline, independently of logging.maxGapSeconds. Defaults are Pico 15 seconds and SBMS 30 seconds; the existing sbms_stale_seconds option also sets the SBMS API deadline. An expired connected sample is reported as state=stale, fresh=false, with null readings/reading. Monotonic age and last accepted receipt timestamps remain truthful. Actual disconnects immediately clear readings.
 
 One rejected SBMS JSON message neither renews nor immediately discards a still-unexpired accepted live reading. The receiver emits rejected and diagnostic events, and the collector CLI immediately ends that source's logging coverage. The next valid nonduplicate sample recovers normally. Retained messages and complete repeats cannot renew live freshness. Integration continues to use the unchanged configured maxGapSeconds; a longer display deadline adds no history duration/energy coverage. MQTT protocol errors and device/network connection loss are separate unresolved causes, not fixed by this display policy.
+
+
+## Retention metadata in 0.7.3
+
+The electrical/selected-voltage catalogue reports minute: 24 hours, hour: 15 days, day: null, month: null; null means indefinite retention. Environmental hour remains one calendar month and day remains null. The existing database/schema/API response shapes, metric identities and calculations are unchanged. Explicit UTC ranges can retrieve any retained daily history; prior expired detail is not restored. Default query windows remain bounded as described above (electrical hours default to 7 days and days to one calendar month); those defaults are query ranges rather than retention limits.

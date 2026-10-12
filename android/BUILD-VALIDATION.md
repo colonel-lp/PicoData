@@ -1,5 +1,13 @@
 # Build validation
 
+## Pi collector 0.7.3 — extended retention without resetting history, 2026-10-12
+
+Source parent: PicoData ef52e33bf43c734e9cecfd2dee95ce2c9c8a6f7c. Owner explicitly authorizes electrical hourly retention of 15 days and indefinite daily history without losing current logs. Android source/version remains 0.27 / build 9.
+
+All 36 focused tests in logger.test.js, combined-history.test.js and api.test.js pass. A new synthetic existing-schema-2 database test seeds combined/separate records, closes/reopens the store and checkpoints under the new policy. It verifies byte-identical old daily/monthly payloads, retained 14-day hourly values, exact 15-day end-boundary expiry, unchanged minute and environmental-hour expiry, source bindings, clock metadata, schema version/integrity and API reads of older daily data. A further 400-day checkpoint retains the permanent payloads while expired hours are removed. Existing partial/restart, backed-up schema-1 migration, rollback and API metadata/HTTP checks also pass.
+
+The implementation only changes expiry predicates and catalogue retention metadata. There is no database reset/new schema, logging selection, unit/sign/integral/SOC recalculation, dependency or MQTT change. Existing retained detail remains in place; detail deleted by earlier expiry rules is not restored. Environmental hour remains one calendar month, which is longer than the requested electrical window. No real owner database is modified for validation, and no Pi installation/hardware result is claimed. Service stop/pull/start applies the committed source to the Pi with its existing configuration/path; do not regenerate history or revert to older expiry rules.
+
 ## Android 0.27 — same-version test compilation correction, 2026-10-12
 
 Source parent: PicoData 82ac414782de5b0a8ac3e81989d9c35044d1a0c6. Retain versionName 0.27 / versionCode 9 and Ella-monitoring-v0.27.apk.

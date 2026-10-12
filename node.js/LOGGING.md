@@ -1,4 +1,4 @@
-# Pi history logging — 0.6.0
+# Pi history logging — 0.7.3
 
 The collector writes selected measurements to SQLite when `PicoData/logging.json` exists. MQTT publishing and its existing JSON contract remain unchanged. No separate database server or npm database package is needed. Logging requires Node 22.13+ with built-in `node:sqlite`; reader-only/MQTT operation remains compatible with Node 18+. Node 22 can print one SQLite experimental-feature warning at startup.
 
@@ -70,14 +70,14 @@ All boundaries and acquisition timestamps use UTC. The Pi system timezone can re
 | Measurements | Resolution | Retention |
 | --- | --- | --- |
 | Pico/SBMS electrical; secondary voltage | Minute | 24 hours |
-| Pico/SBMS electrical; secondary voltage | Hour | 7 days |
-| Pico/SBMS electrical; secondary voltage | Day | 1 calendar month |
+| Pico/SBMS electrical; secondary voltage | Hour | 15 days |
+| Pico/SBMS electrical; secondary voltage | Day | Indefinite |
 | Pico/SBMS electrical; secondary voltage | Month | Indefinite |
 | Pressure; outside temperature | Hour, last valid sample | 1 calendar month |
 | Pressure | Day, last valid sample | Indefinite |
 | Outside temperature | Day, minimum/maximum of all valid samples | Indefinite |
 
-Retention expires **completed buckets by their end timestamp**. One month means subtract one UTC calendar month, clamping the day when necessary. Partial current buckets are checkpointed as well as completed buckets. The larger summaries accumulate integrals directly; deleting minute records never removes their already saved contribution to the larger intervals. Empty periods are left empty.
+Minute/hour retention expires **completed buckets by their end timestamp**. Daily/monthly history is retained indefinitely. The environmental hourly calendar-month cutoff subtracts one UTC calendar month, clamping the day when necessary. Partial current buckets are checkpointed as well as completed buckets. The larger summaries accumulate integrals directly; deleting minute records never removes their already saved contribution to the larger intervals. Empty periods are left empty.
 
 ## Values and accuracy
 
@@ -148,3 +148,12 @@ Official references: [SQLite consistent snapshot backup](https://sqlite.org/lang
 ## API access
 
 Collector 0.7.0 can expose this existing history through the authenticated, read-only [API](API.md). It keeps schema 2, calculations and retention unchanged and uses a separate read-only connection in the same service. Keep the existing persistent location during testing; moving the whole history directory to USB and adding consistent backups are later work, with backup destinations still undecided.
+
+
+## Retention update from 0.7.2 to 0.7.3
+
+Electrical/selected-voltage hours now last 15 days and their days are indefinite. Pressure/temperature hours keep their existing one-calendar-month window; their days were already indefinite. Minute history remains 24 hours and electrical monthly summaries remain indefinite.
+
+Apply the source update and restart the existing service using the same logging configuration and database path. This is an expiry-policy change inside the existing transaction, not a schema migration or new database. Existing retained rows, payloads, integrals, SOC, source bindings and checkpoints are preserved. Do not delete history, rerun selection generation, change the database path or run an older collector afterwards: older expiry rules would remove the extended detail again. Previously expired rows cannot be recreated; the longer hourly/daily history accumulates going forward. A stopped service's ordinary shutdown flushes the pending tail before the source update.
+
+Daily electrical records now add about one row per completed day per separate metric/combined battery group, without an expiry limit; empty periods are still omitted. The hourly portion is bounded at 15 days. Actual disk growth depends on the recorded fields and SQLite overhead. No new field selection, minute logging, calculation, MQTT output or Android version is introduced.

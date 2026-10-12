@@ -51,7 +51,7 @@ class HistoryReader {
       return { ...definition, name:m.name, sourceName:m.source_name, batteryChannel:channels.get(m.id) ?? null,
         units:electrical ? {values:definition.role==='battery' ? ['W','A','V','%'] : ['W','A','V'],energy:'Wh',charge:'Ah'} : {value:{voltage:'V',temperature:'°C',barometer:'hPa'}[definition.kind]},
         resolutions:environmental ? ['hour','day'] : ['minute','hour','day','month'],
-        retention:environmental ? {hour:'1 calendar month',day:null} : {minute:'24 hours',hour:'7 days',day:'1 calendar month',month:null} };
+        retention:environmental ? {hour:'1 calendar month',day:null} : {minute:'24 hours',hour:'15 days',day:null,month:null} };
     }) };
   }
   history(metricId, params, now) {

@@ -1,5 +1,12 @@
 # Pico base changelog
 
+## 0.7.3 — 2026-10-12
+
+- Extend electrical/selected-voltage hourly retention from 7 to 15 days; keep daily records indefinitely. Preserve the existing 24-hour minute policy, indefinite monthly summaries and longer environmental hourly retention.
+- Apply new expiry cutoffs to the existing schema-2 database in place. No reset, schema migration, binding change or recalculation; retained payloads, signed integrals, SOC and source references remain intact. Longer retained detail accumulates going forward; previously expired rows are not recreated.
+- Report the new retention through API catalogue metadata; keep default query windows and response shapes compatible. MQTT, acquisition, logging fields, calculations and dependencies are unchanged.
+- All 36 focused logger, combined-history and API tests pass, including reopening a seeded existing database, byte-preserving daily/monthly payloads, hourly cutoff boundaries, unchanged minute/environmental expiry, source bindings/schema/integrity and historical API reads. Real Pi service installation remains an owner step.
+
 ## 0.7.2 — 2026-10-11
 
 - Separate live API display freshness from logging integration maxGapSeconds. Use the actual receivers' stale deadlines: Pico 15 seconds by default; SBMS 30 seconds or its existing sbms_stale_seconds setting. Preserve receipt age/timestamps and report expired data as stale/null.

@@ -1,6 +1,6 @@
 # Ella Monitoring Android preview
 
-Version **0.27** (build 9). Native Java viewer for the existing [Pi collector 0.7.2 API](../node.js/API.md). Minimum Android 8.1 / API 27; compile/target API 37. The Pi remains the always-on collector and logger. The viewer also works with collector 0.7.1; update the Pi source to 0.7.2 for the live-freshness correction. Logging, the database schema and MQTT output are unchanged.
+Version **0.27** (build 9). Native Java viewer for the existing [Pi collector API](../node.js/API.md). Minimum Android 8.1 / API 27; compile/target API 37. The Pi remains the always-on collector and logger. The viewer is compatible with collectors 0.7.1–0.7.3. Collector 0.7.3 includes the 0.7.2 live-freshness correction and extends electrical hourly retention to 15 days and daily retention indefinitely. It preserves logged fields, database schema and MQTT output. Android source/version is unchanged by that Pi-only update.
 
 **Owner-built update:** compile `Ella-monitoring-v0.27.apk` in Android Studio and use the same signing key as the installed app to update in place and preserve settings. The package is unchanged. The earlier 0.1.0 key is different and still requires reinstalling. This remains the existing development package; a separate production identity is not introduced.
 

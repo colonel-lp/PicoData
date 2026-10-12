@@ -103,6 +103,8 @@ test('environmental history and catalogue expose agreed units, periods and retai
   const catalogue=(await get('/api/v1/metrics')).body;assert.equal(catalogue.timezone,'UTC');
   assert.equal(catalogue.metrics.find(m=>m.id==='outside').units.value,'°C');assert.equal(catalogue.metrics.find(m=>m.id==='pressure').units.value,'hPa');
   assert.equal(catalogue.metrics.find(m=>m.id==='pico-battery').name,'House  ');assert.equal(catalogue.metrics.find(m=>m.id==='outside').retention.day,null);
+  for (const metric of catalogue.metrics) assert.deepEqual(metric.retention,
+    ['temperature','barometer'].includes(metric.kind) ? {hour:'1 calendar month',day:null} : {minute:'24 hours',hour:'15 days',day:null,month:null});
   assert.equal(catalogue.picoSensors.find(s=>s.sensorId===103).name,'Module [test]');
 });
 

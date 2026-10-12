@@ -130,13 +130,13 @@ class HistoryStore {
       }
       for (const row of combined.values()) this.putBattery.run(row.resolution,row.start,row.end,JSON.stringify(row.channels));
       const cutoff = monthBefore(time);
+      // Daily/monthly records are permanent; extend electrical hours in place.
       this.db.prepare(`DELETE FROM battery_history WHERE (resolution='minute' AND end_ms<=?) OR
-        (resolution='hour' AND end_ms<=?) OR (resolution='day' AND end_ms<=?)`).run(time-86400000,time-7*86400000,cutoff);
+        (resolution='hour' AND end_ms<=?)`).run(time-86400000,time-15*86400000);
       this.db.prepare(`DELETE FROM history WHERE
         (resolution='minute' AND end_ms<=?) OR
-        (resolution='hour' AND end_ms<=CASE WHEN metric_id IN (SELECT id FROM metrics WHERE json_extract(definition,'$.kind') IN ('temperature','barometer')) THEN ? ELSE ? END) OR
-        (resolution='day' AND end_ms<=? AND metric_id IN (SELECT id FROM metrics WHERE json_extract(definition,'$.kind') NOT IN ('temperature','barometer')))`)
-        .run(time - 86400000, cutoff, time - 7 * 86400000, cutoff);
+        (resolution='hour' AND end_ms<=CASE WHEN metric_id IN (SELECT id FROM metrics WHERE json_extract(definition,'$.kind') IN ('temperature','barometer')) THEN ? ELSE ? END)`)
+        .run(time - 86400000, cutoff, time - 15 * 86400000);
       this.db.prepare("INSERT OR REPLACE INTO meta VALUES('savedAt',?)").run(new Date(time).toISOString());
       this.db.exec('COMMIT');
     } catch (err) { this.db.exec('ROLLBACK'); throw err; }

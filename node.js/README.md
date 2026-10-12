@@ -2,7 +2,7 @@
 
 Standalone Node.js starting point for the Android Pico reader. It uses the updated acquisition code preserved in [`../_old/pico2signalk/`](../_old/pico2signalk/), with the owner's [`../python/pico-mqtt.py`](../python/pico-mqtt.py) sensor mappings, calculations and Ella JSON format carried over. MQTT publishing is enabled by default using `PicoData/mqtt` and the existing Ella JSON contract; `--no-mqtt` selects reader-only operation. SignalK remains excluded.
 
-**Status:** version 0.7.2 separates live display deadlines from logging gap limits and keeps an unexpired accepted display through an isolated rejected SBMS payload. Actual stale/disconnects still clear readings and rejected data interrupts logging coverage. Version 0.7.1 exposes the full live SBMS broadcast and boolean On/Off flags without adding them to history. Version 0.7.0 adds an optional authenticated local API for live Pico/SBMS readings, source/measurement metadata and selected history. It uses the existing Node.js service and SQLite schema 2; MQTT payloads, acquisition, combined battery history and retention are unchanged. See [API setup and contract](API.md) and [logging setup](LOGGING.md). The owner's uploaded live history and migration backup passed integrity/preservation checks; The owner has confirmed local Pi API status/live/history requests; LAN/TLS and hardware performance still need testing. Ella Monitoring Android source is in android/source; the owner builds the APK. See [build validation](../android/BUILD-VALIDATION.md) for automated evidence and pending checks.
+**Status:** version 0.7.3 extends electrical hourly retention to 15 days and keeps daily history indefinitely in the existing database, with compatible API metadata. Minute history stays 24 hours, environmental hours retain their longer calendar-month window, and monthly history remains indefinite. Version 0.7.2 separates live display deadlines from logging gap limits and keeps an unexpired accepted display through an isolated rejected SBMS payload. Actual stale/disconnects still clear readings and rejected data interrupts logging coverage. Version 0.7.1 exposes the full live SBMS broadcast and boolean On/Off flags without adding them to history. Version 0.7.0 adds an optional authenticated local API for live Pico/SBMS readings, source/measurement metadata and selected history. It uses the existing Node.js service and SQLite schema 2; MQTT payloads, acquisition, combined battery history and retention are unchanged. See [API setup and contract](API.md) and [logging setup](LOGGING.md). The owner's uploaded live history and migration backup passed integrity/preservation checks; The owner has confirmed local Pi API status/live/history requests; LAN/TLS and hardware performance still need testing. Ella Monitoring Android source is in android/source; the owner builds the APK. See [build validation](../android/BUILD-VALIDATION.md) for automated evidence and pending checks.
 
 ## Run on the Pi
 
@@ -174,3 +174,17 @@ For the combined battery record use `node bin/history.js --battery --limit 3`. K
 ## Local API
 
 Follow [API.md](API.md) to create private parent `PicoData/api.json` and access status, live readings, measurement metadata and selected history. The API is disabled when that file is absent. It requires configured logging; `--api-config FILE` selects a different file and `--no-api` disables it. It uses the same service, without changing the MQTT dashboard or adding npm dependencies. Android remains a subsequent stage.
+
+
+## Apply the 0.7.3 retention update
+
+Stop the existing service so its pending checkpoint is flushed, pull the source update and start the same service:
+
+```bash
+cd ~/PicoData
+sudo systemctl stop pico-mqtt.service
+git pull --ff-only
+sudo systemctl start pico-mqtt.service
+```
+
+If the pull fails, resolve it before starting the old collector, whose older expiry policy still applies. Retain the existing private logging/API/MQTT configuration, history directory and database path. No selection generation, database deletion/migration or dependency change is required. The update affects expiry only; previously expired rows cannot be recovered by extending retention. Longer detail accumulates going forward. Android source remains 0.27 / build 9 and continues to use the same API contract. See LOGGING.md for the updated table and API.md for retention metadata versus default query windows.

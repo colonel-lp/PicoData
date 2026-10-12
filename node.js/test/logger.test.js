@@ -106,17 +106,17 @@ test('writer lease prevents overlap while read-only inspection and private file 
   assert.equal(fs.statSync(config.database).mode&0o777,0o600); logger.close({advance:false}); new HistoryLogger(config,{automatic:false}).close({advance:false});
 });
 
-test('retention prunes short summaries but retains electrical months and environmental days', t => {
+test('retention prunes short summaries but retains all daily and monthly records', t => {
   const {logger,config}=setup(t), time=Date.parse('2026-03-31T12:00:00Z'), rows=[];
   for(const id of ['battery','outside']) for(const resolution of ['minute','hour','day','month']) {
     const [start,end]=bounds(Date.parse('2026-01-01T00:00:00Z'),resolution); rows.push({id,resolution,start,end,data:{}});
   }
   logger.store.save(rows,time);
   assert.deepEqual(logger.store.db.prepare('SELECT metric_id,resolution FROM history ORDER BY metric_id,resolution').all().map(r=>[r.metric_id,r.resolution]),[['outside','day'],['outside','month']]);
-  assert.deepEqual(logger.store.db.prepare('SELECT resolution FROM battery_history').all().map(r=>r.resolution),['month']);
+  assert.deepEqual(logger.store.db.prepare('SELECT resolution FROM battery_history ORDER BY resolution').all().map(r=>r.resolution),['day','month']);
   assert.equal(new Date(monthBefore(time)).toISOString(),'2026-02-28T12:00:00.000Z'); assert.equal(new Date(monthBefore(Date.parse('2024-03-31T12:00:00Z'))).toISOString(),'2024-02-29T12:00:00.000Z');
   const [start,end]=bounds(time-10*86400000,'hour'); logger.store.save(['battery','outside'].map(id=>({id,resolution:'hour',start,end,data:{}})),time);
-  assert.equal(row(config,'battery','hour'),undefined); assert.ok(row(config,'outside','hour'));
+  assert.ok(row(config,'battery','hour')); assert.ok(row(config,'outside','hour'));
 });
 
 test('clock adjustments skip untrusted intervals and do not invent coverage', t => {

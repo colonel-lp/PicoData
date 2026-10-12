@@ -1,3 +1,12 @@
+## Implemented collector change — extended retention — 2026-10-12
+
+Owner subsequently authorizes an exception to the earlier keep-retention instruction: electrical hours 15 days and daily history indefinite, preserving current logs. Implemented immediately in collector source 0.7.3; Android remains 0.27 / build 9. This does not authorize new logged fields or minute/environmental sampling changes.
+
+- [x] Change expiry for the existing combined battery and separate electrical/selected-voltage history in place. Keep schema 2 and existing payloads/bindings/calculations, 24-hour minutes, indefinite months and the longer environmental hourly window.
+- [x] Update API catalogue retention metadata and collector package/lock root version; dependencies and default query windows are unchanged.
+- [x] Verify database preservation/restart and exact expiry in synthetic temporary databases; 36 logger/combined/API tests pass. Current retained logs survive; longer retained detail accumulates going forward, while previously expired rows are not recreated. The owner applies the source on the Pi with its existing configuration/path.
+- [ ] Next Android build: use actual server history/retention availability for full previous-week six-hour plots and daily past-month curves as the longer history accumulates. Unlogged/raw-voltage/Ah/minute-environmental options remain unavailable without verified existing history; no extra logging is approved.
+
 ## Next-build clarifications — chart units, signs, global view state and unchanged logging — 2026-10-12
 
 Owner answered the popup-chart questions. These decisions supersede the earlier suggestions/questions below; record only until the next authorized build. Source remains 0.27 / build 9.

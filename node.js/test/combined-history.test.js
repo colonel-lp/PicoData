@@ -114,12 +114,12 @@ test('partial checkpoints and restart preserve untouched fields; missing fields 
   } finally {store.close();}
 });
 
-test('combined minute/hour/day expiry preserves monthly history and forbids implicit group rebinding', t=>{
+test('combined minute/hour expiry preserves daily/monthly history and forbids implicit group rebinding', t=>{
   const config=setup(t), store=new HistoryStore(config), now=BASE+40*86400000;
   try {
     store.save([rec('pico-battery',data(-2,12,80)),rec('pico-battery',data(-2,12,80),BASE,'hour',3600000),
       rec('pico-battery',data(-2,12,80),BASE,'day',86400000),rec('pico-battery',data(-2,12,80),Date.parse('2026-01-01T00:00:00Z'),'month',31*86400000)],now);
-    assert.deepEqual(store.db.prepare('SELECT resolution FROM battery_history').all().map(r=>r.resolution),['month']);
+    assert.deepEqual(store.db.prepare('SELECT resolution FROM battery_history ORDER BY resolution').all().map(r=>r.resolution),['day','month']);
   } finally {store.close();}
   const changed=structuredClone(config);changed.metrics.push({...changed.metrics[0],id:'another-battery',sensorId:201});changed.batteryGroup.picoBattery='another-battery';
   assert.throws(()=>new HistoryStore(validateConfig(changed)),/group binding changed/);
@@ -136,6 +136,52 @@ test('battery CLI is read-only and old member commands remain views rather than 
     const conflict=spawnSync(process.execPath,[cli,'--config',file,'--battery','--metric','pico-battery']);assert.equal(conflict.status,1);
     assert.equal(store.db.prepare('SELECT COUNT(*) AS n FROM history').get().n,0);
   } finally {store.close();}
+});
+
+test('retention update preserves existing logs through reopen, checkpoint and later expiry', t=>{
+  const config=setup(t), day=86400000, hour=3600000, now=Date.parse('2026-04-01T12:00:00Z');
+  let store=new HistoryStore(config);
+  // Seed a pre-existing schema-2 database directly, independent of expiry policy.
+  const insertBattery=store.db.prepare('INSERT INTO battery_history VALUES(?,?,?,?)');
+  const insertOther=store.db.prepare('INSERT INTO history VALUES(?,?,?,?,?)');
+  const permanent={picoBattery:data(-2,12,80),sbmsBattery:data(-3,12,65),secondaryVoltage:data(0,11.9)};
+  const dates={oldDay:now-500*day,month:Date.parse('2024-01-01T00:00:00Z'),hourKeep:now-14*day,
+    cutoff:now-15*day,minuteKeep:now-60000};
+  insertBattery.run('day',dates.oldDay,dates.oldDay+day,JSON.stringify(permanent));
+  insertBattery.run('month',dates.month,dates.month+31*day,JSON.stringify(permanent));
+  for(const start of [dates.hourKeep,dates.cutoff,dates.cutoff-hour])insertBattery.run('hour',start,start+hour,JSON.stringify(permanent));
+  for(const start of [dates.minuteKeep,now-2*day])insertBattery.run('minute',start,start+60000,JSON.stringify(permanent));
+  insertOther.run('load','day',dates.oldDay,dates.oldDay+day,JSON.stringify(data(-1,12)));
+  insertOther.run('outside','day',dates.oldDay,dates.oldDay+day,JSON.stringify({...empty(),last:-1,min:-2,max:4}));
+  for(const start of [dates.hourKeep,dates.cutoff,dates.cutoff-hour])insertOther.run('load','hour',start,start+hour,JSON.stringify(data(-1,12)));
+  for(const id of ['outside','pressure'])for(const start of [now-20*day,now-40*day])insertOther.run(id,'hour',start,start+hour,JSON.stringify({...empty(),last:8}));
+  store.db.prepare('INSERT OR REPLACE INTO meta VALUES(?,?)').run('clockSteps','2');
+  const batteryBefore=store.db.prepare("SELECT resolution,start_ms,end_ms,data FROM battery_history WHERE resolution IN ('day','month') ORDER BY resolution,start_ms").all();
+  const dailyBefore=store.db.prepare("SELECT * FROM history WHERE resolution='day' ORDER BY metric_id,start_ms").all();
+  const bindingsBefore=store.db.prepare('SELECT * FROM battery_fields ORDER BY channel').all();
+  store.close();store=new HistoryStore(config);
+  try {
+    store.save([],now);
+    assert.deepEqual(store.db.prepare("SELECT resolution,start_ms,end_ms,data FROM battery_history WHERE resolution IN ('day','month') ORDER BY resolution,start_ms").all(),batteryBefore);
+    assert.deepEqual(store.db.prepare("SELECT * FROM history WHERE resolution='day' ORDER BY metric_id,start_ms").all(),dailyBefore);
+    for(const id of ['pico-battery','load']){assert.ok(store.read(id,'hour',dates.hourKeep));assert.ok(store.read(id,'hour',dates.cutoff));assert.equal(store.read(id,'hour',dates.cutoff-hour),null);}
+    assert.deepEqual(store.read('pico-battery','minute',dates.minuteKeep),permanent.picoBattery);
+    assert.equal(store.read('pico-battery','minute',now-2*day),null);
+    for(const id of ['outside','pressure']){assert.ok(store.read(id,'hour',now-20*day));assert.equal(store.read(id,'hour',now-40*day),null);}
+    assert.equal(store.db.prepare('PRAGMA user_version').get().user_version,2);
+    assert.equal(store.db.prepare('PRAGMA integrity_check').get().integrity_check,'ok');
+    assert.deepEqual(store.db.prepare('SELECT * FROM battery_fields ORDER BY channel').all(),bindingsBefore);
+    assert.equal(store.db.prepare("SELECT value FROM meta WHERE key='clockSteps'").get().value,'2');
+    const { HistoryReader }=require('../lib/history-reader'),reader=new HistoryReader(config.database);
+    try {
+      const query=new URLSearchParams({resolution:'day',from:new Date(dates.oldDay).toISOString(),to:new Date(dates.oldDay+day).toISOString()});
+      const response=reader.history('pico-battery',query,now);assert.equal(response.rows.length,1);assert.equal(response.rows[0].values[1],-2);
+    }finally{reader.close();}
+    store.save([],now+400*day);
+    assert.deepEqual(store.db.prepare("SELECT resolution,start_ms,end_ms,data FROM battery_history WHERE resolution IN ('day','month') ORDER BY resolution,start_ms").all(),batteryBefore);
+    assert.deepEqual(store.db.prepare("SELECT * FROM history WHERE resolution='day' ORDER BY metric_id,start_ms").all(),dailyBefore);
+    assert.equal(store.read('pico-battery','hour',dates.hourKeep),null);
+  }finally{store.close();}
 });
 
 test('migration is idempotent and legacy read-only inspection never changes a schema-1 database', t=>{
