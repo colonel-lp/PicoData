@@ -1,3 +1,15 @@
+## Next-build requests — popup period rows and recorded periods — 2026-10-12
+
+Owner requests these for the next build. This records the list only; retain source 0.27 / build 9 until a new build is authorized. The two-row design supersedes the 0.27 Rolling/Fixed toggle.
+
+- [ ] Remember the Rolling/Fixed selection when a popup is closed and reopened, showing the restored selection in the new row layout.
+- [ ] Remove the Rolling/Fixed toggle button. Show the Rolling period buttons in the upper row and the Fixed period buttons directly below.
+- [ ] Move the period buttons to the right, with Rolling data and Fixed data labels in front of their respective rows. Keep the existing button sizes; the new labels use the same existing text size. Retain the agreed 6px button/bounding-box spacing.
+- [ ] Show the sampled time period directly below Samples. For Rolling hour/day/week/month, display the period in minutes/hours/days/days respectively.
+- [ ] For Fixed hour, show the actual hour range, for example 6am to 7am. For yesterday, show weekday, ordinal date and month, for example Tuesday 5th September. For last week, show the date range, for example 5th September to 11th September. For a fixed month, show the recorded month.
+- [ ] Replace the Fixed month button with a dropdown containing scrollable previous months. Selecting a month displays its recorded data. When a month belongs to a previous year, show its two-digit year, for example September '25.
+- [ ] Preserve the current calendar definitions, signed Current/Energy calculations, recorded-entry Samples x/y, honest missing-data handling, source bindings and the title-only treatment of non-current popups. Month navigation must use recorded history rather than inventing values for absent data.
+
 ## Completed same-version correction — test compilation — 2026-10-12
 
 Owner reported cannot find symbol TextView in CompanionLayoutTest.java when compiling unit-test sources.
