@@ -1,3 +1,54 @@
+## Next-build requests — popup chart layout, refresh, extrema and bar labels — 2026-10-13
+
+Record for the next authorized build; Android remains 0.28 / build 10. The owner asks for these popup-chart changes and suggestions/clarifications, not a new build yet. Preserve the pending interval Ah/Wh correction below and unrelated app/collector behavior.
+
+### Owner-confirmed clarifications
+
+- [ ] The quantity selector is Ah / Wh, not the ambiguous W / Ah wording. The owner selected Ah / Wh after being reminded that interval/cumulative quantities must agree with integrated totals. Ordinary points are interval amounts; Sum is cumulative.
+- [ ] Values toggles only the numeric annotations above/below bars. The owner answered “the values above or below the bars”; keep header readings/totals, Samples, period captions and axis labels visible. Do not interpret this as hiding all chart values or header contents.
+- [ ] SOC, voltage and barometer headers show the latest recorded reading within the selected window on the left. Samples and the selected period sit centrally; Values is on the right. Temperature headers instead show Min and Max. Do not add Ah/Wh selection or enable Sum for non-additive readings.
+
+### Layout and theme
+
+- [ ] Reduce popup button height without reducing text size. Proposed compact height is 28 logical pixels instead of 38, retaining 11.5px text and 6px padding/gaps where applicable; the two-line header buttons are the specified exception. Keep Close and the other compact buttons consistent, correctly scaled on supported screens.
+- [ ] Put Highlight 1 / Highlight 2 / Hide / Chart / Close in a themed bounding box. Put both time-period rows in their own themed bounding box. Preserve mutually exclusive highlights, swatches, Hide behavior, existing order and global 6px gaps/edge padding. Do not change unrelated approved dialog padding.
+- [ ] Remove Rolling data / Fixed data labels and shift the four time buttons in each row left. Put Line/Bar above Sum in the freed right column, inside a separate themed/padded bounding box. Align that box with the two-row period box; retain unavailable Sum handling for non-current charts.
+- [ ] Move Current:/Energy: to the left, aligned with the Y-axis label area, preserving the requested colon alignment. Samples occupies the centre of the Current row; the period caption occupies the centre of the Energy row. Do not leave the old separate Samples/period rows below them.
+- [ ] Move Ah/Wh into the right side of that two-line header. Its height matches the combined two text lines. Put Values immediately to its left, suitably aligned. The Ah/Wh button's right inset from the popup edge must equal the left inset of the Current text. Use measured/shared header-axis layout rather than mismatched fixed margins.
+- [ ] Use the freed vertical space for a taller graph. Remove the old in-graph top-right controls and their reserved space; preserve the approved popup width, scaling, source/calculation behavior and safe small-screen fallback. Apply matching compact footer/period/mode boxes and header layout to verified chart-enabled non-current popups. Unlogged title/footer popups gain the compact footer box only; no new history is implied.
+- [ ] Use hour-only X-axis labels on day charts, without :00. Keep the full local-calendar day and accurate elapsed-time axis, including DST.
+- [ ] Add a logically placed Graph axes & markers colour picker with a shown swatch/hex value. Apply it to popup axis lines/ticks/labels and point markers, with compatible old-theme defaults, preview/save/restore/validation. Preserve independent grid/data-line/bar colours and bottom-bar roles. This section concerns popup charts; the separate Charts page is not otherwise requested to change.
+- [ ] Persist per-popup Values state alongside period/quantity/Line-Bar/Sum in Downloads/ella-monitoring/display-settings.json, outside presets. Read older files compatibly; retain strict bounds/field validation and existing theme/preset ownership.
+
+### Refresh timing — proposed corrected calendar rules
+
+The current popup loads on opening/selection changes but has no periodic history refresh. The owner wants changing data to redraw at its relevant resolution. All times below use the selected device-local calendar; requests remain UTC. Refresh in place without clearing the graph or rebuilding the popup, and guard/cancel callbacks on close, background, reconnect or selection change.
+
+- [ ] This hour: refresh each minute when minute history exists, and roll to the new hour at its boundary. Environmental minute history remains unavailable.
+- [ ] Last hour: load the closed selected hour, then advance/refetch at each new hour. No minute polling of a finalized unchanged past hour is necessary; allow a bounded retry if its final checkpoint is not yet published.
+- [ ] Today: refresh hourly, and restart the selected day at midnight. This week: refresh hourly so current six-/twelve-hour groups gain newly logged hourly data, and roll at Monday 00:00. Do not wait until Sunday/Monday to show the current week's changing data.
+- [ ] This month: refresh as new daily history becomes available, and roll at 00:00 on the first. Do not wait until month end to add the current month's daily points. Account for existing UTC daily buckets versus local-calendar cutoffs without inventing/prorating data; source checkpoint availability may require retry after a boundary.
+- [ ] Yesterday: change/refetch at local midnight. Last week: change/refetch at Monday 00:00, meaning the end of Sunday, not the start of Sunday.
+- [ ] Explicitly selected older months are fixed: no continuous data polling after finalized data loads. Update month availability when a new month begins or after an explicit retry/reopen; preserve a user-selected older month rather than silently changing it. Default previous-month selection, if still relative, advances at the first-of-month boundary. Respect the saved selection.
+- [ ] Calculate next real calendar boundary (DST and month length), not repeated fixed 24-hour sleeps. Keep source freshness/logging intervals/retention untouched. Refresh only while the relevant popup and foreground activity are active, with connection/checkpoint-failure retry handling.
+
+### Bars, temperature extrema and pressure range
+
+- [ ] Today/Yesterday bars span one actual logged hour. This week/Last week bars group actual hourly records into local 00:00–12:00 / 12:00–00:00 intervals; use summed valid Ah/Wh rather than a mean rate. This supersedes the earlier six-hour grouping for weekly BAR mode only; retain six-hour weekly LINE points and daily month points unless separately requested. Keep missing hours/coverage visible rather than treating the full bar width as complete recording.
+- [ ] Draw the value above a positive bar or below a negative bar, rounded to zero decimal places. Values turns these annotations on/off. Actual plot positions, integrals/totals, exports and stored data retain their precision. Rounded annotation sums need not equal the unrounded total; do not quantize calculation inputs to make them appear equal. Signed battery bars remain signed; current-draw presentation retains the approved sign rules and common chart/summary arithmetic.
+- [ ] Temperature line mode plots recorded High and Low series instead of the single last-reading series. Temperature bar mode shows a low-to-high range bar, with high/low annotations above/below it controlled by Values. Use one-hour day bars, twelve-hour week bars and corresponding retained month/day data. Keep negative Celsius, missing ranges and unavailable minute options honest. Use distinguishable existing theme colours unless further roles are requested.
+- [ ] Replace temperature Current/Energy header content with Min:/Max: for the selected window. Use min/max already recorded in the hour/day environmental records; combine extrema using min of lows and max of highs, never averages, sums or invented extrema from only last values. No new logging is requested.
+- [ ] Barometer Y-axis is fixed at 900–1100 hPa, an explicit exception to the earlier universal zero-origin rule. Preserve recorded pressure precision and existing periods/freshness.
+
+### Grey month button — source finding and next-build correction
+
+Source reviewed at PicoData e6de554daec37fff6a4d5021318941cc811ff31e. The Fixed month dropdown is enabled only for a supported day-history metric with earlier recorded months. loadMonths filters out the current month, so current-month data alone correctly gives no previous-month menu. However, a failed/cancelled history request is caught and converted to an empty months list, disabling the same button with no distinct feedback. Thus grey alone cannot prove that no data exists. The Rolling current-month button does not depend on that list; its disabled state instead reflects a missing binding or unsupported resolution. No current owner API/database contents were inspected.
+
+- [ ] Distinguish successful empty availability from loading, unsupported/unlogged source and request failure. Keep genuine no-earlier-daily-data handling, but provide themed, clear failure feedback and an accessible retry instead of silently presenting a network/API failure as no data.
+- [ ] Verify the correct selected field/sensor and actual compatible daily records for derived sources. Do not reconstruct old daily curves from monthly totals or fabricate earlier months. Keep the current month available through Rolling where its exact source/day resolution exists.
+
+Application/collector source, versions, database, retention and APK remain unchanged while recording these requests. No tests or build are needed for this documentation-only update. Implement the settled list when the owner authorizes the next source build.
+
 ## Next-build correction — popup chart interval Ah/Wh — 2026-10-13
 
 Owner clarifies this concerns the element popup charts: current/energy points should represent Ah/Wh for their plotted interval regardless of the selected capture period, so the ordinary chart relates directly to the shown Ah/Wh total.
