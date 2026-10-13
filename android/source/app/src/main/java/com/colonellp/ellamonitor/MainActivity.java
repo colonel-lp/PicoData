@@ -129,11 +129,11 @@ public final class MainActivity extends Activity {
     @Override protected void onStop() {
         dismissAnchoredMenu();
         if(Build.VERSION.SDK_INT>=29||checkSelfPermission("android.permission.WRITE_EXTERNAL_STORAGE")==PackageManager.PERMISSION_GRANTED)flushPopupSettings();
-        active = false; epoch++; historyEpoch++; handler.removeCallbacks(poll); handler.removeCallbacks(expire);
+        active = false;if(elementPopup!=null)elementPopup.pause(); epoch++; historyEpoch++; handler.removeCallbacks(poll); handler.removeCallbacks(expire);
         if (liveClient != null) liveClient.cancel(); if (metadataClient!=null)metadataClient.cancel();metadataLoading=false; if (historyClient != null) historyClient.cancel(); if (summaryClient != null) summaryClient.cancel();if(popupMonthClient!=null)popupMonthClient.cancel();
         live = null; history = null; historyLoading = false; screen.stop(); persistence(false); super.onStop();
     }
-    @Override protected void onDestroy() { if(colourDialog!=null)colourDialog.dismiss();if(appearanceDialog!=null){appearanceDialog.setOnDismissListener(null);appearanceDialog.dismiss();} if(updates!=null)updates.destroy();handler.removeCallbacks(savePopupSettings);popupWorker.shutdownNow();viewSettingsWorker.shutdown();liveWorker.shutdownNow(); historyWorker.shutdownNow();metadataWorker.shutdownNow(); super.onDestroy(); }
+    @Override protected void onDestroy() { if(elementPopup!=null)elementPopup.dialog.dismiss();if(colourDialog!=null)colourDialog.dismiss();if(appearanceDialog!=null){appearanceDialog.setOnDismissListener(null);appearanceDialog.dismiss();} if(updates!=null)updates.destroy();handler.removeCallbacks(savePopupSettings);popupWorker.shutdownNow();viewSettingsWorker.shutdown();liveWorker.shutdownNow(); historyWorker.shutdownNow();metadataWorker.shutdownNow(); super.onDestroy(); }
 
     private int dp(float value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     private LinearLayout column() { LinearLayout v = new LinearLayout(this); v.setOrientation(LinearLayout.VERTICAL); return v; }
@@ -291,7 +291,7 @@ public final class MainActivity extends Activity {
     private ApiClient client() throws Exception { return new ApiClient(settings.prefs.getString("address", ""), settings.token(), this::open); }
     private boolean allowed() { return Build.VERSION.SDK_INT < 37 || checkSelfPermission(LAN_PERMISSION) == PackageManager.PERMISSION_GRANTED; }
     private void restartConnection() {
-        epoch++; historyEpoch++; summaryEpoch++;if(summaryClient!=null)summaryClient.cancel();if(popupMonthClient!=null)popupMonthClient.cancel();polls = 0; live = null; collectorStatus = null; history = null; historyLoading = false; piNowAt = 0; metrics = new ArrayList<>(); readings = new LinkedHashMap<>();
+        if(elementPopup!=null)elementPopup.pause();epoch++; historyEpoch++; summaryEpoch++;if(summaryClient!=null)summaryClient.cancel();if(popupMonthClient!=null)popupMonthClient.cancel();polls = 0; live = null; collectorStatus = null; history = null; historyLoading = false; piNowAt = 0; metrics = new ArrayList<>(); readings = new LinkedHashMap<>();
         handler.removeCallbacks(poll); if (liveClient != null) liveClient.cancel(); if (metadataClient!=null)metadataClient.cancel();metadataLoading=false; if (historyClient != null) historyClient.cancel();
         if (!active) return;
         if (!allowed()) { connectionState = "Local network permission is needed. Open Settings to connect."; updateLive(); return; }
@@ -300,7 +300,7 @@ public final class MainActivity extends Activity {
         liveWorker.execute(() -> {
             try {
                 ApiClient prepared = client();
-                handler.post(() -> { if (active && generation == epoch) { liveClient = prepared; handler.post(poll); } });
+                handler.post(() -> { if (active && generation == epoch) { liveClient = prepared; handler.post(poll);if(elementPopup!=null)elementPopup.resume(); } });
             } catch (Exception e) { handler.post(() -> { if (active && generation == epoch) { connectionState = "Set the Pi address and API token in Settings."; updateLive(); } }); }
         });
     }
@@ -420,78 +420,95 @@ public final class MainActivity extends Activity {
     private void showDetail(MonitorData.Datum d,String fallback){showDetail(d,fallback,false);}
     private void showDetail(MonitorData.Datum d, String fallback,boolean gauge) {showElementDetail(d==null?"pending:"+fallback:d.id,d,fallback,gauge);}
     private void showElementDetail(String id,MonitorData.Datum d,String fallback,boolean gauge){new ElementPopup(id,d,fallback,gauge).show();}
+    private volatile ElementPopup elementPopup;
     private final class ElementPopup {
-        final String id,field;final MonitorData.Metric metric;final boolean current,positive;
+        final String id,field;final MonitorData.Metric metric;final boolean current,positive,temperature,historyAvailable;
         final android.app.Dialog dialog=new android.app.Dialog(MainActivity.this);
         final LinearLayout panel=styledDialogRoot();final PopupSelection selection;
-        final TextView[][] periods=new TextView[2][4];TextView amps,energy,samples,caption,line,sum,quantityButton;
+        final TextView[][] periods=new TextView[2][4];TextView firstValue,secondValue,samples,caption,line,sum,quantityButton,valuesButton;
         PopupChartView graph;android.widget.FrameLayout graphFrame;HistoryData.Result data;PopupHistory.Plan plan;
-        java.util.List<java.time.YearMonth> months;boolean loadingMonths;
+        java.util.List<java.time.YearMonth> months;java.time.YearMonth monthsAt;boolean loadingMonths,monthsError,busy;int finalRetries;java.time.Instant finalWindow;
+        volatile boolean open;volatile int requestVersion,monthVersion;volatile ApiClient dataClient,monthClient;
+        final Runnable refreshMonths=()->{if(isCurrent()){loadMonths(true);scheduleMonths();}};
+        final Runnable refresh=()->{if(isCurrent()){reload(true);if(!java.time.YearMonth.from(now().atZone(ZoneId.systemDefault())).equals(monthsAt))loadMonths(true);}};
         ElementPopup(String key,MonitorData.Datum datum,String fallback,boolean gauge){
             id=key;metric=PopupHistory.binding(id,datum,metrics);field=datum==null?"current":datum.quantity.equals("starterVoltage")?"voltage":datum.quantity;
             GaugeScale.Kind kind=GaugeScale.kind("gauges",fallback);current=datum!=null?datum.quantity.equals("current"):gauge&&(kind==GaugeScale.Kind.LOAD||kind==GaugeScale.Kind.PV||kind==GaugeScale.Kind.BATTERY);
-            positive=current&&(metric==null||!metric.role.equals("battery"));selection=popupSettings.get(id);
+            positive=current&&(metric==null||!metric.role.equals("battery"));temperature=metric!=null&&metric.kind.equals("temperature");selection=popupSettings.get(id);
             String saved=settings.label(id,fallback),title=saved.equals(fallback)?PopupHistory.title(id,datum,fallback):saved;
             if(datum!=null&&datum.unit.equals("°C")&&!title.toLowerCase(Locale.UK).endsWith("temperature"))title+=" temperature";
             panel.setPadding(dialogDp(6),dialogDp(6),dialogDp(6),dialogDp(6));TextView heading=uiText(title,dialogTextSize(22),theme.titleText);heading.setGravity(Gravity.CENTER);heading.setTypeface(Typeface.create(theme.fontFamily,Typeface.BOLD));panel.addView(heading,new LinearLayout.LayoutParams(-1,dialogDp(38)));
-            boolean history=current||metric!=null&&(field.equals("stateOfCharge")||field.equals("voltage")||metric.kind.equals("voltage")||metric.kind.equals("barometer")||metric.kind.equals("temperature"));
-            if(current){LinearLayout values=column();values.setGravity(Gravity.CENTER);amps=summaryLine(values,"Current:");energy=summaryLine(values,"Energy:");popupRow(panel,values);}
-            if(history){
+            historyAvailable=current||metric!=null&&(field.equals("stateOfCharge")||field.equals("voltage")||metric.kind.equals("voltage")||metric.kind.equals("barometer")||temperature);
+            if(historyAvailable){
                 plan=PopupHistory.plan(now(),selection,ZoneId.systemDefault());if(metric!=null&&!PopupHistory.supports(metric,plan.query.resolution)){selection.period=1;selection.fixed=false;}
-                samples=uiText("Samples: —/—",dialogTextSize(11.5f),theme.text);samples.setGravity(Gravity.CENTER);popupRow(panel,samples);
-                caption=uiText("",dialogTextSize(11.5f),theme.text);caption.setGravity(Gravity.CENTER);popupRow(panel,caption);
-                android.widget.FrameLayout frame=new android.widget.FrameLayout(MainActivity.this);graphFrame=frame;graph=new PopupChartView(MainActivity.this,theme,dialogTextSize(1));frame.addView(graph,new android.widget.FrameLayout.LayoutParams(-1,-1));
-                LinearLayout controls=row();controls.setBaselineAligned(false);
-                if(current){quantityButton=popupButton(selection.power?"W":"A",selection.power,()->{selection.power=!selection.power;remember();draw();});chartControl(controls,quantityButton,0);}
-                line=popupButton(selection.bars?"Bar":"Line",selection.bars,()->{selection.bars=!selection.bars;remember();draw();});chartControl(controls,line,controls.getChildCount());
-                sum=popupButton("Sum",current&&selection.sum,()->{if(current){selection.sum=!selection.sum;remember();draw();}});sum.setEnabled(current);sum.setAlpha(current?1:.4f);chartControl(controls,sum,controls.getChildCount());
-                android.widget.FrameLayout.LayoutParams cp=new android.widget.FrameLayout.LayoutParams(-2,dialogDp(38),Gravity.TOP|Gravity.RIGHT);cp.setMargins(dialogDp(6),dialogDp(6),dialogDp(6),0);frame.addView(controls,cp);
-                LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(-1,dialogDp(200));fp.topMargin=dialogDp(6);panel.addView(frame,fp);
-                for(int row=0;row<2;row++){final boolean fixed=row==1;LinearLayout buttons=row();buttons.setBaselineAligned(false);TextView label=uiText(fixed?"Fixed data":"Rolling data",dialogTextSize(11.5f),theme.text);label.setGravity(Gravity.CENTER);popupControl(buttons,label,0);
-                    for(int p=0;p<4;p++){final int period=p;TextView button=popupButton("",false,()->{if(fixed&&period==3){chooseMonth();return;}selection.fixed=fixed;selection.period=period;remember();reload();});periods[row][p]=button;popupControl(buttons,button,p+1);}popupRow(panel,buttons);
-                }
-                dialog.setOnShowListener(v->{reload();loadMonths();});
+                LinearLayout header=row();header.setBaselineAligned(false);header.setPadding(dialogDp(PopupChartView.LABEL_INSET),0,dialogDp(PopupChartView.LABEL_INSET),0);
+                LinearLayout readings=column();String first=current?"Current:":temperature?"Min:":"Latest:",second=current?"Energy:":temperature?"Max:":"";
+                firstValue=headerReading(readings,first);if(!second.isEmpty())secondValue=headerReading(readings,second);else readings.addView(new View(MainActivity.this),new LinearLayout.LayoutParams(1,dialogDp(20)));
+                header.addView(readings,new LinearLayout.LayoutParams(-2,dialogDp(40)));
+                LinearLayout middle=column();samples=uiText("Samples: —/—",dialogTextSize(11.5f),theme.text);caption=uiText("",dialogTextSize(11.5f),theme.text);
+                for(TextView text:new TextView[]{samples,caption}){text.setGravity(Gravity.CENTER);text.setIncludeFontPadding(false);text.setSingleLine();text.setEllipsize(TextUtils.TruncateAt.END);middle.addView(text,new LinearLayout.LayoutParams(-1,dialogDp(20)));}
+                LinearLayout.LayoutParams middleSize=new LinearLayout.LayoutParams(0,dialogDp(40),1);middleSize.setMargins(dialogDp(6),0,dialogDp(6),0);header.addView(middle,middleSize);
+                LinearLayout controls=row();valuesButton=popupButton("Values",selection.values,()->{selection.values=!selection.values;remember();draw();});controls.addView(valuesButton,new LinearLayout.LayoutParams(dialogDp(48),dialogDp(40)));
+                if(current){quantityButton=popupButton(selection.power?"Wh":"Ah",selection.power,()->{selection.power=!selection.power;remember();draw();});LinearLayout.LayoutParams q=new LinearLayout.LayoutParams(dialogDp(42),dialogDp(40));q.leftMargin=dialogDp(6);controls.addView(quantityButton,q);}header.addView(controls,new LinearLayout.LayoutParams(-2,dialogDp(40)));popupRow(panel,header);
+                graphFrame=new android.widget.FrameLayout(MainActivity.this);graph=new PopupChartView(MainActivity.this,theme,dialogTextSize(1));graphFrame.addView(graph,new android.widget.FrameLayout.LayoutParams(-1,-1));LinearLayout.LayoutParams fp=new LinearLayout.LayoutParams(-1,dialogDp(280));fp.topMargin=dialogDp(6);panel.addView(graphFrame,fp);
+                LinearLayout periodArea=row();periodArea.setBaselineAligned(false);LinearLayout periodBox=popupBox();LinearLayout.LayoutParams timeSize=new LinearLayout.LayoutParams(0,-2,4);periodArea.addView(periodBox,timeSize);
+                for(int r=0;r<2;r++){final boolean fixed=r==1;LinearLayout buttons=row();buttons.setBaselineAligned(false);for(int i=0;i<4;i++){final int period=i;TextView button=popupButton("",false,()->{if(fixed&&period==3){chooseMonth();return;}selection.fixed=fixed;selection.period=period;remember();reload(false);});periods[r][i]=button;popupControl(buttons,button,i);}if(r==0)periodBox.addView(buttons,new LinearLayout.LayoutParams(-1,-2));else popupRow(periodBox,buttons);}
+                LinearLayout modeBox=popupBox();line=popupButton(selection.bars?"Bar":"Line",selection.bars,()->{selection.bars=!selection.bars;remember();draw();});modeBox.addView(line,new LinearLayout.LayoutParams(-1,dialogDp(28)));
+                sum=popupButton("Sum",current&&selection.sum,()->{if(current){selection.sum=!selection.sum;remember();draw();}});sum.setEnabled(current);sum.setAlpha(current?1:.4f);LinearLayout.LayoutParams sumSize=new LinearLayout.LayoutParams(-1,dialogDp(28));sumSize.topMargin=dialogDp(6);modeBox.addView(sum,sumSize);LinearLayout.LayoutParams modeSize=new LinearLayout.LayoutParams(0,-2,1);modeSize.leftMargin=dialogDp(6);periodArea.addView(modeBox,modeSize);popupRow(panel,periodArea);
+                dialog.setOnShowListener(v->{if(elementPopup!=this||!dialog.isShowing())return;open=true;reload(false);loadMonths(true);scheduleMonths();});
             }
-            LinearLayout footer=row();footer.setBaselineAligned(false);popupRow(panel,footer);addElementOptions(footer,id,()->dialog.dismiss(),metric,field);
-            dialog.setOnDismissListener(v->{summaryEpoch++;if(summaryClient!=null)summaryClient.cancel();if(popupMonthClient!=null)popupMonthClient.cancel();dismissAnchoredMenu();removeTrackedChildren(panel);flushPopupSettings();});
+            LinearLayout footerBox=popupBox(),footer=row();footer.setBaselineAligned(false);footerBox.addView(footer,new LinearLayout.LayoutParams(-1,-2));popupRow(panel,footerBox);addElementOptions(footer,id,()->dialog.dismiss(),metric,field);
+            dialog.setOnDismissListener(v->{open=false;pause();if(elementPopup==this)elementPopup=null;dismissAnchoredMenu();removeTrackedChildren(panel);flushPopupSettings();});
         }
-        TextView summaryLine(LinearLayout values,String label){LinearLayout line=row();line.setGravity(Gravity.CENTER);TextView name=uiText(label,dialogTextSize(16),theme.text);name.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);line.addView(name,new LinearLayout.LayoutParams(dialogDp(80),dialogDp(20)));TextView value=uiText("—",dialogTextSize(16),theme.text);value.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);value.setPadding(dialogDp(6),0,0,0);value.setSingleLine();line.addView(value,new LinearLayout.LayoutParams(dialogDp(180),dialogDp(20)));values.addView(line);return value;}
-        void chartControl(LinearLayout row,TextView button,int index){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(dialogDp(54),dialogDp(38));if(index>0)lp.leftMargin=dialogDp(6);row.addView(button,lp);}
+        LinearLayout popupBox(){LinearLayout box=column();box.setPadding(dialogDp(6),dialogDp(6),dialogDp(6),dialogDp(6));box.setBackground(roundedBackground(theme.panel,theme.border,1.1f,5));return box;}
+        TextView headerReading(LinearLayout column,String label){LinearLayout row=row();TextView name=uiText(label,dialogTextSize(16),theme.text);name.setSingleLine();name.setIncludeFontPadding(false);name.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);int labelWidth=Math.round(name.getPaint().measureText(current?"Current:":temperature?"Max:":"Latest:"));row.addView(name,new LinearLayout.LayoutParams(labelWidth,dialogDp(20)));TextView value=uiText("—",dialogTextSize(16),theme.text);value.setSingleLine();value.setIncludeFontPadding(false);value.setPadding(dialogDp(6),0,0,0);value.setGravity(Gravity.LEFT|Gravity.CENTER_VERTICAL);value.setEllipsize(TextUtils.TruncateAt.END);row.addView(value,new LinearLayout.LayoutParams(dialogDp(116),dialogDp(20)));column.addView(row);return value;}
+        boolean isCurrent(){return active&&open&&elementPopup==this&&dialog.isShowing();}
+        boolean valid(int version,int connection){return isCurrent()&&version==requestVersion&&connection==epoch;}
         void show(){
-            if(graphFrame!=null){int width=Math.max(1,Math.min(dialogDp(560),viewport.getWidth()-dialogDp(30))),height=Math.max(1,viewport.getHeight()-dialogDp(24));panel.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));int excess=Math.max(0,panel.getMeasuredHeight()-height);graphFrame.getLayoutParams().height=Math.max(dialogDp(128),dialogDp(200)-excess);}
-            showStyledDialog(dialog,panel,560);refreshChangedIndicators();
+            if(elementPopup!=null)elementPopup.dialog.dismiss();elementPopup=this;
+            if(graphFrame!=null){int width=Math.max(1,Math.min(dialogDp(560),viewport.getWidth()-dialogDp(30))),height=Math.max(1,viewport.getHeight()-dialogDp(24));panel.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));graphFrame.getLayoutParams().height=Math.max(dialogDp(140),dialogDp(280)-Math.max(0,panel.getMeasuredHeight()-height));}
+            showStyledDialog(dialog,panel,560);if(!historyAvailable)open=true;refreshChangedIndicators();
         }
         void remember(){try{popupSettings.put(id,selection);handler.removeCallbacks(savePopupSettings);handler.postDelayed(savePopupSettings,250);}catch(Exception e){toast(e.getMessage());}}
+        void pause(){handler.removeCallbacks(refresh);handler.removeCallbacks(refreshMonths);requestVersion++;monthVersion++;busy=false;loadingMonths=false;if(dataClient!=null)dataClient.cancel();if(monthClient!=null)monthClient.cancel();}
+        void resume(){if(isCurrent()&&historyAvailable){reload(true);loadMonths(true);scheduleMonths();}}
+        void scheduleMonths(){handler.removeCallbacks(refreshMonths);if(!isCurrent()||metric==null||!PopupHistory.supports(metric,"day"))return;java.time.Instant at=now(),next=java.time.YearMonth.from(at.atZone(ZoneId.systemDefault())).plusMonths(1).atDay(1).atStartOfDay(ZoneId.systemDefault()).toInstant();handler.postDelayed(refreshMonths,Math.max(1000,java.time.Duration.between(at,next).toMillis()));}
+        void schedule(boolean retry){handler.removeCallbacks(refresh);if(!isCurrent()||!historyAvailable)return;java.time.Instant next=PopupHistory.nextRefresh(now(),selection,ZoneId.systemDefault());if(retry)handler.postDelayed(refresh,15000);else if(next!=null)handler.postDelayed(refresh,Math.max(1000,java.time.Duration.between(now(),next).toMillis()));}
         void updateButtons(){
             java.time.YearMonth selected=selection.month.isEmpty()?java.time.YearMonth.from(now().atZone(ZoneId.systemDefault())).minusMonths(1):java.time.YearMonth.parse(selection.month);
-            for(int r=0;r<2;r++)for(int p=0;p<4;p++){TextView button=periods[r][p];String name=SummaryPeriods.label(now(),p,r==1,ZoneId.systemDefault());if(r==1&&p==3)name=PopupHistory.monthLabel(selected,now(),ZoneId.systemDefault())+" ▾";
-                button.setText(name);popupButtonState(button,selection.fixed==(r==1)&&selection.period==p);boolean available=PopupHistory.supports(metric,p==0?"minute":p<3?"hour":"day")&&(r==0||p!=3||months==null||!months.isEmpty());button.setEnabled(available);button.setAlpha(available?1:.4f);
+            for(int r=0;r<2;r++)for(int p=0;p<4;p++){TextView button=periods[r][p];String name=SummaryPeriods.label(now(),p,r==1,ZoneId.systemDefault());if(r==1&&p==3)name=monthsError?"Retry months":PopupHistory.monthLabel(selected,now(),ZoneId.systemDefault())+" ▾";
+                button.setText(name);popupButtonState(button,selection.fixed==(r==1)&&selection.period==p);boolean available=PopupHistory.supports(metric,p==0?"minute":p<3?"hour":"day")&&(r==0||p!=3||monthsError||months==null||!months.isEmpty());button.setEnabled(available);button.setAlpha(available?1:.4f);if(r==1&&p==3)button.setContentDescription(monthsError?"Retry recorded months":months!=null&&months.isEmpty()?"No earlier daily readings":name);
             }
         }
-        void reload(){
-            plan=PopupHistory.plan(now(),selection,ZoneId.systemDefault());updateButtons();caption.setText(PopupHistory.caption(plan,selection.fixed));data=null;draw();
-            final int generation=++summaryEpoch,connection=epoch;if(summaryClient!=null)summaryClient.cancel();final PopupHistory.Plan requested=plan;
-            if(!PopupHistory.supports(metric,plan.query.resolution)||!plan.query.to.isAfter(plan.query.from))return;
-            popupWorker.execute(()->{try{if(!active||generation!=summaryEpoch||connection!=epoch)return;ApiClient client=client();summaryClient=client;HistoryData.Result result=HistoryData.fetch(client,metric,requested.query);
-                handler.post(()->{if(active&&dialog.isShowing()&&generation==summaryEpoch&&connection==epoch){data=result;draw();}});
-            }catch(Exception ignored){handler.post(()->{if(active&&dialog.isShowing()&&generation==summaryEpoch&&connection==epoch)draw();});}});
+        void reload(boolean automatic){
+            if(!historyAvailable||!isCurrent())return;if(automatic&&busy){schedule(true);return;}handler.removeCallbacks(refresh);busy=true;
+            final PopupHistory.Plan requested=PopupHistory.plan(now(),selection,ZoneId.systemDefault());final int version=++requestVersion,connection=epoch;if(dataClient!=null)dataClient.cancel();
+            if(!automatic||data==null){plan=requested;data=null;updateButtons();caption.setText(PopupHistory.caption(plan,selection.fixed));draw();}
+            if(!PopupHistory.supports(metric,requested.query.resolution)||!requested.query.to.isAfter(requested.query.from)){busy=false;schedule(false);return;}
+            popupWorker.execute(()->{try{if(!valid(version,connection))return;ApiClient client=client();dataClient=client;summaryClient=client;if(!valid(version,connection)){client.cancel();return;}HistoryData.Result result=HistoryData.fetch(client,metric,requested.query);
+                handler.post(()->{if(valid(version,connection)){busy=false;data=result;plan=requested;caption.setText(PopupHistory.caption(plan,selection.fixed));updateButtons();draw();if(!requested.query.to.equals(finalWindow)){finalWindow=requested.query.to;finalRetries=0;}boolean finishing=PopupHistory.awaitingFinalCheckpoint(result,selection);schedule(finishing&&finalRetries++<3);}});
+            }catch(Exception ignored){handler.post(()->{if(valid(version,connection)){busy=false;if(!automatic)toast("Popup history could not be loaded. Retrying.");schedule(true);}});}});
         }
         void draw(){
-            if(graph==null)return;String q=current?(selection.power?"watts":"current"):field;PopupHistory.Series series=data==null?null:PopupHistory.series(data,plan,q,current&&selection.sum,positive);graph.show(plan,series,selection.bars);
-            samples.setText(data==null?"Samples: —/"+SummaryPeriods.expected(plan.query,plan.zone):current?SummaryPeriods.totals(data).samples():"Samples: "+series.captured+"/"+series.expected);
-            if(current){SummaryPeriods.Totals t=data==null?new SummaryPeriods.Totals():SummaryPeriods.totals(data);amps.setText(amount(t.charge,"Ah"));energy.setText(amount(t.energy,"Wh"));quantityButton.setText(selection.power?"W":"A");popupButtonState(quantityButton,selection.power);}
-            line.setText(selection.bars?"Bar":"Line");popupButtonState(line,selection.bars);popupButtonState(sum,current&&selection.sum);
+            if(graph==null)return;String q=current?(selection.power?"watts":"current"):field;PopupHistory.Series series=data==null?null:PopupHistory.series(data,plan,q,current&&selection.sum,positive,selection.bars);graph.show(plan,series,selection.bars,selection.values,metric!=null&&metric.kind.equals("barometer"));
+            samples.setText(data==null?"Samples: —/"+SummaryPeriods.expected(plan.query,plan.zone):"Samples: "+series.captured+"/"+series.expected);
+            if(current){SummaryPeriods.Totals t=data==null?new SummaryPeriods.Totals():SummaryPeriods.totals(data,positive);firstValue.setText(amount(t.charge,"Ah"));secondValue.setText(amount(t.energy,"Wh"));quantityButton.setText(selection.power?"Wh":"Ah");popupButtonState(quantityButton,selection.power);}
+            else if(temperature){firstValue.setText(reading(series==null?null:series.minimum,"°C"));secondValue.setText(reading(series==null?null:series.maximum,"°C"));}
+            else firstValue.setText(reading(series==null?null:series.latest,series==null?"":series.unit));
+            popupButtonState(valuesButton,selection.values);line.setText(selection.bars?"Bar":"Line");popupButtonState(line,selection.bars);popupButtonState(sum,current&&selection.sum);
         }
-        String amount(Double value,String unit){return value==null?"—":String.format(Locale.UK,"%.3f %s",positive?Math.abs(value):value,unit);}
-        void loadMonths(){
-            if(metric==null||loadingMonths)return;loadingMonths=true;final int connection=epoch;
-            popupWorker.execute(()->{try{if(!active||connection!=epoch)return;ApiClient client=client();popupMonthClient=client;java.util.List<java.time.YearMonth> recorded=PopupHistory.months(client,metric,now(),ZoneId.systemDefault(),field);java.time.YearMonth current=java.time.YearMonth.from(now().atZone(ZoneId.systemDefault()));recorded.removeIf(m->!m.isBefore(current));
-                handler.post(()->{if(active&&dialog.isShowing()&&connection==epoch){months=recorded;loadingMonths=false;updateButtons();}});
-            }catch(Exception e){handler.post(()->{if(active&&dialog.isShowing()&&connection==epoch){loadingMonths=false;months=new ArrayList<>();updateButtons();}});}});
+        String amount(Double value,String unit){return value==null?"—":String.format(Locale.UK,"%.3f %s",value,unit);}
+        String reading(Double value,String unit){return value==null?"—":String.format(Locale.UK,unit.equals("V")?"%.3f %s":unit.equals("°C")?"%.1f %s":"%.0f %s",value,unit);}
+        void loadMonths(boolean force){
+            if(metric==null||loadingMonths||!PopupHistory.supports(metric,"day")||!isCurrent()||!force&&months!=null)return;loadingMonths=true;monthsError=false;updateButtons();final int connection=epoch,version=++monthVersion;
+            java.time.Instant at=now();java.time.ZoneId zone=ZoneId.systemDefault();
+            popupWorker.execute(()->{try{if(!isCurrent()||connection!=epoch||version!=monthVersion)return;ApiClient client=client();monthClient=client;popupMonthClient=client;if(!isCurrent()||connection!=epoch||version!=monthVersion){client.cancel();return;}java.util.List<java.time.YearMonth> recorded=PopupHistory.months(client,metric,at,zone,field);java.time.YearMonth current=java.time.YearMonth.from(at.atZone(zone));recorded.removeIf(m->!m.isBefore(current));
+                handler.post(()->{if(isCurrent()&&connection==epoch&&version==monthVersion){months=recorded;monthsAt=current;loadingMonths=false;monthsError=false;updateButtons();}});
+            }catch(Exception e){handler.post(()->{if(isCurrent()&&connection==epoch&&version==monthVersion){loadingMonths=false;monthsError=true;updateButtons();}});}});
         }
         void chooseMonth(){
-            if(months==null){toast("Recorded months are loading.");return;}if(months.isEmpty())return;
-            List<String> labels=new ArrayList<>();List<Runnable> actions=new ArrayList<>();for(java.time.YearMonth month:months){labels.add(PopupHistory.monthLabel(month,now(),ZoneId.systemDefault()));actions.add(()->{selection.month=month.toString();selection.fixed=true;selection.period=3;remember();reload();});}
+            if(monthsError){toast("Could not load recorded months. Retrying.");loadMonths(true);return;}if(months==null||loadingMonths){toast("Recorded months are loading.");return;}if(months.isEmpty()){toast("No earlier daily readings are available.");return;}
+            List<String> labels=new ArrayList<>();List<Runnable> actions=new ArrayList<>();for(java.time.YearMonth month:months){labels.add(PopupHistory.monthLabel(month,now(),ZoneId.systemDefault()));actions.add(()->{selection.month=month.toString();selection.fixed=true;selection.period=3;remember();reload(false);});}
             anchoredMenu(periods[1][3],true,labels,actions,months.indexOf(selection.month.isEmpty()?java.time.YearMonth.from(now().atZone(ZoneId.systemDefault())).minusMonths(1):java.time.YearMonth.parse(selection.month)));
         }
     }
@@ -499,7 +516,7 @@ public final class MainActivity extends Activity {
     private void popupRow(LinearLayout panel,View child){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,dialogDp(6),0,0);panel.addView(child,lp);}
     private TextView popupButton(String label,boolean selected,Runnable action){TextView button=uiText(label,dialogTextSize(11.5f),theme.buttonTextOn);button.setGravity(Gravity.CENTER);button.setSingleLine();button.setEllipsize(TextUtils.TruncateAt.END);button.setPadding(dialogDp(6),0,dialogDp(6),0);button.setFocusable(true);button.setClickable(true);popupButtonState(button,selected);button.setOnClickListener(v->action.run());return button;}
     private void popupButtonState(TextView button,boolean selected){button.setActivated(selected);button.setTextColor(theme.buttonTextOn);android.graphics.drawable.StateListDrawable states=new android.graphics.drawable.StateListDrawable();states.addState(new int[]{android.R.attr.state_pressed},roundedBackground(ThemeConfig.blend(theme.buttonBackground,theme.controls,.12f),theme.controls,1.1f,5));states.addState(new int[]{android.R.attr.state_focused},roundedBackground(ThemeConfig.blend(theme.buttonBackground,theme.controls,.12f),theme.controls,1.1f,5));states.addState(new int[]{},roundedBackground(selected?ThemeConfig.blend(theme.buttonBackground,theme.controls,.12f):theme.buttonBackground,selected?theme.controls:theme.offButtonBorder,1.1f,5));button.setBackground(states);}
-    private void popupControl(LinearLayout row,TextView button,int index){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dialogDp(38),1);if(index>0)lp.setMargins(dialogDp(6),0,0,0);row.addView(button,lp);}
+    private void popupControl(LinearLayout row,TextView button,int index){LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dialogDp(28),1);if(index>0)lp.setMargins(dialogDp(6),0,0,0);row.addView(button,lp);}
     private void addElementOptions(LinearLayout row,String id,Runnable close,MonitorData.Metric metric,String field){
         List<TextView> highlights=new ArrayList<>();
         for(int i=0;i<2;i++){final int choice=i+1;TextView button=popupButton("Highlight "+choice,settings.highlight(id)==choice,()->{

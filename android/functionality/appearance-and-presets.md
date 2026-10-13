@@ -1,6 +1,6 @@
 # Appearance and viewer presets
 
-Updated in **0.28 / build 10**.
+Updated in **0.29 / build 11**.
 
 Themes contain colour roles only, with name/format metadata. Named files remain in Downloads/ella-monitoring/themes; older themes are read compatibly. Font belongs to viewer settings/presets and is selected at the bottom left of Edit theme, with Back at the right and its choices opening above. Choosing/editing a theme preserves the font and affects only the Theme modification indication. Preset save/load/update does not include or restore colours/theme selection.
 
@@ -39,3 +39,8 @@ The Font PopupWindow is owned by the theme-dialog anchor's window token, opens a
 In 0.28 popup/future chart display choices have separate global ownership: period, Rolling/Fixed, recorded month, A/W, Line/Bar and Sum are individually keyed in Downloads/ella-monitoring/display-settings.json. The chart-display private preferences cache stores only those choices and pending IDs, outside viewer preferences/preset comparison. Highlight/Hide remains in presets; colours remain in themes. Named presets and theme files/format are unchanged.
 
 The global file uses format 1 with a maximum 128 identities and the shared 64 KB strict JSON/UTF-8 limits. Known selection fields/types/ranges/months are validated; unknown fields, credentials and malformed entries are rejected. Malformed existing files are not overwritten by autosave. Choices are cached immediately, written on a separate worker after a short debounce and flushed on popup close/background when storage access is granted. Pending cached choices survive restarts and merge with the valid file before saving. IO does not hold the UI selection lock; choices changed during a write remain pending. Existing Downloads permission, rollback and picker-free paths are reused. Actual provider/device behavior remains to verify.
+
+
+In 0.29 Graph axes & markers uses the previously unused colour-editor slot, with the same picker/hex validation, preview, swatch, copy/save/rollback and independent modification comparison. The graphAxes role controls popup axis lines/ticks/text and line-point markers; grid/data line/bar roles remain independent. Colour-only format 17 remains; old themes lacking the field inherit their Labels colour. The older-default comparison also inherits that colour. Presets and bottom-bar colour roles are unchanged.
+
+Popup boxed compact controls follow the existing button on/off background/text/border roles. Values lives in the separate global popup display file and only toggles bar annotations; it never dirties presets. Current/energy unit choices now display Ah/Wh. Main-element Highlight/Hide retains preset ownership. No other theme-editor/dialog padding is changed.

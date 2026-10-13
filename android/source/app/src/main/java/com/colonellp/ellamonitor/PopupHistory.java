@@ -65,48 +65,73 @@ final class PopupHistory {
     }
     static List<YearMonth> months(ApiClient client,MonitorData.Metric metric,Instant now,ZoneId zone)throws Exception {return months(client,metric,now,zone,"current");}
     static List<YearMonth> months(ApiClient client,MonitorData.Metric metric,Instant now,ZoneId zone,String field)throws Exception {
-        if(DerivedHistory.isDerived(metric)){
-            Set<YearMonth> common=null;JSONArray c=metric.definition.getJSONArray("components");for(int i=0;i<c.length();i++){
-                Set<YearMonth> available=new TreeSet<>(months(client,new MonitorData.Metric(c.getJSONObject(i).getJSONObject("metric")),now,zone,field));if(common==null)common=available;else common.retainAll(available);
-            }List<YearMonth> result=new ArrayList<>(common==null?Collections.emptySet():common);result.sort(Collections.reverseOrder());return result;
-        }
-        String resolution="day";
-        HistoryData.Result result=HistoryData.fetch(client,metric,new HistoryData.Window(Instant.EPOCH,now,resolution));Set<YearMonth> available=new TreeSet<>(Collections.reverseOrder());
-        for(HistoryData.Record row:result.rows){Double coverage=row.coverage(field,metric.kind);if(row.value(field,metric.kind)!=null&&(coverage==null||coverage>0))available.add(YearMonth.from(row.start.atZone(zone)));}return new ArrayList<>(available);
+        HistoryData.Result result=HistoryData.fetch(client,metric,new HistoryData.Window(Instant.EPOCH,now,"day"));
+        Set<YearMonth> available=new TreeSet<>(Collections.reverseOrder());
+        for(HistoryData.Record row:result.rows){Double coverage=row.coverage(field,metric.kind);if(row.value(field,metric.kind)!=null&&(coverage==null||coverage>0))available.add(YearMonth.from(row.start.atZone(zone)));}
+        return new ArrayList<>(available);
     }
+    /** Calendar boundaries, not fixed 24-hour delays. Explicit older months stay selected. */
+    static Instant nextRefresh(Instant now,PopupSelection s,ZoneId zone){
+        ZonedDateTime at=now.atZone(zone);
+        if(s.period==0)return s.fixed?at.truncatedTo(ChronoUnit.HOURS).plusHours(1).toInstant():at.truncatedTo(ChronoUnit.MINUTES).plusMinutes(1).toInstant();
+        if(s.fixed){
+            if(s.period==1)return at.toLocalDate().plusDays(1).atStartOfDay(zone).toInstant();
+            if(s.period==2)return at.toLocalDate().with(TemporalAdjusters.next(DayOfWeek.MONDAY)).atStartOfDay(zone).toInstant();
+            return s.month.isEmpty()?YearMonth.from(at).plusMonths(1).atDay(1).atStartOfDay(zone).toInstant():null;
+        }
+        if(s.period<3)return at.truncatedTo(ChronoUnit.HOURS).plusHours(1).toInstant();
+        Instant local=at.toLocalDate().plusDays(1).atStartOfDay(zone).toInstant(),utc=now.atZone(ZoneOffset.UTC).toLocalDate().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+        return local.isBefore(utc)?local:utc; // Also consume finalized UTC daily checkpoints.
+    }
+    static boolean awaitingFinalCheckpoint(HistoryData.Result data,PopupSelection selection){
+        if(!selection.fixed)return false;try{return Instant.parse(data.savedAt).isBefore(data.window.to);}catch(Exception e){return true;}
+    }
+    static String dayTick(Instant at,Plan plan){return at.equals(plan.end)?"24":DateTimeFormatter.ofPattern("H",Locale.UK).withZone(plan.zone).format(at);}
     static final class Point {
-        final Instant start,end;final double value;final boolean complete;
-        Point(Instant s,Instant e,double v,boolean c){start=s;end=e;value=v;complete=c;}
+        final Instant start,end,fullEnd;final double value;final boolean complete;final Double low,high;
+        Point(Instant s,Instant e,double v,boolean c){this(s,e,e,v,c,null,null);}
+        Point(Instant s,Instant e,Instant f,double v,boolean c,Double l,Double h){start=s;end=e;fullEnd=f;value=v;complete=c;low=l;high=h;}
     }
     static final class Series {
-        final List<Point> points=new ArrayList<>();long captured,expected;String unit;boolean cumulative;
+        final List<Point> points=new ArrayList<>();long captured,expected;String unit;boolean cumulative,temperature,usage;Double minimum,maximum,latest;
     }
-    private static final class Bin {Instant start,end;double sum,coverage;long rows;Double last;boolean complete=true;}
-    static Series series(HistoryData.Result data,Plan plan,String field,boolean cumulative,boolean positive){
-        Series result=new Series();result.expected=SummaryPeriods.expected(data.window,plan.zone);result.cumulative=cumulative;
-        result.unit=cumulative?(field.equals("watts")?"Wh":"Ah"):field.equals("watts")?"W":field.equals("current")?"A":field.equals("stateOfCharge")?"%":field.equals("voltage")?"V":data.metric.kind.equals("barometer")?"hPa":"°C";
-        Map<Instant,Bin> bins=new TreeMap<>();Set<Instant> counted=new HashSet<>();
+    private static final class Bin {Instant start,end,fullEnd;double sum,coverage;long rows;Double last,low,high;boolean complete=true;}
+    static Series series(HistoryData.Result data,Plan plan,String field,boolean cumulative,boolean positive){return series(data,plan,field,cumulative,positive,false);}
+    static Series series(HistoryData.Result data,Plan plan,String field,boolean cumulative,boolean positive,boolean bars){
+        boolean integrated=data.metric.kind.equals("electrical")&&(field.equals("current")||field.equals("watts"));
+        Series result=new Series();result.expected=SummaryPeriods.expected(data.window,plan.zone);result.cumulative=integrated&&cumulative;result.temperature=data.metric.kind.equals("temperature");result.usage=integrated&&positive&&data.metric.role.equals("load");
+        result.unit=integrated?(field.equals("watts")?"Wh":"Ah"):field.equals("stateOfCharge")?"%":field.equals("voltage")?"V":data.metric.kind.equals("barometer")?"hPa":"°C";
+        Map<Instant,Bin> bins=new TreeMap<>();Set<Instant> counted=new HashSet<>();int groupHours=bars?12:6;
         for(HistoryData.Record row:data.rows){
-            if(!SummaryPeriods.included(row,data))continue;Double value=row.value(field,data.metric.kind),coverage=row.coverage(field,data.metric.kind);
-            if(value==null||coverage!=null&&coverage<=0||cumulative&&coverage==null)continue;
+            if(!SummaryPeriods.included(row,data)||!counted.add(row.start))continue;
+            Double value=row.value(field,data.metric.kind),coverage=row.coverage(field,data.metric.kind),low=result.temperature?row.value("min",data.metric.kind):null,high=result.temperature?row.value("max",data.metric.kind):null;
+            if(result.temperature?low==null&&high==null:value==null||coverage!=null&&coverage<=0||integrated&&coverage==null)continue;
             Instant effective=row.end;if(row.partial)try{effective=Instant.parse(data.savedAt);if(effective.isAfter(row.end))effective=row.end;}catch(Exception e){continue;}
-            if(effective.isAfter(data.window.to))continue;
-            Instant start=row.start;
-            if(plan.period==2){ZonedDateTime at=start.atZone(plan.zone);start=at.toLocalDate().atTime(at.getHour()/6*6,0).atZone(plan.zone).toInstant();}
-            Bin bin=bins.get(start);if(bin==null){bin=new Bin();bin.start=start;bins.put(start,bin);}
-            bin.end=effective;bin.rows++;if(counted.add(row.start))result.captured++;
-            double duration=Duration.between(row.start,effective).toMillis()/1000d;
-            bin.complete&=coverage==null||Math.abs(coverage-duration)<.05;
-            if(cumulative){if(coverage==null)continue;Double integral=row.value(field.equals("watts")?"Wh":"Ah",data.metric.kind);if(integral==null)integral=value*coverage/3600;bin.sum+=integral;}
+            if(!effective.isAfter(row.start)||effective.isAfter(data.window.to))continue;
+            Instant start=row.start,fullEnd=row.end;
+            if(plan.period==2){ZonedDateTime at=start.atZone(plan.zone);int hour=at.getHour()/groupHours*groupHours;start=at.toLocalDate().atTime(hour,0).atZone(plan.zone).toInstant();fullEnd=hour+groupHours==24?at.toLocalDate().plusDays(1).atStartOfDay(plan.zone).toInstant():at.toLocalDate().atTime(hour+groupHours,0).atZone(plan.zone).toInstant();}
+            Bin bin=bins.get(start);if(bin==null){bin=new Bin();bin.start=start;bins.put(start,bin);}bin.end=effective;bin.fullEnd=fullEnd;bin.rows++;result.captured++;
+            double duration=Duration.between(row.start,effective).toMillis()/1000d;bin.complete&=coverage==null||Math.abs(coverage-duration)<.05;bin.complete&=!result.temperature||low!=null&&high!=null;
+            if(integrated){Double integral=row.value(field.equals("watts")?"Wh":"Ah",data.metric.kind);if(integral==null)integral=value*coverage/3600;bin.sum+=positive?Math.abs(integral):integral;}
+            else if(result.temperature){if(low!=null)bin.low=bin.low==null?low:Math.min(bin.low,low);if(high!=null)bin.high=bin.high==null?high:Math.max(bin.high,high);}
             else if(coverage!=null){bin.sum+=value*coverage;bin.coverage+=coverage;}
             else bin.last=value;
+            if(value!=null)result.latest=value;
+            if(low!=null)result.minimum=result.minimum==null?low:Math.min(result.minimum,low);
+            if(high!=null)result.maximum=result.maximum==null?high:Math.max(result.maximum,high);
         }
         double total=0;for(Bin bin:bins.values()){
             boolean complete=bin.complete;
-            if(plan.period==2){ZonedDateTime at=bin.start.atZone(plan.zone);int next=at.getHour()+6;Instant end=next==24?at.toLocalDate().plusDays(1).atStartOfDay(plan.zone).toInstant():at.toLocalDate().atTime(next,0).atZone(plan.zone).toInstant();if(end.isAfter(data.window.to))end=data.window.to;long expected=(long)Math.ceil(Duration.between(bin.start,end).toMillis()/3600000d);complete&=bin.rows==expected;}
-            double value=cumulative?(total+=bin.sum):bin.last!=null?bin.last:bin.sum/bin.coverage;
-            if(Double.isFinite(value))result.points.add(new Point(bin.start,bin.end,positive?Math.abs(value):value,complete));
-        }return result;
+            if(plan.period==2){Instant end=bin.fullEnd.isAfter(data.window.to)?data.window.to:bin.fullEnd;long expected=(long)Math.ceil(Duration.between(bin.start,end).toMillis()/3600000d);complete&=bin.rows==expected;}
+            double value=integrated?(result.cumulative?(total+=bin.sum):bin.sum):result.temperature?(bin.high!=null?bin.high:bin.low):bin.last!=null?bin.last:bin.sum/bin.coverage;
+            if(Double.isFinite(value))result.points.add(new Point(bin.start,bin.end,bin.fullEnd,value,complete,bin.low,bin.high));
+        }
+        return result;
+    }
+    static double[] axisRange(Series data,boolean pressure){
+        if(pressure)return new double[]{900,1100,50};double min=0,max=0;
+        if(data!=null)for(Point p:data.points){min=Math.min(min,p.value);max=Math.max(max,p.value);if(p.low!=null)min=Math.min(min,p.low);if(p.high!=null)max=Math.max(max,p.high);}
+        double step=tickStep(min,max);return new double[]{Math.floor(min/step)*step,Math.max(step,Math.ceil(max/step)*step),step};
     }
     static double tickStep(double min,double max){double target=Math.max(1,(max-min)/4),unit=Math.pow(10,Math.floor(Math.log10(target)));double factor=target/unit;return Math.max(1,(factor<=1?1:factor<=2?2:factor<=5?5:10)*unit);}
 }

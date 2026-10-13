@@ -16,6 +16,7 @@ final class ThemeConfig {
     static final String GRID = "grid";
     static final String VERTICAL_GRID = "verticalGrid";
     static final String GRAPH_BACKGROUND = "graphBackground";
+    static final String GRAPH_AXES = "graphAxes";
     static final String TEXT = "text";
     static final String BUTTON_TEXT = "buttonText"; // legacy import key
     static final String BUTTON_TEXT_ON = "buttonTextOn";
@@ -60,6 +61,7 @@ final class ThemeConfig {
     int verticalGrid = -16118514;
     int graphBackground = panel;
     int text = -3616043;
+    int graphAxes = text;
     int buttonTextOn = -4404270;
     int buttonTextOff = -4404270;
     String fontFamily = "sans-serif-medium";
@@ -124,6 +126,7 @@ final class ThemeConfig {
         t.verticalGrid = Color.rgb(75, 101, 112);
         t.graphBackground = t.panel;
         t.text = Color.rgb(229, 239, 243);
+        t.graphAxes = t.text;
         t.buttonTextOn = Color.rgb(229, 239, 243);
         t.buttonTextOff = Color.rgb(205, 222, 229);
         t.fontFamily = "sans-serif";
@@ -167,6 +170,7 @@ final class ThemeConfig {
         t.grid = grid;
         t.verticalGrid = verticalGrid;
         t.graphBackground = graphBackground;
+        t.graphAxes = graphAxes;
         t.text = text;
         t.buttonTextOn = buttonTextOn;
         t.buttonTextOff = buttonTextOn;
@@ -236,6 +240,7 @@ final class ThemeConfig {
         if (GRID.equals(field)) return grid;
         if (VERTICAL_GRID.equals(field)) return verticalGrid;
         if (GRAPH_BACKGROUND.equals(field)) return graphBackground;
+        if (GRAPH_AXES.equals(field)) return graphAxes;
         if (TEXT.equals(field)) return text;
         if (BUTTON_TEXT_ON.equals(field)) return buttonTextOn;
         if (BUTTON_TEXT_OFF.equals(field) || BUTTON_TEXT.equals(field)) return buttonTextOn;
@@ -275,6 +280,7 @@ final class ThemeConfig {
         else if (GRID.equals(field)) grid = color;
         else if (VERTICAL_GRID.equals(field)) verticalGrid = color;
         else if (GRAPH_BACKGROUND.equals(field)) graphBackground = color;
+        else if (GRAPH_AXES.equals(field)) graphAxes = color;
         else if (TEXT.equals(field)) text = color;
         else if (BUTTON_TEXT_ON.equals(field)) buttonTextOn = color;
         else if (BUTTON_TEXT_OFF.equals(field) || BUTTON_TEXT.equals(field)) buttonTextOn = color;
@@ -314,6 +320,7 @@ final class ThemeConfig {
         o.put(GRID, grid);
         o.put(VERTICAL_GRID, verticalGrid);
         o.put(GRAPH_BACKGROUND, graphBackground);
+        o.put(GRAPH_AXES, graphAxes);
         o.put(TEXT, text);
         o.put(BUTTON_TEXT_ON, buttonTextOn);
         JSONObject spectrumColours = new JSONObject();
@@ -368,6 +375,7 @@ final class ThemeConfig {
         t.grid = o.optInt(GRID, t.grid);
         t.verticalGrid = o.optInt(VERTICAL_GRID, t.verticalGrid);
         t.text = o.optInt(TEXT, t.text);
+        t.graphAxes = o.optInt(GRAPH_AXES, t.text);
         int legacyButton = o.optInt(BUTTON_TEXT, t.buttonTextOff);
         t.buttonTextOn = o.optInt(BUTTON_TEXT_ON, legacyButton);
         t.buttonTextOff = t.buttonTextOn; // Legacy off-text files remain readable; the active role is removed.
@@ -450,6 +458,7 @@ final class ThemeConfig {
                 && grid == other.grid
                 && verticalGrid == other.verticalGrid
                 && graphBackground == other.graphBackground
+                && graphAxes == other.graphAxes
                 && text == other.text
                 && buttonTextOn == other.buttonTextOn
                 && line1Spectrum == other.line1Spectrum

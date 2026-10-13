@@ -1,5 +1,16 @@
 # Android changelog
 
+## 0.29 — 2026-10-13
+
+- Current popup charts now show interval Ah/Wh with Sum off and cumulative Ah/Wh with Sum on. Use retained integrals or actual coverage integration, never nominal bucket duration. Header totals use the same interval values/sign presentation. Non-battery display adds magnitudes of retained interval net amounts; signed battery flow, source derivations, logs and CSV remain unchanged. No new gross-flow recording is implied.
+- Compact popup buttons to 28px logical height without shrinking 11.5px text. Add separate themed boxes for the footer, both time rows and the Line/Bar-over-Sum column, with 6px edges/gaps. Remove Rolling data/Fixed data labels. Move Current/Energy left, Samples/period into the middle column and tall Values/Ah-Wh buttons right with mirrored outer insets. Give the graph more space; keep small-screen fallback and other approved app/dialog padding.
+- Day bars span one hour; week bars span local midnight-to-noon/noon-to-midnight while week lines retain six-hour groups. Preserve actual duration across DST, missing hours and partial coverage. Values toggles rounded whole-number annotations above/below bars only; the graph and totals retain measured precision. Day-axis hour labels omit :00.
+- Logged temperature charts draw recorded High/Low lines or range bars, with selected-window Min/Max in the header. SOC/voltage/barometer headers show the latest retained selected-window reading. Barometer Y is fixed at 900–1100 hPa. Non-additive Sum and unavailable history/resolutions remain disabled; no new logging is added.
+- Refresh changing open popups at minute/hour/day/calendar boundaries without clearing the displayed chart during requests. Preserve explicitly chosen older months; refresh their month list at boundaries. Cancel timers/requests on close/background/reconnect and reject stale callbacks. Handle failed requests and bounded checkpoint-finalization retries.
+- Distinguish empty earlier daily history from a failed month request. Failure leaves Retry months accessible instead of silently disabling the dropdown; derived availability uses compatible combined daily records. Do not recreate daily curves from monthly totals.
+- Add the Graph axes & markers theme colour with swatch/hex picker, independent preview/save/copy/modified comparison and old-theme Labels fallback. Save per-popup Values alongside the existing global display choices, outside presets. Highlight/Hide remains preset-owned; themes remain colour-only.
+- Source versionName 0.29 / versionCode 11; owner-built output Ella-monitoring-v0.29.apk. Package/signing identity, SDK/toolchain settings, collector 0.7.3, database/retention and raw MQTT/history/CSV are preserved. Validation and device limitations are recorded in BUILD-VALIDATION.md; no APK is assembled, signed or published.
+
 ## 0.28 — 2026-10-12
 
 - Same-version test compilation correction: construct PopupHistoryTest's synthetic JSON response outside the IOException-only connection factory, so Android's checked JSONException is handled by the test method. Retain 0.28 / versionCode 10 and existing application/toolchain settings.

@@ -1,6 +1,6 @@
 # Live dashboard
 
-Updated in **0.28 / build 10**.
+Updated in **0.29 / build 11**.
 
 Same-version SOC direction correction: the remaining arc ends at 12 o'clock; its start moves anticlockwise as SOC falls. From full, the moving edge reaches 9 o'clock at 75%, 6 at 50% and 3 at 25%. This supersedes the fixed-start direction described earlier. The remaining arc still uses one threshold-selected colour and displays the actual source SOC.
 
@@ -44,3 +44,14 @@ DerivedHistory supplies read-only virtual metrics for Load [Pico]/Inverter/Load 
 In 0.28 non-battery live current/chart/current-integral values are positive presentation magnitudes; battery currents/graphs remain signed and negative temperatures remain visible. All live derivations/integral arithmetic retain the original signed inputs before presentation; CSV is unchanged. Pitch/Roll pointers now end two logical pixels inside the band's inner edge after accounting for the one-pixel rounded stroke cap.
 
 Every popup's view selection is stored independently in Downloads/ella-monitoring/display-settings.json, outside presets; Highlight/Hide remains preset-owned. Closing/backgrounding/reconnecting cancels requests, and late callbacks reject old generations. See settings-and-persistence.md for validation/write behavior.
+
+
+0.29 supersedes the popup layout/mean-current presentation described above. PopupHistory converts current/power to retained interval Ah/Wh (or actual corresponding coverage / 3600 fallback) in both ordinary and cumulative modes. For non-battery positive presentation, take the magnitude of each recorded interval's net amount before grouping/accumulating; SummaryPeriods uses exactly the same rule for the header. Battery sums retain their signs. This is a magnitude of recorded interval nets, not reconstruction of gross in/out inside a bucket. The original signed calculations, source selection and CSV are unchanged.
+
+Week lines group six local hours; bars group local midnight/noon twelve-hour spans, which can have 11/13 actual hours at DST. Day bars retain one-hour widths. Partial bars use lower opacity and integrate only actual coverage; incomplete/missing lines remain disconnected. Labels round to zero decimals only when drawing bar annotations. Values hides those annotations, never totals/axes. Temperature ranges use logged min/max, combined as extrema; no range is invented from a last value. The header Min/Max covers the selected window. Other logged scalar/voltage headers show the latest retained interval/reading in that window. Pressure uses fixed 900–1100 hPa; other axes include zero with integer ticks. Day ticks are hour-only, with 24 at the day endpoint.
+
+Compact popup footer/time/mode boxes use 28px logical buttons, unchanged 11.5px text and 6px edges/gaps. Line/Bar and Sum stack beside both time rows; their row labels are removed. The header has left Current/Energy or Min/Max/Latest readings, centred middle-column Samples/period and right Values/Ah-Wh controls spanning the two 20px text lines. Header left/right insets share the graph-label inset. The plot has up to 280px logical height before the existing small-screen scroll fallback, with no overlaid controls. Unlogged popups keep title/boxed-footer only. Other app/dialog padding is unchanged.
+
+ElementPopup refreshes in place on relevant calendar boundaries, retaining the previous coherent data/plan until a new request succeeds. This hour refreshes per minute; last hour per new hour; today/this week hourly; this month at new local/UTC daily boundaries. Yesterday advances at local midnight, last week at Monday 00:00 and a relative previous month at the first. Explicit older months stay selected and stop graph polling after finalized success; their availability list still refreshes at the next month boundary. Up to three short finalization retries handle newly closed fixed windows; request failures retry while open. Close/background/reconnect cancels both timers and clients; generations reject late results. Foreground recovery reloads the visible popup.
+
+Month availability now fetches compatible derived daily rows rather than merely intersecting component month names. Empty successful lists disable previous-month selection; request failures instead expose Retry months, retaining source/resolution checks and explicit loading/no-data descriptions. The current month remains a Rolling view where its exact day data is supported. No logging/schema/retention changes are made.

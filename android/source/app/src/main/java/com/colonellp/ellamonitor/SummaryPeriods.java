@@ -47,7 +47,8 @@ final class SummaryPeriods {
         String text(){return "Current: "+(charge==null?"—":String.format(Locale.UK,"%.3f Ah",charge))+"\nEnergy: "+(energy==null?"—":String.format(Locale.UK,"%.3f Wh",energy));}
         String samples(){return "Samples: "+captured+"/"+expected;}
     }
-    static Totals totals(HistoryData.Result result){
+    static Totals totals(HistoryData.Result result){return totals(result,false);}
+    static Totals totals(HistoryData.Result result,boolean positive){
         Totals total=new Totals();total.expected=expected(result.window);
         Set<Instant> starts=new HashSet<>();
         for(HistoryData.Record row:result.rows){
@@ -55,8 +56,8 @@ final class SummaryPeriods {
             Double ac=row.coverage("current","electrical"),pc=row.coverage("watts","electrical");
             Double a=row.value("current","electrical"),w=row.value("watts","electrical");
             boolean current=a!=null&&ac!=null&&ac>0,power=w!=null&&pc!=null&&pc>0;
-            if(current){Double ah=row.value("Ah","electrical");double value=ah==null?a*ac/3600:ah;total.charge=(total.charge==null?0:total.charge)+value;}
-            if(power){Double wh=row.value("Wh","electrical");double value=wh==null?w*pc/3600:wh;total.energy=(total.energy==null?0:total.energy)+value;}
+            if(current){Double ah=row.value("Ah","electrical");double value=ah==null?a*ac/3600:ah;total.charge=(total.charge==null?0:total.charge)+(positive?Math.abs(value):value);}
+            if(power){Double wh=row.value("Wh","electrical");double value=wh==null?w*pc/3600:wh;total.energy=(total.energy==null?0:total.energy)+(positive?Math.abs(value):value);}
             if((current||power)&&starts.add(row.start))total.captured++;
         }
         return total;
