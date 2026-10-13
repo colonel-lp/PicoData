@@ -1,3 +1,16 @@
+## Next-build correction — popup chart interval Ah/Wh — 2026-10-13
+
+Owner clarifies this concerns the element popup charts: current/energy points should represent Ah/Wh for their plotted interval regardless of the selected capture period, so the ordinary chart relates directly to the shown Ah/Wh total.
+
+Read-only finding at PicoData 30f331d44397e19124e9867653e0b934a4eed2ce: PopupHistory.series currently returns coverage-weighted mean A/W when Sum is off, and integrated cumulative Ah/Wh only when Sum is on. MainActivity labels the selector A/W. Current:/Energy: totals already integrate netAh/netWh, or mean times valid recorded coverage divided by 3600. Adding ordinary A/W ordinates therefore does not reproduce Ah/Wh totals. The conversion exists only in the cumulative branch; this is the requested ordinary-view quantity correction, not evidence that collector integrals are wrong.
+
+- [ ] Change current/energy popup charts to Ah/Wh per plotted interval with Sum off. Use recorded netAh/netWh where available, falling back to mean A/W multiplied by actual corresponding recorded coverage seconds / 3600. Do not multiply by the nominal minute/hour/day duration when coverage is missing or partial.
+- [ ] Group integrated quantities by addition, including the six-hour weekly groups; do not use the current coverage-weighted-rate mean as an interval Ah/Wh amount. Keep existing minute/hour/six-hour/day point spacing, selected full calendar axes, gaps and Samples semantics.
+- [ ] Keep Sum as cumulative Ah/Wh. Use the same valid intervals, source definitions and sign/usage presentation for points and totals so the final cumulative point agrees with its shown total. Review sign reversals: summing displayed absolute interval magnitudes and taking the absolute signed-net total are not equivalent. Do not hide a discrepancy through a rate/unit label change, fabricate coverage or silently alter source signs.
+- [ ] Label the quantity selector and Y-axis Ah/Wh in both ordinary and cumulative views. Apply this only to current/energy popup charts; SOC/voltage/pressure/temperatures retain their physical units and unavailable Sum handling. No changes to the separate Charts page are requested here.
+- [ ] Focused checks: a 2 A / 24 W reading with 15 minutes of valid coverage contributes 0.5 Ah / 6 Wh, independent of nominal bucket size; grouped interval amounts and cumulative endpoint match the displayed integrated total using common coverage/sign rules. Cover partial recording, missing current/power, missing buckets, signed batteries and positive draw presentation.
+- [ ] Leave collector 0.7.3, database, retention, raw logged signs/integrals and CSV untouched. Record for the next authorized build; application source remains 0.28 / build 10 and no APK/version change is made for this investigation.
+
 ## Completed same-version correction — unit-test JSONException — 2026-10-12
 
 - [x] Fix the five checked JSONException compilation errors in PopupHistoryTest: construct the synthetic JSON response in the test method before the IOException-only connection-factory lambda. Keep the response, assertions and production code unchanged.
