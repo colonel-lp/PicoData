@@ -33,3 +33,5 @@ android/.DS_Store
 *.keystore
 /android/source/signing.properties
 
+.DS_Store
+.DS_Store
