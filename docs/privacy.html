@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="How the personal-use Ella Backups configuration accesses, stores and uses Google Drive data.">
+  <title>Privacy policy — Ella Backups</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <h1>Ella Backups privacy policy</h1>
+    <p class="muted">Effective date: 28 October 2026</p>
+    <p>Ella Backups is a personal-use backup configuration for the Ella Monitoring / PicoData project. It is operated by the account owner on their own device, using rclone to store monitoring-history backup archives in their private Google Drive.</p>
+    <h2>Information accessed and its purpose</h2>
+    <p>The configuration requests the Google Drive <code>drive.file</code> permission. It accesses the contents and metadata of files and folders it creates, for uploading backups, listing and verifying them, downloading them for recovery, and removing older versions under the owner's chosen retention settings. It does not request Gmail, contacts or calendar access.</p>
+    <p>Backup archives may contain monitoring measurements, their timestamps, and associated source and display labels. These are used solely to preserve and restore the owner's monitoring history.</p>
+    <h2>Storage and account authorisation</h2>
+    <p>Local history and any staged backup archives remain on the owner's device or storage. Uploaded copies are stored in the owner's Google Drive. OAuth credentials and tokens are kept in the owner's private rclone configuration; they are not included in this website or the public source repository. The configuration does not collect or store the owner's Google password.</p>
+    <h2>Sharing and Google user data</h2>
+    <p>The backup configuration does not sell Google user data, use it for advertising, share it with data brokers, or use it to train artificial intelligence models. Data is transferred to Google Drive only for the owner's backup and recovery purposes. The public website does not provide access to backup contents.</p>
+    <p>Ella Backups' use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including its Limited Use requirements.</p>
+    <h2>Retention, deletion and control</h2>
+    <p>The owner chooses backup frequency and retention. They can delete local archives and Google Drive backups, stop the backup job, or revoke its access through their Google Account's third-party connections settings. Revoking access stops future authorised transfers; it does not automatically delete existing backups. Google Drive's own trash and retention behaviour also applies.</p>
+    <h2>This website</h2>
+    <p>These static pages do not set application cookies or run analytics, advertising or tracking scripts. GitHub Pages hosts the website and may process normal web-request information under <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub's privacy statement</a>. Google handles account sign-in and Drive storage under its own policies.</p>
+    <h2>Changes and contact</h2>
+    <p>This policy will be updated if the backup configuration's data practices change. Questions about the project can be directed to the maintainer through the <a href="https://github.com/colonel-lp/PicoData/issues">PicoData issue tracker</a>.</p>
+    <footer>
+      <nav aria-label="Project links">
+        <a href="./">Ella Backups home</a>
+        <a href="https://github.com/colonel-lp/PicoData">PicoData project</a>
+      </nav>
+    </footer>
+  </main>
+</body>
+</html>

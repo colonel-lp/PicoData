@@ -35,3 +35,7 @@ Project working instructions: [agents.md](agents.md). Keep credentials out of ne
 Selected continuous SQLite history is implemented in the Pi collector; see [logging setup](node.js/LOGGING.md). The database and runtime sensor selection remain private and outside the source folder. The [local API](node.js/API.md) serves source-referenced live/history JSON for the Android viewer.
 
 Battery history now uses one combined record per UTC interval, with distinct source-referenced Pico/SBMS/solar fields. Existing history is backed up and migrated automatically; other sensor records are preserved.
+
+## Google Drive backup information pages
+
+The personal-use **Ella Backups** homepage and privacy policy are in [`docs/`](docs/). See [publication and OAuth setup](docs/README.md) to publish them with GitHub Pages. The pages contain public information only; backup scheduling and cloud authentication are configured separately on the owner's device.
