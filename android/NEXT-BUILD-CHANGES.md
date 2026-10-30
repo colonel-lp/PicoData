@@ -1,3 +1,13 @@
+## Pending next changes — collector clock-step status recovery — 2026-10-30
+
+Recorded at the owner's request for the next authorized collector update; not implemented.
+
+- [ ] Return API `logging.state` from `clock-step` to `started` once normal clock progression has resumed and any backward-time hold has ended. Advancing `savedAt` alone must not clear the warning while integration is still paused.
+- [ ] Preserve the persistent `clockSteps` counter, existing history, clock-adjustment detection, skipped-interval/backward-hold safeguards, calculations, coverage and retention. Do not mask an active logging failure or unrelated diagnostic state.
+- [ ] Add focused forward/backward clock-step recovery tests, including no premature recovery during a backward hold and no reset of the accumulated counter.
+
+This is collector/API status reporting only; it does not request an Android build or authorize implementation now.
+
 ## Completed in 0.29 — 2026-10-13
 
 The owner authorized “next build please”. Prepared source 0.29 / versionCode 11 for owner-built Ella-monitoring-v0.29.apk. Completed the two pending request sections below: interval Ah/Wh and matching cumulative totals; compact boxed controls/taller graph/two-line headers; bar annotations and temperature ranges; refresh scheduling; distinct month failures; graph axis theme role and independent global Values state.
