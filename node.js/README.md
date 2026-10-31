@@ -188,3 +188,8 @@ The established script makes a temporary sparse clone of colonel-lp/PicoData, se
 
 Keep the existing private configuration and database path. No selection generation, database deletion/migration or manual git pull in the installed folder is required. This corrects the earlier generic stop/pull/start instruction, which did not match the owner's installation. The update affects expiry only; previously expired rows cannot be recovered by extending retention. Longer detail accumulates going forward. Android source remains 0.27 / build 9 and continues to use the same API contract. See LOGGING.md for the updated table and API.md for retention metadata versus default query windows.
 
+
+## Optional hotspot diagnostics and recovery
+
+The standalone [AP watch helper](AP-WATCH.md) records bounded hotspot evidence and can recover a confirmed global client-traffic stall. It is installed separately from the collector, uses private local targets and restarts only the existing hostapd service. It does not change acquisition, MQTT/API configuration, logging, retention or backups. Read its arming, maintenance and restart-limit safeguards before enabling recovery. Download/install instructions and offline tests are in the guide; the existing collector updater does not enable this monitor automatically.
+

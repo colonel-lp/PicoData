@@ -1,3 +1,13 @@
+## Operational helper — AP diagnostics and bounded recovery — 2026-10-31
+
+Implemented separately at the owner's immediate request to investigate hotspot stalls and recover automatically. This is not a new Android/collector build; their versions and source behavior are unchanged. The owner must install the helper on the Pi; no live configuration was changed remotely.
+
+- [x] Add standalone `node.js/tools/ap-watch.py` and `node.js/AP-WATCH.md`: local hostapd diagnostics, RAM event/counter/probe ring and bounded private incident archives captured before recovery. Never publish actual targets, network inventory, measurements or captures.
+- [x] Monitor two to four configured always-on AP clients with RX progress and short interface-bound probes. Arm traffic recovery only after each is seen alive. Use startup grace, 90-second global-stall confirmation, route checks, observation-only mode, cooldown and a persistent-in-RAM recovery latch/rate limit. Keep internet loss, a single missing sensor and an intentionally inactive hotspot from triggering whole-AP recovery.
+- [x] Restart only the existing custom hotspot unit using its established dependency relationships. Preserve the collector, acquisition, database, retention, MQTT/API credentials, addresses, upstream selection, driver/firmware and WPA2 security. Add an optional-removable startup hook to retain AP power-saving-off and diagnostic verbosity.
+- [x] Validate offline recovery policy, command deadlines/output bounds, file permissions/rotation/retention, interface-bound health probes, mocked control protocol and mocked installation with real systemd unit parsing. Document limitations and operator status/capture/mode/reset/removal commands.
+- [ ] Owner installation and live Pi verification: baseline arming, sensor logging continuity, actual RAM/CPU/diagnostic volume, service integration and recovery during a genuine stall. Source tests do not establish the stall's root cause or guarantee firmware recovery.
+
 ## Implemented source 0.30 — Settings Pi controls and network selection — 2026-10-31
 
 The owner authorized the next source changes. Implemented Android 0.30 / build 12; owner builds Ella-monitoring-v0.30.apk. No APK or live Pi configuration/storage changes are made here. See BUILD-VALIDATION.md for actual source checks and remaining Android Studio/device verification.
@@ -835,5 +845,6 @@ See [README.md](README.md), [CHANGELOG.md](CHANGELOG.md) and [BUILD-VALIDATION.m
 ## Owner-reported initial history check — 2026-10-09
 
 - [x] Owner inspected an actual saved minute electrical record and could identify voltage/SOC. Keep the posted values/timestamps private. This verifies initial live history visibility, not all channels, energy accuracy, retention or long-run recovery.
+
 
 
