@@ -1,5 +1,13 @@
 # Android changelog
 
+## 0.30 — 2026-10-31
+
+- Add themed Settings panels for Android Wi-Fi selection, per-network Pi endpoints, SSH setup and Pi Auto/Home/M1 controls. Long-press a network button to edit its SSID and Pi host; confirm device-network changes and use Android Wi-Fi settings when direct saved-network switching is unavailable. Highlight the device's actual network separately from the Pi upstream mode.
+- Move API Connection settings to the right; place network controls top left and Pi connection/resource/collector readouts below. Keep 6px panel/column spacing and add 6px clearance above the bottom bar. Preserve existing bottom controls; no new Pi menu button.
+- Show the Pi's confirmed upstream Wi-Fi name in the main status line. Bound foreground SSH refresh, timeouts/output and lifecycle cancellation; display missing/stale values as dashes. Add RAM, CPU/load, temperature and collector readouts without changing logged measurements.
+- Verify the Pi SSH host key before authenticating or selecting a different API endpoint. Keep passwords/private keys encrypted on-device; fixed remote operations handle sudo through stdin. Network definitions follow presets; runtime endpoint/mode changes and SSH credentials do not mark presets modified. Retain API scheme, port, token and TLS verification.
+- Source versionName 0.30 / versionCode 12; owner-built filename Ella-monitoring-v0.30.apk. Add the maintained JSch 2.28.8 SSH client with bundled licence notice. Minimum/target SDK, existing signing identity, themes, history calculations and retention remain unchanged. Android/SSH/device compatibility still requires Android Studio and hardware verification; no APK is assembled here.
+
 ## 0.29 — 2026-10-13
 
 - Current popup charts now show interval Ah/Wh with Sum off and cumulative Ah/Wh with Sum on. Use retained integrals or actual coverage integration, never nominal bucket duration. Header totals use the same interval values/sign presentation. Non-battery display adds magnitudes of retained interval net amounts; signed battery flow, source derivations, logs and CSV remain unchanged. No new gross-flow recording is implied.
@@ -143,4 +151,5 @@ First authorized Android viewer build. Collector/database/API versions remain un
 - Add synthetic API/model/network and Android activity tests, pinned build tooling and validation records. No private runtime readings/network/system inventory is included.
 
 Development preview identity/signing is separate from the future production app. Hardware/LAN/UI fit, FYT timeout restoration, production identity/releases/updater, background alerts and future remote/direct-device features remain pending; no cloud uploads or monitor settings writes are enabled.
+
 

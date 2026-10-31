@@ -23,9 +23,10 @@ class HistoryLogger extends EventEmitter {
     super(); this.config = validateConfig(config); this.store = new HistoryStore(this.config);
     this.rows = new Map(); this.latest = new Map(); this.active = new Set(); this.sbmsVoltage = null;
     this.cursor = null; this.lastCommitMono = null; this.failed = false; this.closed = false;
+    this.state = 'started'; this.clockRecoveryReady = false;
     if (automatic) this.timer = setInterval(() => this.tick(), 1000);
   }
-  status(state, extra = {}) { this.emit('status', { source: 'logging', state, ...extra }); }
+  status(state, extra = {}) { this.state = state; this.emit('status', { source: 'logging', state, ...extra }); }
   guard(fn) {
     if (this.failed || this.closed) return;
     try { fn(); }
@@ -132,12 +133,15 @@ class HistoryLogger extends EventEmitter {
     const dt = mono - previousMono, wallDt = time - previousTime;
     if (dt < 0) return;
     if (wallDt < 0 || Math.abs(wallDt - dt) > 2000) {
+      this.clockRecoveryReady = false;
       this.latest.clear(); this.sbmsVoltage = null; this.status('clock-step', { reason: 'Skipped interval after a system clock adjustment' });
       if (wallDt < 0) this.clockHoldUntil = Math.max(this.clockHoldUntil || 0, previousTime);
       this.store.db.prepare("INSERT INTO meta VALUES('clockSteps','1') ON CONFLICT(key) DO UPDATE SET value=CAST(value AS INTEGER)+1").run();
     } else if (this.clockHoldUntil && previousTime < this.clockHoldUntil) {
+      this.clockRecoveryReady = false;
       this.latest.clear(); this.sbmsVoltage = null;
     } else if (dt > 0) {
+      this.clockHoldUntil = 0; this.clockRecoveryReady = true;
       for (const m of this.config.metrics) {
         if (!['electrical', 'voltage'].includes(m.kind)) continue;
         const value = this.latest.get(m.id); if (!value) continue;
@@ -169,6 +173,9 @@ class HistoryLogger extends EventEmitter {
     this.store.save([...this.rows.values()].filter(r => r.dirty), time);
     for (const [key, row] of this.rows) { row.dirty = false; if (row.end <= time) this.rows.delete(key); }
     this.lastCommitMono = mono;
+    // A successful save alone is insufficient during a backward-time integration hold.
+    // Only clear our own clock warning, after normal progression and a durable save.
+    if (this.state === 'clock-step' && this.clockRecoveryReady) this.status('started');
   }
   close({ time = Date.now(), mono = performance.now(), advance = true } = {}) {
     if (this.closed) return;

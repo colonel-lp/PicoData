@@ -38,6 +38,7 @@ final class PrivateSettings {
     org.json.JSONObject connectionSnapshot() throws Exception {
         org.json.JSONObject out=new org.json.JSONObject().put("address",prefs.getString("address",""));
         if(prefs.contains("token"))out.put("token",prefs.getString("token","")).put("tokenIv",prefs.getString("tokenIv",""));
+        if(prefs.contains("pi.networks"))out.put("networks",piNetworks());
         return out;
     }
     private String decrypt(org.json.JSONObject snapshot) throws Exception {
@@ -52,6 +53,8 @@ final class PrivateSettings {
         org.json.JSONObject current=connectionSnapshot();
         if(!current.optString("address").equals(saved.optString("address")))out.add("connection.address");
         if(!java.security.MessageDigest.isEqual(decrypt(current).getBytes(java.nio.charset.StandardCharsets.UTF_8),decrypt(saved).getBytes(java.nio.charset.StandardCharsets.UTF_8)))out.add("connection.token");
+        org.json.JSONArray a=current.has("networks")?PiNetworkConfig.validate(current.get("networks")):PiNetworkConfig.empty(),b=saved.has("networks")?PiNetworkConfig.validate(saved.get("networks")):PiNetworkConfig.empty();
+        for(int i=0;i<3;i++)if(!a.getJSONObject(i).toString().equals(b.getJSONObject(i).toString()))out.add("connection.network."+i);
         return out;
     }
     void stageConnection(SharedPreferences.Editor edit,org.json.JSONObject saved) throws Exception {
@@ -63,6 +66,23 @@ final class PrivateSettings {
             edit.putString("token",saved.getString("token")).putString("tokenIv",saved.getString("tokenIv"));
         }else edit.remove("token").remove("tokenIv");
         edit.putString("address",address);
+        if(saved.has("networks"))edit.putString("pi.networks",PiNetworkConfig.validate(saved.get("networks")).toString());else edit.remove("pi.networks");
+    }
+    org.json.JSONArray piNetworks() throws Exception {return prefs.contains("pi.networks")?PiNetworkConfig.validate(new org.json.JSONArray(prefs.getString("pi.networks",""))):PiNetworkConfig.empty();}
+    void savePiNetworks(org.json.JSONArray values) throws Exception {if(!prefs.edit().putString("pi.networks",PiNetworkConfig.validate(values).toString()).commit())throw new Exception("Could not save network settings.");}
+    void saveSecret(String name,String value) throws Exception {
+        SharedPreferences.Editor edit=prefs.edit();stageSecret(edit,name,value);if(!edit.commit())throw new Exception("Could not save SSH credential.");
+    }
+    void stageSecret(SharedPreferences.Editor edit,String name,String value) throws Exception {
+        if(!name.startsWith("pi.ssh.")||value.length()>32768)throw new IllegalArgumentException("Invalid SSH credential.");
+        Cipher cipher=Cipher.getInstance("AES/GCM/NoPadding");cipher.init(Cipher.ENCRYPT_MODE,key());
+        String encrypted=Base64.encodeToString(cipher.doFinal(value.getBytes(java.nio.charset.StandardCharsets.UTF_8)),Base64.NO_WRAP),iv=Base64.encodeToString(cipher.getIV(),Base64.NO_WRAP);
+        edit.putString(name,encrypted).putString(name+".iv",iv);
+    }
+    String secret(String name) throws Exception {
+        if(!prefs.contains(name))return "";
+        Cipher cipher=Cipher.getInstance("AES/GCM/NoPadding");cipher.init(Cipher.DECRYPT_MODE,key(),new GCMParameterSpec(128,Base64.decode(prefs.getString(name+".iv",""),Base64.NO_WRAP)));
+        return new String(cipher.doFinal(Base64.decode(prefs.getString(name,""),Base64.NO_WRAP)),java.nio.charset.StandardCharsets.UTF_8);
     }
     String label(String id, String original) { return prefs.getString("label:" + id, original); }
     private boolean hasElementSettings(String id) {

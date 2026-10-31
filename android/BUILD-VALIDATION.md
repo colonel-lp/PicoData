@@ -1,5 +1,21 @@
 # Build validation
 
+## Android 0.30 / collector 0.7.4 — Pi Settings controls and clock recovery — 2026-10-31
+
+Source parent: PicoData a1d58644b926a9e8eedb5e6b14070f1863425347. Android versionName 0.30 / versionCode 12, filename Ella-monitoring-v0.30.apk; collector 0.7.4. Source-only delivery: no APK assembled/signed/installed or hardware-tested. Preserve package/signing identity and SDK/Gradle/JDK configuration.
+
+Implemented: Settings Pi/network controls, right-side API connection editor, 6px panel/bottom-bar clearance, per-network SSID/host definitions, actual Android Wi-Fi highlights and supported saved-network/system-settings switching; bounded foreground SSH with pinned identity, encrypted auth and fixed status/mode commands; Pi resource/source readouts and actual upstream SSID in the live top bar. Runtime endpoint selection does not modify saved presets. Clock-step recovery only follows normal progression beyond any hold plus a successful save, retaining counters and later diagnostic/failure states. No logging destination, backup implementation, commit cadence, retention, schema or calculation changes.
+
+Checks actually run:
+
+- 40 Node tests passed on the available Node 24 runtime: logger/history, combined-history migration/retention, authenticated API and four focused clock-recovery cases. New cases cover forward recovery, no premature recovery while backward hold saves, failed-save/unrelated-diagnostic preservation, and persistent counters across reopen. An initial partial checkout lacked unchanged CLI dependencies; those original files were restored before the successful run. This is not a Pi or Node 22 hardware test.
+- JDK 17 compiler parser accepted all 45 available application/test Java files with Java 8 source syntax. This is parsing only, not Android API type/resource compilation.
+- Actual ApiClient, PiNetworkConfig and PiStats compiled/executed on the JVM with upstream org.json 20240303 sources. Checks covered strict host/SSID validation, duplicate SSIDs, retained API scheme/port, protocol rejection and missing/reset CPU/resource handling. This is a pure-JVM core check, not Android networking/SSH execution.
+- Added PiControlTest for Android Studio/Robolectric covering strict endpoints, fixed SSH operations, preset ownership, missing/reset resource values and requested Settings columns/clearance. These new Robolectric tests were not run here.
+- Android SDK/Gradle/JSch dependency packaging was not available in this environment, so no fresh Android compilation, APK, screenshot/device layout, runtime permissions, saved-network switching, SSH host-key negotiation/private-key compatibility/sudo operation, radio recovery or Pi resource overhead is claimed. Run these checks in Android Studio/on the Joying and phone before relying on the controls.
+
+The SSH service and existing Pi-local pi-wifi helper must already be installed. Configure private SSIDs/endpoints and SSH credentials in-app, verify the Pi fingerprint, and test the actual topology. Source preparation does not update the live Pi. Apply collector 0.7.4 through the existing Pi-local update-pico.sh when ready; preserve the parent configuration/history.
+
 ## Android 0.29 — popup amounts, compact layout and refresh, 2026-10-13
 
 Source parent: PicoData 93d92f74ce4b6e8879e32dd508b65e06ec83b6f1. VersionName 0.29 / versionCode 11; owner compiles Ella-monitoring-v0.29.apk. Package/signing identity, API 27 minimum/API 37 compile and target, AGP/Gradle/JDK configuration, collector 0.7.3, raw MQTT/history/CSV and retention are preserved. No app APK is assembled, signed or published.

@@ -157,3 +157,8 @@ Electrical/selected-voltage hours now last 15 days and their days are indefinite
 Apply the source update and restart the existing service using the same logging configuration and database path. This is an expiry-policy change inside the existing transaction, not a schema migration or new database. Existing retained rows, payloads, integrals, SOC, source bindings and checkpoints are preserved. Do not delete history, rerun selection generation, change the database path or run an older collector afterwards: older expiry rules would remove the extended detail again. Previously expired rows cannot be recreated; the longer hourly/daily history accumulates going forward. A stopped service's ordinary shutdown flushes the pending tail before the source update.
 
 Daily electrical records now add about one row per completed day per separate metric/combined battery group, without an expiry limit; empty periods are still omitted. The hourly portion is bounded at 15 days. Actual disk growth depends on the recorded fields and SQLite overhead. No new field selection, minute logging, calculation, MQTT output or Android version is introduced.
+
+
+## Clock-step status recovery — 0.7.4
+
+After a clock adjustment the logging warning remains until normal clock progression has resumed, any existing backward-time integration hold has ended, and a subsequent save succeeds. Advancing savedAt during a hold does not clear it. Recovery emits started without resetting the persistent clockSteps counter, altering recorded intervals or masking a newer diagnostic/failure. This status correction does not change the 60-second default/maximum commit interval, logging destination, history schema, coverage or retention.

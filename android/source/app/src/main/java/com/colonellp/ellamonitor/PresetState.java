@@ -52,7 +52,8 @@ final class PresetState {
     private static void connection(Object value) throws Exception {
         if(!(value instanceof JSONObject))throw SavedJson.invalid();JSONObject c=(JSONObject)value;
         SavedJson.string(c,"address",0,2048);if(!c.getString("address").isEmpty())ApiClient.validateBase(c.getString("address"));
-        for(Iterator<String> keys=c.keys();keys.hasNext();)if(!java.util.Arrays.asList("address","token","tokenIv").contains(keys.next()))throw SavedJson.invalid();
+        for(Iterator<String> keys=c.keys();keys.hasNext();)if(!java.util.Arrays.asList("address","token","tokenIv","networks").contains(keys.next()))throw SavedJson.invalid();
+        if(c.has("networks"))PiNetworkConfig.validate(c.get("networks"));
         if(c.has("token")!=c.has("tokenIv"))throw SavedJson.invalid();
         if(c.has("token")){
             for(String key:new String[]{"token","tokenIv"}){SavedJson.string(c,key,1,512);if(!c.getString(key).matches("[A-Za-z0-9+/]+={0,2}"))throw SavedJson.invalid();}

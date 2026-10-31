@@ -57,6 +57,7 @@ public final class MainActivity extends Activity {
     private final Runnable savePopupSettings=()->withDownloadsStorage(()->viewSettingsWorker.execute(()->{try{popupSettings.save();}catch(Exception e){handler.post(()->{if(MainActivity.this.active)toast(e.getMessage());});}}));
     private final ExecutorService liveWorker = Executors.newSingleThreadExecutor(), historyWorker = Executors.newSingleThreadExecutor(), metadataWorker=Executors.newSingleThreadExecutor();
     private PrivateSettings settings;
+    private PiControls piControls;
     private ScreenControl screen;
     private Palette palette;
     private LinearLayout root, content, dashboard;
@@ -104,7 +105,7 @@ public final class MainActivity extends Activity {
     };
 
     @Override public void onCreate(Bundle state) {
-        super.onCreate(state); settings = new PrivateSettings(this); screen = new ScreenControl(this, settings.prefs);
+        super.onCreate(state); settings = new PrivateSettings(this); screen = new ScreenControl(this, settings.prefs); piControls=new PiControls(this,settings);
         setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         appearance = new AppearanceStore(this,settings.prefs); theme = appearance.active();migrateViewerSettings();
         presets=new PresetStore(this,settings.prefs);popupSettings=new PopupSettingsStore(this);
@@ -122,22 +123,22 @@ public final class MainActivity extends Activity {
         build();updates.onCreated();
     }
     @Override protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); out.putBoolean("settingsPage", settingsScreen); out.putBoolean("history", historyScreen); out.putString("quantity", quantity); out.putInt("offset", offset); }
-    @Override protected void onStart() { super.onStart(); active = true; screen.start(keepScreen); windowMode(); persistence(true); restartConnection(); handler.post(expire); }
+    @Override protected void onStart() { super.onStart(); active = true; screen.start(keepScreen); windowMode(); persistence(true); piControls.start(); restartConnection(); handler.post(expire); }
     @Override protected void onResume() { super.onResume(); screen.apply(); windowMode(); if(updates!=null)updates.onResumed(); }
     @Override protected void onPause(){if(updates!=null)updates.onPaused();super.onPause();}
     @Override public void onWindowFocusChanged(boolean focus) { super.onWindowFocusChanged(focus); if (focus && screen != null) { screen.apply(); windowMode(); } }
     @Override protected void onStop() {
         dismissAnchoredMenu();
         if(Build.VERSION.SDK_INT>=29||checkSelfPermission("android.permission.WRITE_EXTERNAL_STORAGE")==PackageManager.PERMISSION_GRANTED)flushPopupSettings();
-        active = false;if(elementPopup!=null)elementPopup.pause(); epoch++; historyEpoch++; handler.removeCallbacks(poll); handler.removeCallbacks(expire);
+        active = false;piControls.stop();if(elementPopup!=null)elementPopup.pause(); epoch++; historyEpoch++; handler.removeCallbacks(poll); handler.removeCallbacks(expire);
         if (liveClient != null) liveClient.cancel(); if (metadataClient!=null)metadataClient.cancel();metadataLoading=false; if (historyClient != null) historyClient.cancel(); if (summaryClient != null) summaryClient.cancel();if(popupMonthClient!=null)popupMonthClient.cancel();
         live = null; history = null; historyLoading = false; screen.stop(); persistence(false); super.onStop();
     }
-    @Override protected void onDestroy() { if(elementPopup!=null)elementPopup.dialog.dismiss();if(colourDialog!=null)colourDialog.dismiss();if(appearanceDialog!=null){appearanceDialog.setOnDismissListener(null);appearanceDialog.dismiss();} if(updates!=null)updates.destroy();handler.removeCallbacks(savePopupSettings);popupWorker.shutdownNow();viewSettingsWorker.shutdown();liveWorker.shutdownNow(); historyWorker.shutdownNow();metadataWorker.shutdownNow(); super.onDestroy(); }
+    @Override protected void onDestroy() { if(piControls!=null)piControls.destroy();if(elementPopup!=null)elementPopup.dialog.dismiss();if(colourDialog!=null)colourDialog.dismiss();if(appearanceDialog!=null){appearanceDialog.setOnDismissListener(null);appearanceDialog.dismiss();} if(updates!=null)updates.destroy();handler.removeCallbacks(savePopupSettings);popupWorker.shutdownNow();viewSettingsWorker.shutdown();liveWorker.shutdownNow(); historyWorker.shutdownNow();metadataWorker.shutdownNow(); super.onDestroy(); }
 
     private int dp(float value) { return Math.round(value * getResources().getDisplayMetrics().density); }
-    private LinearLayout column() { LinearLayout v = new LinearLayout(this); v.setOrientation(LinearLayout.VERTICAL); return v; }
-    private LinearLayout row() { LinearLayout v = new LinearLayout(this); v.setOrientation(LinearLayout.HORIZONTAL); v.setGravity(Gravity.CENTER_VERTICAL); return v; }
+    LinearLayout column() { LinearLayout v = new LinearLayout(this); v.setOrientation(LinearLayout.VERTICAL); return v; }
+    LinearLayout row() { LinearLayout v = new LinearLayout(this); v.setOrientation(LinearLayout.HORIZONTAL); v.setGravity(Gravity.CENTER_VERTICAL); return v; }
     private TextView text(String value, float size, int color) {
         TextView view = new TextView(this); view.setText(value); view.setTextSize(size); view.setTextColor(color); view.setPadding(dp(8), dp(5), dp(8), dp(5)); return view;
     }
@@ -151,14 +152,14 @@ public final class MainActivity extends Activity {
         b.setOnClickListener(v -> action.run()); return b;
     }
     private Button changedChartButton(String name,boolean selected,Runnable action,String field){return trackChange(button(name,selected,action),field);}
-    private TextView uiText(String value, float size, int color) {
+    TextView uiText(String value, float size, int color) {
         TextView v = new TextView(this); v.setText(value); v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, size); v.setTextColor(color);
         v.setTypeface(Typeface.create(theme.fontFamily, Typeface.NORMAL)); v.setIncludeFontPadding(false); return v;
     }
-    private GradientDrawable uiBackground(int color, int border) {
+    GradientDrawable uiBackground(int color, int border) {
         GradientDrawable d = new GradientDrawable(); d.setColor(color); d.setCornerRadius(5); d.setStroke(1, border); return d;
     }
-    private Button uiButton(String label, boolean selected, Runnable action) {
+    Button uiButton(String label, boolean selected, Runnable action) {
         Button b = new Button(this); b.setActivated(selected);b.setText(label); b.setAllCaps(false); b.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, 11.5f);
         b.setTypeface(Typeface.create(theme.fontFamily, Typeface.NORMAL)); b.setTextColor(selected ? theme.buttonTextOn : theme.buttonTextOn);
         b.setMinWidth(0); b.setMinimumWidth(0); b.setMinHeight(0); b.setMinimumHeight(0); b.setPadding(6,0,6,0);
@@ -188,6 +189,7 @@ public final class MainActivity extends Activity {
             else view.setPadding(fullscreen?0:insets.getSystemWindowInsetLeft(),fullscreen?0:insets.getSystemWindowInsetTop(),fullscreen?0:insets.getSystemWindowInsetRight(),fullscreen?Math.max(0,insets.getSystemWindowInsetBottom()-insets.getStableInsetBottom()):insets.getSystemWindowInsetBottom());return insets;
         }); viewport.requestApplyInsets();
         getWindow().setFlags(settingsScreen ? android.view.WindowManager.LayoutParams.FLAG_SECURE : 0,android.view.WindowManager.LayoutParams.FLAG_SECURE);
+        piControls.settingsVisible(settingsScreen);
         if(settingsScreen) buildSettingsPage(); else if(historyScreen) buildHistory(); else buildDashboard();
         screen.apply(); windowMode(); updateLive();refreshChangedIndicators();
     }
@@ -270,17 +272,18 @@ public final class MainActivity extends Activity {
         next = bound;
         boolean changed = liveDashboard!=null&&!liveDashboard.accepts(next); readings = next;
         if (!historyScreen && !settingsScreen) { if (changed || liveDashboard == null) buildDashboard(); else liveDashboard.update(readings); }
-        if (live == null) status.setText(connectionState);
+        if (live == null) status.setText(connectionState+"   ·   "+piControls.statusBar());
         else {
             double elapsed = (SystemClock.elapsedRealtime() - receivedMono) / 1000d;
             String logging = MonitorData.object(collectorStatus, "logging").optString("state", "unknown");
-            status.setText(connectionState+"   ·   Pico " + (MonitorData.fresh(MonitorData.object(live, "pico"), elapsed) ? "live" : "—") + "   ·   SBMS " + (MonitorData.fresh(MonitorData.object(live, "sbms"), elapsed) ? "live" : "—") + "   ·   logging " + logging + "   ·   " + clock(now()));
+            status.setText(connectionState+"   ·   Pico " + (MonitorData.fresh(MonitorData.object(live, "pico"), elapsed) ? "live" : "—") + "   ·   SBMS " + (MonitorData.fresh(MonitorData.object(live, "sbms"), elapsed) ? "live" : "—") + "   ·   logging " + logging + "   ·   "+piControls.statusBar()+"   ·   " + clock(now()));
         }
     }
     private Instant now() { return piNowAt > 0 ? Instant.ofEpochMilli(piNowAt + SystemClock.elapsedRealtime() - piNowMono) : Instant.now(); }
     private String clock(Instant at) { return DateTimeFormatter.ofPattern("dd MMM HH:mm:ss").withZone(localClock ? ZoneId.systemDefault() : ZoneOffset.UTC).format(at) + (localClock ? " local" : " UTC"); }
 
     private HttpURLConnection open(URL url) throws java.io.IOException {
+        Network selected=piControls.network();if(selected!=null)return (HttpURLConnection)selected.openConnection(url);
         ConnectivityManager manager = (ConnectivityManager)getSystemService(CONNECTIVITY_SERVICE);
         if (manager != null) for (Network network : manager.getAllNetworks()) {
             NetworkCapabilities cap = manager.getNetworkCapabilities(network);
@@ -288,13 +291,17 @@ public final class MainActivity extends Activity {
         }
         throw new java.io.IOException("Join the Pi's Wi-Fi network.");
     }
-    private ApiClient client() throws Exception { return new ApiClient(settings.prefs.getString("address", ""), settings.token(), this::open); }
+    private ApiClient client() throws Exception {
+        final Network route=piControls.network();
+        return new ApiClient(piControls.apiBase(),settings.token(),url->route==null?open(url):(HttpURLConnection)route.openConnection(url));
+    }
     private boolean allowed() { return Build.VERSION.SDK_INT < 37 || checkSelfPermission(LAN_PERMISSION) == PackageManager.PERMISSION_GRANTED; }
     private void restartConnection() {
         if(elementPopup!=null)elementPopup.pause();epoch++; historyEpoch++; summaryEpoch++;if(summaryClient!=null)summaryClient.cancel();if(popupMonthClient!=null)popupMonthClient.cancel();polls = 0; live = null; collectorStatus = null; history = null; historyLoading = false; piNowAt = 0; metrics = new ArrayList<>(); readings = new LinkedHashMap<>();
         handler.removeCallbacks(poll); if (liveClient != null) liveClient.cancel(); if (metadataClient!=null)metadataClient.cancel();metadataLoading=false; if (historyClient != null) historyClient.cancel();
         if (!active) return;
         if (!allowed()) { connectionState = "Local network permission is needed. Open Settings to connect."; updateLive(); return; }
+        if(piControls.awaitingIdentity()){connectionState="Checking Pi identity on this Wi-Fi network…";build();return;}
         connectionState = "Connecting to Pi…"; liveClient = null; build();
         final int generation = epoch;
         liveWorker.execute(() -> {
@@ -344,7 +351,7 @@ public final class MainActivity extends Activity {
             });
         });
     }
-    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) { super.onRequestPermissionsResult(requestCode, permissions, results); if (requestCode == 37) restartConnection(); if(requestCode==28){Runnable action=storageAction;storageAction=null;if(results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED&&action!=null)action.run();else toast("Storage access is needed to save presets, themes and exports in Downloads.");} }
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) { super.onRequestPermissionsResult(requestCode, permissions, results); if (requestCode == 37) restartConnection(); if(requestCode==39)piControls.permissionsChanged(); if(requestCode==28){Runnable action=storageAction;storageAction=null;if(results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED&&action!=null)action.run();else toast("Storage access is needed to save presets, themes and exports in Downloads.");} }
 
     private List<MonitorData.Metric> historyMetrics(){List<MonitorData.Metric> result=new ArrayList<>(metrics);for(boolean inverter:new boolean[]{false,true}){MonitorData.Metric derived=DerivedHistory.metric(metrics,inverter);if(derived!=null)result.add(derived);}MonitorData.Metric bms=DerivedHistory.bmsLoad(metrics);if(bms!=null)result.add(bms);return result;}
     private MonitorData.Metric selected() {
@@ -541,7 +548,7 @@ public final class MainActivity extends Activity {
         themed(themedAlertBuilder().setTitle("Display labels").setItems(names, (d, i) -> editLabel(ids[i], labels.get(ids[i]))).setNegativeButton("Close", null).create());
     }
     private void showSettings() { settingsScreen=true; historyEpoch++; build(); }
-    private LinearLayout settingsGroup(LinearLayout parent,String title) {
+    LinearLayout settingsGroup(LinearLayout parent,String title) {
         LinearLayout g=column();g.setPadding(12,6,12,6);g.setBackground(uiBackground(theme.panel,theme.border));
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,0,0,6);parent.addView(g,lp);
         TextView h=uiText(title,15,theme.controls);g.addView(h,new LinearLayout.LayoutParams(-1,28));return g;
@@ -555,7 +562,7 @@ public final class MainActivity extends Activity {
         changedViews.remove(view);if(view instanceof TextView)normalColours.remove(view);
         if(view instanceof ViewGroup)for(int i=0;i<((ViewGroup)view).getChildCount();i++)removeTrackedChildren(((ViewGroup)view).getChildAt(i));
     }
-    private <T extends View> T trackChange(T view,String field){
+    <T extends View> T trackChange(T view,String field){
         changedViews.put(view,field);if(view instanceof TextView)normalColours.put((TextView)view,((TextView)view).getCurrentTextColor());
         colourChangedView(view,field);return view;
     }
@@ -565,9 +572,10 @@ public final class MainActivity extends Activity {
         else if(view instanceof EqIconButton)((EqIconButton)view).changed(changed);
     }
     private void buildSettingsPage() {
-        content.removeAllViews();ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);LinearLayout columns=row();columns.setGravity(Gravity.TOP);columns.setPadding(8,0,8,0);scroll.addView(columns);content.addView(scroll,new LinearLayout.LayoutParams(-1,-1));
+        content.removeAllViews();ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);LinearLayout columns=row();columns.setGravity(Gravity.TOP);columns.setPadding(8,0,8,6);scroll.addView(columns);content.addView(scroll,new LinearLayout.LayoutParams(-1,-1));
         LinearLayout left=column(),right=column();LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(0,0,6,0);columns.addView(left,lp);columns.addView(right,new LinearLayout.LayoutParams(0,-1,1));
-        LinearLayout connection=settingsGroup(left,"CONNECTION");
+        piControls.build(left);
+        LinearLayout connection=settingsGroup(right,"CONNECTION");
         TextView help=uiText("Pi API address and private token from api.json. HTTP is for a trusted LAN; HTTPS verifies its certificate.",12,theme.text);help.setPadding(0,0,0,6);connection.addView(help);
         EditText address=new EditText(this);address.setHint("http://PI_HOST:8080");address.setSingleLine();address.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);address.setText(settings.prefs.getString("address",""));styleEditor(address);trackChange(address,"connection.address");connection.addView(address,new LinearLayout.LayoutParams(-1,42));
         EditText token=new EditText(this);token.setHint(settings.prefs.contains("token")?"Blank keeps saved token":"Private API token");token.setSingleLine();token.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);token.setSaveEnabled(false);styleEditor(token);trackChange(token,"connection.token");connection.addView(token,new LinearLayout.LayoutParams(-1,42));
@@ -589,16 +597,34 @@ public final class MainActivity extends Activity {
         TextView version=uiText("Version "+BuildConfig.VERSION_NAME+" / build "+BuildConfig.VERSION_CODE,12.5f,theme.text);version.setGravity(Gravity.CENTER);LinearLayout.LayoutParams vp=new LinearLayout.LayoutParams(-1,25);vp.setMargins(0,6,0,0);footer.addView(version,vp);
 
     }
+    void refreshPiStatusBar(){updateLive();}
+    void refreshPiPresetChanges(){refreshChangedIndicators();}
+    boolean piNetworkModified(int index){return presetChanges.contains("connection.network."+index);}
+    String collectorReadout(){
+        if(live==null||SystemClock.elapsedRealtime()-receivedMono>45000)return "Collector: —\nPico: —   SBMS: —\nLogging: —";
+        double elapsed=(SystemClock.elapsedRealtime()-receivedMono)/1000d;
+        return "Collector: connected "+(collectorStatus==null?"":collectorStatus.optString("collectorVersion",""))+"\nPico: "+(MonitorData.fresh(MonitorData.object(live,"pico"),elapsed)?"live":"—")+"   SBMS: "+(MonitorData.fresh(MonitorData.object(live,"sbms"),elapsed)?"live":"—")+"\nLogging: "+MonitorData.object(collectorStatus,"logging").optString("state","—")+"\nSaved: "+MonitorData.object(collectorStatus,"logging").optString("savedAt","—");
+    }
+    void pauseForPiNetwork(){
+        epoch++;historyEpoch++;summaryEpoch++;handler.removeCallbacks(poll);
+        for(ApiClient c:new ApiClient[]{liveClient,historyClient,metadataClient,summaryClient,popupMonthClient})if(c!=null)c.cancel();
+        liveClient=null;metadataLoading=false;live=null;collectorStatus=null;history=null;historyLoading=false;
+        if(elementPopup!=null)elementPopup.pause();connectionState="Checking Pi on this Wi-Fi network…";updateLive();
+    }
+    void selectPiEndpoint(String host){
+        try{piControls.useEndpoint(host);restartConnection();}
+        catch(IllegalArgumentException e){toast(e.getMessage());}
+    }
     private void persistence(boolean visible) {
         Intent service=new Intent(this,PersistentService.class).putExtra("visible",visible);
         if(!persistent){stopService(service);return;}
         try { if(visible)startService(service);else startForegroundService(service); }catch(RuntimeException e){toast("Android could not keep the app notification active.");}
     }
-    private void styleEditor(EditText v){v.setTextColor(theme.text);v.setHintTextColor(theme.buttonTextOn);v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,14);v.setBackgroundTintList(android.content.res.ColorStateList.valueOf(theme.controls));v.setTypeface(Typeface.create(theme.fontFamily,Typeface.NORMAL));}
+    void styleEditor(EditText v){v.setTextColor(theme.text);v.setHintTextColor(theme.buttonTextOn);v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,14);v.setBackgroundTintList(android.content.res.ColorStateList.valueOf(theme.controls));v.setTypeface(Typeface.create(theme.fontFamily,Typeface.NORMAL));}
     private AlertDialog themed(AlertDialog dialog) {
         dialog.setOnShowListener(v->styleDialog(dialog));dialog.show();styleDialog(dialog);return dialog;
     }
-    private AlertDialog.Builder themedAlertBuilder(){return new AlertDialog.Builder(this){
+    AlertDialog.Builder themedAlertBuilder(){return new AlertDialog.Builder(this){
         @Override public AlertDialog create(){AlertDialog d=super.create();d.setOnShowListener(v->styleDialog(d));return d;}
         @Override public AlertDialog show(){AlertDialog d=super.show();styleDialog(d);return d;}
     };}
@@ -817,10 +843,10 @@ public final class MainActivity extends Activity {
         if(Build.VERSION.SDK_INT<=28&&checkSelfPermission("android.permission.WRITE_EXTERNAL_STORAGE")!=PackageManager.PERMISSION_GRANTED){storageAction=action;requestPermissions(new String[]{"android.permission.WRITE_EXTERNAL_STORAGE"},28);}else action.run();
     }
     private GradientDrawable roundedBackground(int fill,int border,float stroke,float radius){GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(dialogDp(radius));if(stroke>0)d.setStroke(dialogDp(stroke),border);return d;}
-    private LinearLayout styledDialogRoot(){LinearLayout panel=column();panel.setGravity(Gravity.CENTER_HORIZONTAL);panel.setPadding(dialogDp(14),dialogDp(12),dialogDp(14),dialogDp(12));panel.setBackground(roundedBackground(theme.panel,theme.border,1.4f,9));return panel;}
-    private TextView styledTitle(String title){TextView t=uiText(title,dialogTextSize(14),theme.text);t.setGravity(Gravity.CENTER);t.setPadding(dialogDp(8),dialogDp(5),dialogDp(8),dialogDp(8));return t;}
-    private TextView dialogButton(String label,int accent){TextView t=styledTitle(label);t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,dialogTextSize(11.5f));t.setBackground(roundedBackground(theme.buttonBackground,accent,1.25f,6));t.setPadding(dialogDp(6),0,dialogDp(6),0);return t;}
-    private void showStyledDialog(android.app.Dialog dialog,View panel,int width){
+    LinearLayout styledDialogRoot(){LinearLayout panel=column();panel.setGravity(Gravity.CENTER_HORIZONTAL);panel.setPadding(dialogDp(14),dialogDp(12),dialogDp(14),dialogDp(12));panel.setBackground(roundedBackground(theme.panel,theme.border,1.4f,9));return panel;}
+    TextView styledTitle(String title){TextView t=uiText(title,dialogTextSize(14),theme.text);t.setGravity(Gravity.CENTER);t.setPadding(dialogDp(8),dialogDp(5),dialogDp(8),dialogDp(8));return t;}
+    TextView dialogButton(String label,int accent){TextView t=styledTitle(label);t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,dialogTextSize(11.5f));t.setBackground(roundedBackground(theme.buttonBackground,accent,1.25f,6));t.setPadding(dialogDp(6),0,dialogDp(6),0);return t;}
+    void showStyledDialog(android.app.Dialog dialog,View panel,int width){
         dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);int maxW=Math.max(1,Math.min(dialogDp(width),viewport.getWidth()-dialogDp(30)));int maxH=Math.max(1,viewport.getHeight()-dialogDp(24));
         panel.measure(View.MeasureSpec.makeMeasureSpec(maxW,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));
         if(panel.getMeasuredHeight()>maxH&&!(panel instanceof ScrollView)){ScrollView scroll=new ScrollView(this);scroll.addView(panel);panel=scroll;}
@@ -840,6 +866,6 @@ public final class MainActivity extends Activity {
     }
 
     private void dismissAnchoredMenu(){if(anchoredPopup!=null){android.widget.PopupWindow popup=anchoredPopup;anchoredPopup=null;popup.dismiss();}}
-    private void toast(String value) { Toast.makeText(this, value, Toast.LENGTH_LONG).show(); }
+    void toast(String value) { Toast.makeText(this, value, Toast.LENGTH_LONG).show(); }
 }
 

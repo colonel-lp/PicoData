@@ -122,3 +122,7 @@ One rejected SBMS JSON message neither renews nor immediately discards a still-u
 ## Retention metadata in 0.7.3
 
 The electrical/selected-voltage catalogue reports minute: 24 hours, hour: 15 days, day: null, month: null; null means indefinite retention. Environmental hour remains one calendar month and day remains null. The existing database/schema/API response shapes, metric identities and calculations are unchanged. Explicit UTC ranges can retrieve any retained daily history; prior expired detail is not restored. Default query windows remain bounded as described above (electrical hours default to 7 days and days to one calendar month); those defaults are query ranges rather than retention limits.
+
+## Logging status recovery — collector 0.7.4
+
+The existing status logging.state returns from clock-step to started only after the logger observes normal progression beyond any backward-time hold and successfully saves. clockSteps remains a cumulative persistent counter. savedAt advancing alone is not evidence that an integration hold has ended. Failed logging remains failed; recovery does not clear unrelated later diagnostics. Authentication, routes, schema and history fields remain unchanged.

@@ -1,5 +1,10 @@
 # Pico base changelog
 
+## 0.7.4 — 2026-10-31
+
+- Recover the logging status from clock-step to started only after normal clock progression, completion of any backward-time hold, and a successful save. Preserve the persistent clockSteps counter and all existing interval-skipping/integration safeguards.
+- Do not clear a newer unrelated diagnostic or an active logging/storage failure. Add focused forward/backward, failed-save and counter-persistence tests. No database schema, retention, commit interval, selected fields, MQTT or calculation changes.
+
 ## 0.7.3 — 2026-10-12
 
 - Extend electrical/selected-voltage hourly retention from 7 to 15 days; keep daily records indefinitely. Preserve the existing 24-hour minute policy, indefinite monthly summaries and longer environmental hourly retention.
@@ -85,4 +90,5 @@
 - Provide raw capture recording, offline verification/replay and Python comparison.
 - Make flat installation self-contained by bundling the unchanged Python comparison source; 16 automated tests pass.
 - Record the owner's real Pico verification: 108 TCP replies and 1,096 UDP packets pass length/CRC checks; all 1,096 outputs match Python with zero differences. Real reconnect testing remains pending.
+
 
