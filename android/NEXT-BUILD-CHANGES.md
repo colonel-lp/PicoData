@@ -1,3 +1,29 @@
+## Next-build requests — Pi control page and network selection — 2026-10-31
+
+Recorded from the owner's request for the next authorized Android source build; not implemented. No APK, source/version change, collector update or live Pi configuration change is authorized by this record.
+
+### Pi page, bottom button and theme
+
+- [ ] Add a page inside Ella Monitoring, reached by a lowercase `pi` button between Lock and Settings in the bottom control group. Match the neighboring buttons' dimensions, themed background/borders/selected state and approved scaling; keep the bar height and 6px spacing. Adapt the working EQ/DSP bottom-menu page-number text rendering (font, size, alignment and theme role) for `pi`; the text itself must follow the current theme.
+- [ ] Keep the page and every confirmation/edit popup consistent with the app's current theme, font and approved dialogue/button styles. Preserve unrelated layouts and padding. Retain the existing navigation controls and a clear route back.
+- [ ] Show the Android device's current Wi-Fi network/address, the selected/reachable Pi endpoint, connection state, the Pi's current upstream connection and `pi-wifi` Auto/Home/M1 mode. Keep the Android Wi-Fi connection and the Pi upstream/mode distinct.
+- [ ] Include available Pi RAM, CPU/load and temperature readings, and collector/source/logging status. Use foreground-only, bounded refreshes; cancel obsolete work on page close, background or network change and show missing/stale/error states honestly. Do not change logging, calculations or retention.
+
+### Three network connect buttons and editable addresses
+
+- [ ] Provide one connect button for each configured network role: monitoring hotspot, home Wi-Fi and mobile-router Wi-Fi. Store the owner's SSIDs and Pi addresses privately/configurably; do not commit installation-specific SSIDs, host addresses or credentials to source, defaults, fixtures or public docs.
+- [ ] Highlight the button corresponding to the Wi-Fi network the Joying/phone is actually connected to, rather than the Pi's upstream or last requested selection. Read the current SSID with appropriate Android permissions and handle denied/redacted information without guessing.
+- [ ] Long-press each connect button to open a themed popup to edit that network's Pi IP/host address. Validate and save the address, preserve appropriate existing port/authentication settings and app/preset ownership rules, and allow Cancel without changes.
+- [ ] Pressing another network's connect button opens an app-themed confirmation asking to connect the Android device to that network. After confirmation, try a supported switch to an already saved network on compatible Joying/Android 8.1 devices. On platforms where direct switching is restricted, use the system Wi-Fi panel/settings with clear guidance; never claim a switch succeeded until the active network is verified.
+- [ ] After a confirmed Android network change, select/probe the corresponding Pi endpoint, reconnect in place and refresh the page. Use bounded identity-checked connection attempts; report unreachable endpoints and the option to join the monitoring hotspot when phone/head unit and Pi are on isolated upstream networks. An edited IP or hostname does not create routing between those networks.
+- [ ] Keep changing the Android Wi-Fi network separate from changing the Pi's upstream policy. Provide explicit Pi Auto/Home/M1 controls and a status/refresh action using the existing `pi-wifi` command.
+
+### Transport, compatibility and validation
+
+- [ ] Use authenticated SSH for the agreed Pi command/resource controls unless the owner agrees another transport. Provide private credential/key setup, retain verified host identity, and handle the current sudo requirement explicitly. Restrict actions to the intended status/resource reads and `pi-wifi` operations; do not expose an unrestricted command endpoint or publish secrets.
+- [ ] Preserve existing API viewer credentials/identity and platform compatibility. Do not reduce the Android target SDK, require root or alter the collector to bypass network-switch restrictions. Review official Android documentation for the actual supported legacy and current Wi-Fi APIs.
+- [ ] On the next authorized build, check button placement/theme/font against the current EQ implementation; validate address edits/cancellation, actual-network highlights, denied permissions, unreachable/wrong hosts, cancelled/failed switches, saved-network fallback and reconnect/lifecycle cleanup. Distinguish source checks from Android compilation and Joying/phone/Pi verification.
+
 ## Pending next changes — collector clock-step status recovery — 2026-10-30
 
 Recorded at the owner's request for the next authorized collector update; not implemented.
