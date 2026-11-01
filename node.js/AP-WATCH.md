@@ -1,6 +1,6 @@
 # Hotspot diagnostics and recovery
 
-Operational helper version 1.0. This does not release or change the Android app
+Operational helper version 1.1. This does not release or change the Android app
 or collector. It is installed separately; the normal collector updater does not
 install, enable or run this helper.
 
@@ -49,6 +49,53 @@ No initial hotspot restart is needed. DEBUG can increase existing journal traffi
 this does not change journald's storage policy or globally enable kernel tracing.
 On the owner's existing installation the system logs use RAM-backed storage.
 
+## Update an existing monitor to 1.1
+
+Use SSH through the independent upstream connection, while the AP and both sensors
+are working. This updates only the monitor; do not run the collector updater just
+for this repair:
+
+```bash
+curl -fL https://raw.githubusercontent.com/colonel-lp/PicoData/main/node.js/tools/ap-watch.py -o ~/ap-watch.py
+sudo python3 ~/ap-watch.py install
+sudo ella-ap-watch status
+```
+
+Install without `--target` retains the existing private targets, AP interface,
+service/control paths, mode and original diagnostic settings. It keeps runtime
+state/evidence and restarts only `ella-ap-watch.service`; the hotspot and collector
+are not restarted. Check that status says **Monitor version: 1.1**, a recent check
+and, after the sensors are observed, the complete baseline and traffic-ok state.
+The two-minute startup grace still applies. Updating from 1.0 preserves saved
+restart limits/latch; because 1.0 never stored a sensor baseline, both sensors
+must be observed once after this first upgrade. Later 1.1 restarts restore the
+validated same-boot/config baseline automatically.
+
+## Changes in 1.1
+
+- Retain established sensor observations and last-good monotonic time across
+  monitor restarts on the same Pi boot and exact AP/target configuration. A helper
+  restart during an already armed outage no longer waits indefinitely to see
+  healthy sensors again. New boots and changed AP/target configuration require
+  fresh observations; old restart limits/latch remain conservative. Invalid state
+  stays inhibited across subsequent saves/restarts until explicit reset.
+- Journal messages use small, nonblocking writes. Broken/full journal output and
+  RAM event-log failures are recorded when possible and do not terminate recovery.
+  The service and startup hook run Python unbuffered. Diagnostics cannot justify
+  bypassing safety: an AP restart is sent only after its accounting/latch has been
+  saved successfully. A failed state write skips the action without inventing a
+  completed attempt. An incident-archive failure still allows an accounted restart.
+- Record the monitor version, startup/restored-baseline state, decision changes,
+  recovery intent/result and error stage. Unexpected exceptions include bounded
+  traceback text without local-variable dumps. Status exposes baseline progress
+  and the timestamp/type/stage of the latest RAM error, which may be historical.
+  `sudo ella-ap-watch errors` reads the private error records.
+
+The reported monitor exit occurred after a traffic-loss sample and before its
+journal warning appeared. A state-save or output failure is not proven by that
+sequence alone. These changes repair demonstrated recovery weaknesses and improve
+future evidence; they do not claim to fix or identify the original AP/radio stall.
+
 ## What triggers recovery
 
 Checks run about every 30 seconds, using monotonic time. There is a two-minute
@@ -57,7 +104,8 @@ advance or it answers a short interface-bound local ping. The IP route must stil
 point directly through the AP interface. Probes never target the internet.
 
 Traffic recovery arms only after **each configured client has been seen alive**
-during this monitor run. If all of them subsequently have no confirmed traffic
+on this Pi boot for this exact AP/target configuration. A validated saved baseline
+is restored after monitor-only restarts. If all of them subsequently have no confirmed traffic
 or ping responses for at least 90 seconds, the monitor captures evidence and
 issues the same `systemctl restart ella-hotspot.service` recovery used manually.
 A non-responsive/non-ENABLED hostapd control interface for 90 seconds can also
@@ -82,7 +130,8 @@ Important limits:
   NetworkManager or changes the upstream connection.
 - Restart limits/latch are saved in RAM and survive monitor-service restarts.
   They reset on Pi reboot. Malformed state inhibits recovery until explicit reset.
-  After any monitor restart, traffic arming needs both clients observed again.
+  A validated same-boot/config baseline survives monitor restarts; new boots,
+  changed targets/AP and the first upgrade from 1.0 require new observations.
 - A deliberately inactive/failed AP service pauses this monitor; hostapd's existing
   `Restart=on-failure` handles process exits. Disable monitoring before maintenance.
 - A silent AP failure before both sensors have ever been seen cannot be reliably
@@ -111,9 +160,21 @@ expose private network names, MACs, addresses and diagnostic messages. Keep the
 reports private; they are never uploaded automatically. Firmware stalls may remain
 silent even with this logging, but the timeline/counters can narrow the failure.
 
-Only incident/manual captures write these archives to persistent storage. Up to
-five archives survive a reboot; the rolling RAM evidence does not. This does not
-change the sensor SQLite history, retention, cadence or backup arrangements.
+Incident/manual captures keep the existing maximum five archives. In 1.1 the
+latest monitor error also uses `/run/ella-ap-watch/last-error.json` (RAM, rate-limited
+per error class/stage). Fatal exceptions, failed state writes and failed recovery
+or incident capture additionally keep one `/var/lib/ella-ap-watch/last-error.json`,
+updated at most once per five minutes within a Pi boot. Each JSON record is at most
+16 KiB plus a newline, private/root-only; it includes version, UTC/monotonic time,
+boot, error class/message, failing stage and bounded traceback. The persistent
+record can be older than the RAM record because of this write limit. These are
+private diagnostics, not sensor history. No per-sample card logging is introduced.
+
+The five archives and one persistent error file survive a normal reboot; the RAM
+ring/baseline does not. If both journal and private storage are unavailable, no
+software can guarantee saved evidence. A failed recovery-state write inhibits
+that check's AP action. Sensor SQLite history, retention, cadence and backups stay
+unchanged.
 
 ## Operator commands
 
@@ -123,6 +184,7 @@ sudo ella-ap-watch observe     # keep diagnostics; disable automatic recovery
 sudo ella-ap-watch recover     # re-enable conservative recovery
 sudo ella-ap-watch capture     # save a diagnostic snapshot; no restart
 sudo ella-ap-watch report      # print the newest private incident JSON
+sudo ella-ap-watch errors      # latest private RAM/persistent error details
 sudo journalctl -u ella-ap-watch.service -n 30 --no-pager
 ```
 
@@ -163,6 +225,15 @@ manual stop/observe mode, cooldown/latching, saved/corrupt state, output/time bo
 parsing, private file permissions, RAM rotation, incident retention and mocked
 control-protocol replies. No live network/systemd operations run in these tests.
 Root-owned file helper checks skip when run as a regular user.
+
+Version 1.1 has 40 passing focused offline tests on Python 3.12, including all 26
+previous tests and regressions for restart during a proven stall, cold/legacy/
+changed-target and corrupt state, retained inhibition/limits, broken/full journal
+pipes, failed event/state/accounting/archive writes, byte-bounded private traceback
+records and persistent error-write throttling. Reinstallation preserves private
+configuration/runtime files; a real systemd parser verifies the generated unit.
+The tests use isolated files, synthetic addresses and mocked radio/service actions;
+no Pi installation, network change or real recovery was performed here.
 
 Pi radio behavior, service integration, actual resource usage and recovery under
 a real AP stall still require owner verification. Do not deliberately disconnect

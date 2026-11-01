@@ -10,6 +10,7 @@ from collections import deque
 from datetime import datetime, timezone
 import fcntl
 import gzip
+import hashlib
 import ipaddress
 import json
 import math
@@ -24,8 +25,9 @@ import subprocess
 import sys
 import tempfile
 import time
+import traceback
 
-VERSION = "1.0"
+VERSION = "1.1"
 CONFIG = Path("/etc/ella-ap-watch.json")
 RUNTIME = Path("/run/ella-ap-watch")
 ARCHIVE = Path("/var/lib/ella-ap-watch")
@@ -34,6 +36,8 @@ SYSTEMD = Path("/etc/systemd/system")
 SERVICE = SYSTEMD / "ella-ap-watch.service"
 MARKER = "# Managed by Ella AP watch\n"
 STOP = False
+PHASE = "startup"
+ERROR_TIMES = {}
 
 
 def run(argv, timeout=5, limit=65536):
@@ -81,9 +85,11 @@ def run(argv, timeout=5, limit=65536):
 
 def mkdir(path):
     path.mkdir(parents=True, exist_ok=True, mode=0o700)
-    if path.is_symlink() or path.stat().st_uid != 0:
+    info = path.stat()
+    if path.is_symlink() or info.st_uid != 0:
         raise ValueError("Unsafe directory: " + str(path))
-    path.chmod(0o700)
+    if info.st_mode & 0o7777 != 0o700:
+        path.chmod(0o700)
 
 
 def write_json(path, value):
@@ -119,6 +125,87 @@ def ring(event):
     fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, "a") as output:
         output.write(line)
+
+
+def journal(message, stream=None):
+    """A journal socket must never block or terminate AP recovery."""
+    stream = sys.stdout if stream is None else stream
+    data = (str(message)[:1800] + "\n").encode("utf-8", "replace")[:2048]
+    try:
+        descriptor = stream.fileno()
+        os.set_blocking(descriptor, False)
+        return os.write(descriptor, data) == len(data)
+    except (OSError, ValueError, AttributeError):
+        return False
+
+
+def report_error(error, phase, persistent=False):
+    """RAM errors plus one bounded disk record per five minutes for critical errors."""
+    now = time.monotonic()
+    key = (phase, type(error).__name__)
+    if now - ERROR_TIMES.get(key, -math.inf) < 30:
+        return
+    if len(ERROR_TIMES) >= 16:
+        ERROR_TIMES.clear()
+    ERROR_TIMES[key] = now
+    record = {"version": VERSION, "utc": stamp(), "uptime": now, "phase": str(phase)[:80],
+              "error": type(error).__name__[:80], "message": str(error)[:1024],
+              "traceback": "".join(traceback.format_exception(type(error), error, error.__traceback__, limit=12))[-8192:]}
+    try:
+        record["boot"] = boot_id()
+    except OSError:
+        record["boot"] = None
+    while len(json.dumps(record, ensure_ascii=True).encode()) > 16384:
+        record["truncated"] = True
+        if len(record["traceback"]) > 128:
+            record["traceback"] = record["traceback"][-len(record["traceback"]) // 2:]
+        else:
+            record["message"] = record["message"][:len(record["message"]) // 2]
+    try:
+        mkdir(RUNTIME)
+        write_json(RUNTIME / "last-error.json", record)
+    except (OSError, ValueError):
+        pass
+    if persistent:
+        persist_error(record, now)
+
+
+def persist_error(record, now):
+    try:
+        mkdir(ARCHIVE)
+        fd = os.open(ARCHIVE / "error.lock", os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+        with os.fdopen(fd, "a") as lock:
+            # Operator commands and a restarting daemon share the same write limit.
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            try:
+                previous = read_json(ARCHIVE / "last-error.json")
+                if not isinstance(previous, dict):
+                    previous = {}
+            except (OSError, ValueError):
+                previous = {}
+            at = previous.get("uptime")
+            same_boot = not (record["boot"] and previous.get("boot") and previous["boot"] != record["boot"])
+            recent = (same_boot and
+                      type(at) in (int, float) and math.isfinite(at) and 0 <= now - at < 300)
+            if not recent:
+                write_json(ARCHIVE / "last-error.json", record)
+    except (OSError, ValueError, TypeError, AttributeError):
+        pass
+
+
+def safe_ring(event):
+    try:
+        ring(event)
+        return True
+    except (OSError, ValueError) as error:
+        report_error(error, "event-log")
+        return False
+
+
+def notice(message):
+    safe_ring({"type": "notice", "phase": PHASE, "message": str(message)[:1800]})
+    if not journal(message):
+        report_error(OSError("Journal output unavailable; monitor continues using private RAM evidence"), "journal-output")
 
 
 def tail(path, limit):
@@ -237,7 +324,7 @@ class Events:
                         data = self.connection.sock.recv(8192)
                     except BlockingIOError:
                         break
-                    ring({"type": "hostapd-event", "text": data.decode("utf-8", "replace")[:4096]})
+                    safe_ring({"type": "hostapd-event", "text": data.decode("utf-8", "replace")[:4096]})
                 else:
                     time.sleep(max(0, 1 - (time.monotonic() - started)))
         except OSError:
@@ -318,7 +405,7 @@ def observe(c, previous):
 
 class Policy:
     """One recovery per unresolved incident; max two in any thirty minutes."""
-    def __init__(self, now, saved=None):
+    def __init__(self, now, saved=None, baseline=None):
         self.started = now
         self.seen = set()
         self.last_good = now
@@ -327,6 +414,7 @@ class Policy:
         self.latched = False
         self.stable_since = None
         self.inhibited = False
+        self.baseline_restored = False
         if saved is not None:
             try:
                 attempts = saved["attempts"]
@@ -336,13 +424,35 @@ class Policy:
                     raise ValueError()
                 if type(saved["latched"]) is not bool:
                     raise ValueError()
+                if type(saved.get("inhibited", False)) is not bool:
+                    raise ValueError()
                 self.attempts = attempts
                 self.latched = saved["latched"]
+                self.inhibited = saved.get("inhibited", False)
+            except (KeyError, TypeError, ValueError):
+                self.inhibited = True
+        if baseline is not None:
+            try:
+                seen, last_good = baseline["seen"], baseline["last_good"]
+                if (not isinstance(seen, list) or len(seen) > 4 or
+                        not all(isinstance(m, str) and re.fullmatch(r"(?:[0-9a-f]{2}:){5}[0-9a-f]{2}", m) for m in seen) or
+                        len(set(seen)) != len(seen) or type(last_good) not in (int, float) or
+                        not math.isfinite(last_good) or not 0 <= last_good <= now):
+                    raise ValueError()
+                self.seen = set(seen)
+                self.last_good = last_good
+                self.baseline_restored = bool(seen)
             except (KeyError, TypeError, ValueError):
                 self.inhibited = True
 
     def saved(self):
-        return {"attempts": self.attempts, "latched": self.latched}
+        result = {"attempts": self.attempts, "latched": self.latched}
+        if self.inhibited:
+            result["inhibited"] = True
+        return result
+
+    def baseline(self):
+        return {"seen": sorted(self.seen), "last_good": self.last_good}
 
     def decide(self, observation, mode):
         now = observation["uptime"]
@@ -396,6 +506,59 @@ class Policy:
         self.control_bad = None
 
 
+def binding(c):
+    value = {k: c[k] for k in ("interface", "unit", "control")}
+    value["targets"] = sorted(c["targets"], key=lambda t: (t["mac"], t["ip"]))
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def load_policy(c, identity, now):
+    """Trust baseline only in this boot, for these exact targets/AP; never reset limits silently."""
+    try:
+        saved = read_json(RUNTIME / "state.json")
+        if not isinstance(saved, dict) or not re.fullmatch(r"[0-9a-f-]{36}", str(saved.get("boot", ""))):
+            raise ValueError("Invalid runtime identity")
+        if saved["boot"] != identity:
+            return Policy(now)
+        limits = saved.get("policy") if isinstance(saved.get("policy"), dict) else {}
+        baseline = None
+        if "stateVersion" in saved:
+            if type(saved["stateVersion"]) is not int or saved["stateVersion"] != 2:
+                raise ValueError("Unsupported monitor runtime state")
+            if not isinstance(saved.get("binding"), str) or not re.fullmatch(r"[0-9a-f]{64}", saved["binding"]):
+                raise ValueError("Invalid runtime configuration binding")
+            if saved.get("binding") == binding(c):
+                baseline = saved.get("baseline")
+                if not isinstance(baseline, dict) or not isinstance(baseline.get("seen"), list):
+                    raise ValueError("Missing sensor baseline")
+                if not set(baseline["seen"]).issubset({t["mac"] for t in c["targets"]}):
+                    raise ValueError("Unexpected baseline client")
+            else:
+                safe_ring({"type": "baseline-discarded", "reason": "AP/target configuration changed"})
+        policy = Policy(now, limits, baseline)
+        if policy.inhibited:
+            report_error(ValueError("Invalid or inhibited recovery state; explicit reset required"), "restore-state", True)
+        return policy
+    except FileNotFoundError:
+        return Policy(now)
+    except (ValueError, TypeError, AttributeError, OSError) as error:
+        report_error(error, "restore-state", True)
+        return Policy(now, {})
+
+
+def checkpoint(c, identity, policy, reason, observation):
+    try:
+        write_json(RUNTIME / "state.json", {"stateVersion": 2, "version": VERSION, "boot": identity,
+                   "binding": binding(c), "policy": policy.saved(), "baseline": policy.baseline(),
+                   "baselineRestored": policy.baseline_restored,
+                   "reason": reason, "mode": c["mode"], "observation": observation})
+        return True
+    except (OSError, ValueError) as error:
+        report_error(error, "state-write", True)
+        notice("AP watch: cannot save recovery state; automatic restart inhibited for this check.")
+        return False
+
+
 def snapshot(c, reason, observation):
     """Only incidents/manual captures reach the card; at most five gzip files."""
     mkdir(ARCHIVE)
@@ -414,6 +577,7 @@ def snapshot(c, reason, observation):
     }
     data = {"version": VERSION, "utc": stamp(), "uptime": time.monotonic(),
             "reason": reason, "observation": observation,
+            "monitor_error": tail(RUNTIME / "last-error.json", 16384),
             "events": tail(RUNTIME / "events.previous.jsonl", 65536) + tail(RUNTIME / "events.jsonl", 196608),
             "diagnostics": {name: run(command, timeout=5, limit=65536)
                             for name, command in commands.items()}}
@@ -448,77 +612,96 @@ def on_start(c):
     while answer != "OK" and time.monotonic() < deadline and not STOP:
         time.sleep(0.25)
         answer = control(c, "LOG_LEVEL DEBUG")
-    ring({"type": "diagnostic-setup", "power_save_off": power["code"] == 0,
+    safe_ring({"type": "diagnostic-setup", "power_save_off": power["code"] == 0,
           "hostapd_debug": answer == "OK"})
     if power["code"] or answer != "OK":
-        print("AP watch: diagnostic setup incomplete; see events/status.", flush=True)
+        notice("AP watch: diagnostic setup incomplete; see events/status.")
+
+
+def check_once(c, identity, policy, counters, old_reason):
+    global PHASE
+    PHASE = "observe"
+    observation, counters = observe(c, counters)
+    PHASE = "decide"
+    reason, restart = policy.decide(observation, c["mode"])
+    PHASE = "sample-log"
+    safe_ring({"type": "sample", "reason": reason, "mode": c["mode"],
+               "enabled": observation["enabled"], "targets": observation["targets"],
+               "stations": observation["stations"]})
+    PHASE = "state-write"
+    saved = checkpoint(c, identity, policy, reason, observation)
+    PHASE = "state-notice"
+    if reason != old_reason:
+        notice("AP watch: " + reason + " (" + c["mode"] + ")")
+    if not restart or not saved:
+        return counters, reason, False
+    PHASE = "recovery-accounting"
+    before = (list(policy.attempts), policy.latched, policy.stable_since, policy.last_good, policy.control_bad)
+    policy.recovering(time.monotonic())
+    # No AP mutation unless the limiter/latch and baseline were saved successfully.
+    if not checkpoint(c, identity, policy, reason, observation):
+        # No restart was sent; a transient write failure must not invent an attempt.
+        policy.attempts, policy.latched, policy.stable_since, policy.last_good, policy.control_bad = before
+        return counters, "recovery-inhibited-state-write", False
+    PHASE = "incident-capture"
+    try:
+        path = snapshot(c, reason, observation)
+        notice("AP watch: diagnostics saved to " + path)
+    except Exception as error:
+        report_error(error, PHASE, True)
+        safe_ring({"type": "snapshot-error", "error": str(error)[:1024]})
+        notice("AP watch: incident archive failed; continuing bounded recovery.")
+    PHASE = "restart-hotspot"
+    safe_ring({"type": "recovery-start", "reason": reason})
+    result = run(["systemctl", "restart", c["unit"]], timeout=35)
+    safe_ring({"type": "recovery-result", **result})
+    if result["code"]:
+        report_error(RuntimeError("Hotspot restart failed/timed out: " + result["text"][:512]), PHASE, True)
+    notice("AP watch: hotspot restart " + ("completed" if result["code"] == 0 else "failed/timed out") +
+           "; awaiting real client traffic.")
+    return {}, reason, True
 
 
 def daemon():
+    global PHASE
+    PHASE = "startup"
     mkdir(RUNTIME)
     lock = (RUNTIME / "lock").open("a")
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     c = config()
     identity = boot_id()
-    previous_state = None
-    try:
-        saved = read_json(RUNTIME / "state.json")
-        if not isinstance(saved, dict) or not re.fullmatch(r"[0-9a-f-]{36}", str(saved.get("boot", ""))):
-            raise ValueError("Invalid runtime identity")
-        if saved.get("boot") == identity:
-            previous_state = saved.get("policy") if isinstance(saved.get("policy"), dict) else {}
-    except FileNotFoundError:
-        pass
-    except (ValueError, TypeError, AttributeError, OSError):
-        previous_state = {}  # Fail closed rather than forget restart limits.
-    policy = Policy(time.monotonic(), previous_state)
+    policy = load_policy(c, identity, time.monotonic())
     tap = Events(c)
+    safe_ring({"type": "monitor-start", "version": VERSION, "baseline_restored": policy.baseline_restored,
+               "seen_clients": len(policy.seen), "recovery_inhibited": policy.inhibited,
+               "last_good": policy.last_good, "policy": policy.saved()})
+    notice("AP watch " + VERSION + ": starting; baseline " + ("restored" if policy.baseline_restored else "requires client observations") + ".")
     on_start(c)
     counters = {}
     old_reason = None
     while not STOP:
         started = time.monotonic()
+        PHASE = "configuration"
         current_config = config()
         if any(current_config[k] != c[k] for k in ("interface", "unit", "control", "targets")):
             raise ValueError("Target/interface configuration changed; restart watch service")
         c = current_config
         # Reattach after a hostapd restart without dropping the monitor process.
+        PHASE = "event-connect"
         if not tap.alive():
             tap.connect()
-        o, counters = observe(c, counters)
-        reason, restart = policy.decide(o, c["mode"])
-        event = {"type": "sample", "reason": reason, "mode": c["mode"],
-                 "enabled": o["enabled"], "targets": o["targets"], "stations": o["stations"]}
-        ring(event)
-        saved = {"boot": identity, "policy": policy.saved(), "reason": reason,
-                 "mode": c["mode"], "observation": o}
-        write_json(RUNTIME / "state.json", saved)
-        if reason != old_reason:
-            print("AP watch: " + reason + " (" + c["mode"] + ")", flush=True)
-            old_reason = reason
-        if restart:
-            policy.recovering(time.monotonic())
-            saved["policy"] = policy.saved()
-            # Persist the limiter in RAM before snapshot/restart, including errors.
-            write_json(RUNTIME / "state.json", saved)
-            try:
-                path = snapshot(c, reason, o)
-                print("AP watch: diagnostics saved to " + path, flush=True)
-            except Exception as error:
-                ring({"type": "snapshot-error", "error": str(error)})
-                print("AP watch: incident archive failed; RAM evidence retained.", flush=True)
-            ring({"type": "recovery-start", "reason": reason})
-            result = run(["systemctl", "restart", c["unit"]], timeout=35)
-            ring({"type": "recovery-result", **result})
-            print("AP watch: hotspot restart " + ("completed" if result["code"] == 0 else "failed/timed out") +
-                  "; awaiting real client traffic.", flush=True)
+        counters, old_reason, restarted = check_once(c, identity, policy, counters, old_reason)
+        if restarted:
             tap.close()
-            counters = {}
             # ExecStartPost applies diagnostics again; no collector operation.
+        PHASE = "event-wait"
         end = max(started + 30, time.monotonic() + 1)
         while not STOP and time.monotonic() < end:
             tap.poll(min(1, end - time.monotonic()))
+    PHASE = "shutdown"
+    safe_ring({"type": "monitor-stop", "reason": "termination requested"})
     tap.close()
+    lock.close()
 
 
 def managed_write(path, text):
@@ -564,6 +747,9 @@ def install(args):
     c = {"version": 1, "interface": args.interface, "unit": args.unit,
          "control": args.control, "targets": targets,
          "mode": existing["mode"] if existing else "recover"}
+    if existing and not args.target:
+        # An operational-helper update keeps the installation's exact AP/targets/mode.
+        c = dict(existing)
     if not existing:
         c["original_power"] = run(["iw", "dev", c["interface"], "get", "power_save"])["text"].strip()
         c["original_log_level"] = control(c, "LOG_LEVEL")
@@ -594,14 +780,14 @@ def install(args):
         with os.fdopen(fd, "w") as output:
             output.write(Path(__file__).read_text())
         PROGRAM.chmod(0o700)
-    managed_write(dropin, "[Service]\nExecStartPost=-/usr/bin/python3 /usr/local/sbin/ella-ap-watch _on-start\n")
+    managed_write(dropin, "[Service]\nExecStartPost=-/usr/bin/python3 -u /usr/local/sbin/ella-ap-watch _on-start\n")
     managed_write(SERVICE, """[Unit]
 Description=Bounded hotspot diagnostics and recovery
 After=HOTSPOT_UNIT
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/python3 /usr/local/sbin/ella-ap-watch daemon
+ExecStart=/usr/bin/python3 -u /usr/local/sbin/ella-ap-watch daemon
 Restart=on-failure
 RestartSec=10
 RuntimeDirectory=ella-ap-watch
@@ -632,7 +818,7 @@ WantedBy=multi-user.target
         if run(command, timeout=20)["code"]:
             raise ValueError("Watch service installation failed; inspect its journal")
     print("Installed AP watch " + VERSION + ". Hotspot and collector were not restarted.")
-    print("30-second checks; 120-second startup grace; requires both clients seen before traffic recovery arms.")
+    print("30-second checks; 120-second startup grace; established same-boot/config baseline survives monitor restarts.")
     print("sudo ella-ap-watch status")
 
 
@@ -660,7 +846,8 @@ def main():
     os.environ["LC_ALL"] = "C"
     os.umask(0o077)
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=("install", "daemon", "status", "observe", "recover", "capture", "report", "reset", "uninstall", "_on-start"))
+    parser.add_argument("--version", action="version", version="Ella AP watch " + VERSION)
+    parser.add_argument("action", choices=("install", "daemon", "status", "observe", "recover", "capture", "report", "errors", "reset", "uninstall", "_on-start"))
     parser.add_argument("--interface", default="wlan0")
     parser.add_argument("--unit", default="ella-hotspot.service")
     parser.add_argument("--control", default="/run/hostapd-ella")
@@ -687,17 +874,39 @@ def main():
         print("Mode: " + args.action + "; takes effect within one check cycle.")
     elif args.action == "status":
         c = config()
+        print("Monitor version: " + VERSION)
         print("Mode: " + c["mode"])
         print(run(["systemctl", "is-active", "ella-ap-watch.service"])["text"].strip())
         try:
             s = read_json(RUNTIME / "state.json")
             print("Last check: " + s["observation"]["utc"])
             print("State: " + s["reason"])
+            baseline = s.get("baseline", {}).get("seen", [])
+            print("Baseline clients seen: " + str(len(baseline)) + "/" + str(len(c["targets"])))
+            print("Baseline restored at start: " + ("yes" if s.get("baselineRestored") else "no"))
             print("Recoveries this boot (last 30 minutes): " + str(sum(time.monotonic() - x < 1800 for x in s["policy"]["attempts"])))
             for v in s["observation"]["targets"].values():
                 print(v["ip"] + ": " + ("traffic/probe OK" if v["alive"] else "no confirmed traffic"))
-        except (OSError, ValueError, KeyError, TypeError):
+        except (OSError, ValueError, KeyError, TypeError, AttributeError):
             print("No readable runtime status yet; inspect service journal.")
+        try:
+            error = read_json(RUNTIME / "last-error.json")
+            print("Latest monitor error: " + error["utc"] + " / " + error["phase"] + " / " + error["error"])
+            print("Use sudo ella-ap-watch errors for details; this entry may be historical.")
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+    elif args.action == "errors":
+        found = False
+        for path in (RUNTIME / "last-error.json", ARCHIVE / "last-error.json"):
+            try:
+                error = read_json(path)
+                print(str(path))
+                print(json.dumps(error, indent=2))
+                found = True
+            except (OSError, ValueError):
+                pass
+        if not found:
+            print("No readable monitor error records.")
     elif args.action == "capture":
         c = config()
         o, _ = observe(c, {})
@@ -725,5 +934,6 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as error:
-        print("AP watch error: " + str(error), file=sys.stderr)
+        report_error(error, PHASE, True)
+        journal("AP watch error [" + PHASE + "]: " + type(error).__name__ + ": " + str(error)[:1024], sys.stderr)
         sys.exit(1)
