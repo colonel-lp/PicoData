@@ -1,5 +1,13 @@
 # Android changelog
 
+## 0.32 — 2026-11-01
+
+- Enable bounded connection recovery for safe API GET reads, including failed reused sockets, while keeping Pi mode POST actions non-retrying with one-shot bodies. Preserve network-bound sockets/DNS, HTTPS hostname/certificate checks, redirect rejection, existing request/response limits and the three-second display freshness rule.
+- Keep the selected endpoint when only the reported Wi-Fi name is temporarily unavailable on the same physical network and route. Reconnect on real network/route changes, a confirmed different SSID, changed connection settings or an actual endpoint change; unknown SSIDs still have no guessed button highlight.
+- Capture API origin, network and encrypted credentials as one selected connection. Read preference snapshots atomically and reject stale selections after settings/preset changes, keeping runtime endpoints outside preset modification state.
+- Add a credential-free, RAM-only ring of the latest 256 connection events: API duration/failure stage, underlying transport errors, snapshot expiry/recovery and reconnect triggers. Long-press Refresh in Settings → NETWORK & PI to view/copy the themed diagnostics; no per-request file writes or automatic uploads.
+- Keep collector 0.7.5 and the separately published AP watch 1.1 unchanged. These app changes harden two source-level flicker candidates; they do not prove the cause of the Joying flickering or the separate hotspot stall. Owner builds Ella-monitoring-v0.32.apk; phone/Joying integration remains to verify.
+
 ## 0.31 — 2026-11-01
 
 - Fix phone Settings footer clipping by measuring full column content before filling the viewport; keep the Changelog / Update / Back / version area reachable by scrolling when needed. Preserve existing panel order, footer/button dimensions, themes and 6px gaps. Correct native Android padding/minimum-height/font alignment in the API address and saved-token fields; retain token masking and blank-keeps-saved behavior.

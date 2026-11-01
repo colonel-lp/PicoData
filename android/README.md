@@ -1,8 +1,8 @@
 # Ella Monitoring Android preview
 
-Version **0.31** (build 13). Native Java monitoring viewer with themed Settings/network controls. Minimum Android 8.1 / API 27; compile/target API 37. The Pi remains the always-on collector/logger. Sensor/history access retains compatibility with older APIs; new Pi resource/mode functions require collector 0.7.5. Status uses the authenticated API, interactive SSH opens ConnectBot, and .local lookup has a bounded legacy fallback.
+Version **0.32** (build 14). Native Java monitoring viewer with themed Settings/network controls. Minimum Android 8.1 / API 27; compile/target API 37. The Pi remains the always-on collector/logger. Sensor/history access retains compatibility with older APIs; new Pi resource/mode functions require collector 0.7.5. Status uses the authenticated API, interactive SSH opens ConnectBot, and .local lookup has a bounded legacy fallback.
 
-**Owner-built update:** compile `Ella-monitoring-v0.31.apk` in Android Studio and use the same signing key as the installed app to update in place and preserve settings. The package is unchanged. The earlier 0.1.0 key is different and still requires reinstalling. This remains the existing development package; a separate production identity is not introduced.
+**Owner-built update:** compile `Ella-monitoring-v0.32.apk` in Android Studio and use the same signing key as the installed app to update in place and preserve settings. The package is unchanged. The earlier 0.1.0 key is different and still requires reinstalling. This remains the existing development package; a separate production identity is not introduced.
 
 ## First connection
 
@@ -56,7 +56,7 @@ cd android/source
 ./gradlew :app:assembleDebug :app:testDebugUnitTest :app:lintDebug
 ```
 
-Android Studio/Gradle produces `app/build/outputs/apk/debug/Ella-monitoring-v0.31.apk` (and the same filename in the release output directory). This source-only delivery does not include an assembled APK. Keep development signing material private. Use the same private signing key as your installed version, and verify package/version/certificate when compiling an update. The app uses the PicoData GitHub release feed; APK assets must be named Ella-monitoring-vX.XX.apk. A source commit alone does not create an APK release. Rebuilding elsewhere with another debug key will require uninstalling the existing preview (which clears its settings), so the retained key must be preserved for future updates.
+Android Studio/Gradle produces `app/build/outputs/apk/debug/Ella-monitoring-v0.32.apk` (and the same filename in the release output directory). This source-only delivery does not include an assembled APK. Keep development signing material private. Use the same private signing key as your installed version, and verify package/version/certificate when compiling an update. The app uses the PicoData GitHub release feed; APK assets must be named Ella-monitoring-vX.XX.apk. A source commit alone does not create an APK release. Rebuilding elsewhere with another debug key will require uninstalling the existing preview (which clears its settings), so the retained key must be preserved for future updates.
 
 UI, encryption and plotting use Android/Java APIs. The API transport uses OkHttp 5.5.1 for network-scoped DNS with standard HTTP/TLS handling; its runtime licence notices are included in app assets. ConnectBot is separately installed and no SSH client is bundled. JUnit, a test-only JSON implementation and Robolectric are test dependencies. The standard Gradle wrapper retains its generated Apache 2.0 notices. Appearance, scaling, vector controls, the colour wheel and FYT screen behaviour are adapted from the owner's [EQ app reference](APP-PLAN.md#source-references-for-reuse); no audio/DSP operations or vendor implementation/assets are copied. No SignalK/Pico protocol port is distributed inside this APK.
 
@@ -86,7 +86,7 @@ Load [Pico] history uses the same logged Pico load-role components and verified 
 
 
 
-## Pi controls (0.31)
+## Pi controls (0.32)
 
 - Keep three network buttons: long-press to edit each exact Wi-Fi name and Pi host; use a numeric address or configured local hostname, without an SSH username/scheme/port. Press another network to confirm Android Wi-Fi switching; modern Android opens system settings when direct switching is unavailable. Highlights follow the actual Android network.
 - API address is an HTTP/HTTPS origin with the existing port/token. The three roles may use the same hostname. A local hostname only works on a reachable multicast-capable LAN; it does not route between isolated home/mobile networks. Network changes cancel old requests/cache entries. URL hostname, TLS certificate validation, saved origin and preset ownership are preserved.
@@ -96,3 +96,11 @@ Load [Pico] history uses the same logged Pico load-role components and verified 
 - Wi-Fi access requests required identification permissions, opens system Wi-Fi settings when ready, and offers Location guidance only if Location is disabled. The app does not collect GPS coordinates. The Settings address/token fields keep masking/blank-keeps-saved behavior, and full Settings content scrolls on shorter windows. Existing themes, footer sizes and 6px panel/bar gaps are retained.
 
 The Pi collector must be updated separately using its established ~/update-pico.sh. This source commit does not install APKs, sudo rules, firmware or networking changes. See [build validation](BUILD-VALIDATION.md) for completed source checks and pending Android Studio/device work.
+
+## Connection stability and diagnostics (0.32)
+
+Safe API GET reads can recover from connection failures within the existing call deadline; Pi mode POST requests use one-shot bodies and are never automatically replayed, including a server-requested immediate HTTP 503 retry. Wi-Fi name redaction on an unchanged network/route keeps its established endpoint without guessing the visible network highlight. Confirmed network/route/SSID changes, endpoint changes and connection edits reconnect with a fresh selection. Preset loading reselects before creating API clients; each client uses the origin and credentials captured together, retaining HTTPS identity and existing private storage. The three-second display freshness cutoff is unchanged.
+
+Long-press **Refresh** under **Settings → NETWORK & PI** to open **Connection diagnostics**; use **COPY** to share the text manually. It shows the latest 256 in-memory events with UTC/relative timing, request duration/error class/stage, snapshot expiry and reconnect reason. It excludes addresses, Wi-Fi names, API paths/metric identifiers, response data, headers, credentials and exception messages. Nothing is written per request or uploaded; the ring is lost when the app process exits. Normal Refresh still requests Pi status. Dialog controls use the current theme/font; approved Settings panels and bottom-bar layout are unchanged.
+
+The separate AP watch 1.1 update and its private Pi diagnostics are documented in [AP-WATCH.md](../node.js/AP-WATCH.md). A source commit does not install that helper on the Pi or establish hardware recovery. See [BUILD-VALIDATION.md](BUILD-VALIDATION.md) for checks and pending Android Studio/device tests.

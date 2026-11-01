@@ -1,6 +1,6 @@
 # Pi controls
 
-Updated in Android **0.31 / build 13**, with collector **0.7.5**.
+Updated in Android **0.32 / build 14**, with collector **0.7.5**.
 
 Settings keeps NETWORK & PI at the top left, PI CONNECTION and PI DATA below, and the API CONNECTION editor plus DISPLAY & APP on the right. The update/back/version area remains bottom right. The columns measure their complete contents, fill a taller viewport, and scroll when the footer cannot fit. Existing themes, button sizes, 6px column/panel gaps and bottom clearance remain. The API address and masked token editors have explicit vertical alignment/minimum-height handling within their existing rows; blank token input keeps the saved token. Settings screenshot protection remains.
 
@@ -37,3 +37,5 @@ The former embedded JSch client/runtime dependency is removed. Previously saved 
 ## Verification
 
 See [BUILD-VALIDATION.md](../BUILD-VALIDATION.md) for actual Node/Python/JVM/parser checks. Android SDK compilation, dependency packaging, Settings measurements, legacy multicast/routing/permissions, ConnectBot handoff and real Pi controls still require Android Studio and phone/Joying/Pi verification. Source tests do not establish radio stability or measured hardware overhead.
+
+In 0.32, transient SSID redaction retains an endpoint only when the physical network, local route and saved connection remain the same. The visible network name/highlight is not inferred. Actual route/confirmed identity/endpoint/settings changes reconnect; private connection snapshots keep the selected origin and token together. GET recovery is enabled within its deadline, while mode POST replay remains disabled. Long-press Refresh opens the current-themed, RAM-only connection diagnostics with COPY / CLOSE. Normal Refresh and approved panel/button layout stay unchanged. See [live-connection.md](live-connection.md) for safeguards and validation limits.

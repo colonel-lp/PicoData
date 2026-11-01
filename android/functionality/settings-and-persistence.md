@@ -1,6 +1,6 @@
 # Settings and persistence
 
-Updated in **0.31 / build 13**.
+Updated in **0.32 / build 14**.
 
 Settings has network/Pi control and status/resource panels on the left, API Connection and Display & App on the right, and an untitled bottom-right control block. Pi network controls, authentication and lifecycle behavior are documented in [Pi control](pi-control.md). The columns/panels retain 6 logical pixel gaps; the content has a 6px bottom inset above the bottom bar. There is no Pi bottom-bar button. Connection retains encrypted private-token/manual-origin setup and foreground reconnection. Credentials disable screenshots and token view-state saving. The page content has no connection-status line or embedded theme controls. The bottom bar retains the Theme dropdown beside Preset, including while Settings is open. Hide connection status applies to monitoring pages; the app-wide title is removed. Local-clock display preserves UTC chart history boundaries; calendar summaries use the device timezone in 0.27. The bottom-right block has Updates: plus a reserved position in its top row, Changelog / Update and Back in its lower row, and the version at the bottom. Updates frequency choices open above their button.
 
@@ -32,3 +32,5 @@ Open popup refresh requests/timers are foreground-only and do not change logging
 
 
 In 0.31 the Settings columns measure full natural content before filling the viewport, keeping footer/version content scrollable on shorter phone windows. API address/token inputs explicitly remove native minimum height/font padding and vertically center their text inside existing rows. Existing sizes, theme, column gaps and bottom-bar clearance remain. Normal Pi monitoring uses the authenticated API without SSH setup; Open terminal launches ConnectBot. Wi-Fi access offers conditional Location guidance rather than unconditionally opening Location settings. See Pi control for network-scoped local-hostname resolution, optional fixed-mode setup and device verification limits.
+
+In 0.32 a long-press on the existing Refresh button opens themed Connection diagnostics with COPY / CLOSE. The ring stays in process RAM, outside presets/themes/Downloads/global display settings, and is shared only on explicit Copy. Preset connection selection now runs before client creation, with atomic private connection snapshots; normal field validation, token masking/Keystore encryption and runtime-versus-preset ownership remain. Settings geometry/padding and screenshot policy are unchanged.

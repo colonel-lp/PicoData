@@ -26,6 +26,15 @@ public class PiControlTest {
         ApiClient client=new ApiClient("http://pi.example.invalid:8080",new String(new char[64]).replace('\0','a'),url->{throw new AssertionError("Must not connect");});
         try{client.mode("reboot");fail();}catch(IllegalArgumentException expected){}
     }
+    @Test public void selectedConnectionSnapshotKeepsItsOwnTokenAfterAnotherPresetIsLoaded()throws Exception{
+        PrivateSettings s=new PrivateSettings(RuntimeEnvironment.getApplication(),()->new javax.crypto.spec.SecretKeySpec(new byte[32],"AES"));
+        String first=ConnectionStabilityTest.repeat('a'),second=ConnectionStabilityTest.repeat('b');
+        s.saveConnection("http://first.example.invalid:8080",first);JSONObject selected=s.connectionSnapshot();
+        s.saveConnection("http://second.example.invalid:8080",second);
+        assertEquals(first,s.token(selected));assertEquals(second,s.token());
+        assertEquals("http://first.example.invalid:8080",selected.getString("address"));
+        assertNotEquals(selected.toString(),s.connectionSnapshot().toString());
+    }
     @Test public void networkEditsBelongToPresetsButSshAndRuntimeSelectionDoNot()throws Exception{
         PrivateSettings s=new PrivateSettings(RuntimeEnvironment.getApplication());JSONObject before=s.connectionSnapshot();JSONArray networks=PiNetworkConfig.empty();networks.getJSONObject(1).put("ssid","Test home").put("host","pi.example.invalid");s.savePiNetworks(networks);
         assertTrue(s.connectionDifferences(before).contains("connection.network.1"));JSONObject saved=s.connectionSnapshot();s.prefs.edit().putString("pi.ssh.user","test-user").putString("pi.ssh.fingerprint","test-pin").apply();assertTrue(s.connectionDifferences(saved).isEmpty());

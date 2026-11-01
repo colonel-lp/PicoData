@@ -24,8 +24,17 @@ final class PiControls {
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
     private volatile ApiClient client;private volatile int generation;private volatile boolean active;
     private boolean busy,visible,permissionRequest,locationReturn;
-    private String networkKey="",ssid="",deviceIp="—",error="Set the Pi API address/token in Settings.",pendingSsid="";
+    private String ssid="",deviceIp="—",error="Set the Pi API address/token in Settings.",pendingSsid="";
     private volatile String selectedBase="";
+    private final NetworkIdentity identity=new NetworkIdentity();
+    private boolean reconnect=true;
+    private String reconnectReason="foreground",endpointHost;
+    private JSONObject selectingConnection;
+    private volatile ApiTarget target;
+    private static final class ApiTarget {
+        final Network route;final String base,key;final JSONObject connection;
+        ApiTarget(Network n,String b,JSONObject c){route=n;base=b;connection=c;key=c.toString();}
+    }
     private long lastAttempt,pendingUntil;private Network network;private PiStats stats;
     private TextView connectionReadout,resourceReadout;private Button[] networks,modes;
     private final Set<Dialog> editors=new HashSet<>();
@@ -34,21 +43,44 @@ final class PiControls {
     final LocalNameResolver resolver;
     private final Runnable tick=this::tick;
     PiControls(MainActivity a,PrivateSettings settings){this.a=a;this.settings=settings;resolver=new LocalNameResolver(a);}
-    void start(){active=true;networkKey="";lastAttempt=0;registerNetworkInfo();inspectNetwork();ui.removeCallbacks(tick);ui.post(tick);}
+    void start(){active=true;reconnect=true;reconnectReason="foreground";lastAttempt=0;registerNetworkInfo();inspectNetwork();ui.removeCallbacks(tick);ui.post(tick);}
     void stop(){active=false;invalidate();ui.removeCallbacks(tick);unregisterNetworkInfo();for(Dialog d:new ArrayList<>(editors))d.dismiss();editors.clear();}
     void destroy(){stop();worker.shutdownNow();}
     Network network(){return network;}
     String apiBase(){return selectedBase.isEmpty()?settings.prefs.getString("address",""):selectedBase;}
-    void useEndpoint(String host){selectedBase=PiNetworkConfig.replaceApiHost(settings.prefs.getString("address",""),host);}
+    void useEndpoint(String host){
+        try{JSONObject saved=selectingConnection==null?settings.connectionSnapshot():selectingConnection;
+            selectedBase=PiNetworkConfig.replaceApiHost(saved.optString("address"),host);
+            target=new ApiTarget(network,selectedBase,saved);
+        }catch(Exception e){throw new IllegalArgumentException("Save a valid Pi API connection first.");}
+    }
+    ApiClient apiClient()throws Exception{
+        ApiTarget t=target;if(t==null||t.route==null||!t.key.equals(settings.connectionSnapshot().toString()))throw new java.io.IOException("Pi connection selection is pending.");
+        String token=settings.token(t.connection);
+        if(t!=target||!t.key.equals(settings.connectionSnapshot().toString()))throw new java.io.IOException("Pi connection changed.");
+        return new ApiClient(t.base,token,new NetworkTransport(t.route,resolver,a.connectionDiagnostics()),a.connectionDiagnostics());
+    }
     void settingsVisible(boolean value){visible=value;if(!value){connectionReadout=null;resourceReadout=null;networks=null;modes=null;}render();}
     private boolean permitted(){return Build.VERSION.SDK_INT<37||a.checkSelfPermission("android.permission.ACCESS_LOCAL_NETWORK")==PackageManager.PERMISSION_GRANTED;}
     private JSONArray configuration(){try{return settings.piNetworks();}catch(Exception e){return new JSONArray();}}
     private JSONObject entry(int i){JSONObject o=configuration().optJSONObject(i);return o==null?new JSONObject():o;}
     private int role(){for(int i=0;i<3;i++)if(!ssid.isEmpty()&&ssid.equals(entry(i).optString("ssid")))return i;return -1;}
-    private String endpoint(){int role=role();if(role>=0&&!entry(role).optString("host").isEmpty())return entry(role).optString("host");try{return new URI(settings.prefs.getString("address","")).getHost();}catch(Exception e){return null;}}
+    private String endpoint(){return endpointHost;}
+    private String endpoint(JSONObject saved,String routingSsid){
+        JSONArray entries=saved.optJSONArray("networks");
+        if(entries!=null)for(int i=0;i<entries.length();i++){JSONObject e=entries.optJSONObject(i);if(e!=null&&!routingSsid.isEmpty()&&routingSsid.equals(e.optString("ssid"))&&!e.optString("host").isEmpty())return e.optString("host");}
+        try{return new URI(saved.optString("address")).getHost();}catch(Exception e){return null;}
+    }
+    private String routeKey(ConnectivityManager cm,Network n){
+        LinkProperties link=cm==null||n==null?null:cm.getLinkProperties(n);if(link==null)return "";
+        List<String> parts=new ArrayList<>();parts.add(String.valueOf(link.getInterfaceName()));
+        for(LinkAddress address:link.getLinkAddresses())parts.add(address.toString());
+        for(RouteInfo route:link.getRoutes())if(route.isDefaultRoute())parts.add(route.toString());
+        Collections.sort(parts);return parts.toString();
+    }
     private boolean configured(){return !settings.prefs.getString("address","").isEmpty()&&settings.prefs.contains("token");}
-    void connectionEdited(){networkKey="";inspectNetwork();}
-    void permissionsChanged(){if(!active)return;unregisterNetworkInfo();registerNetworkInfo();networkKey="";lastAttempt=0;ui.removeCallbacks(tick);ui.post(tick);if(permissionRequest){permissionRequest=false;if(requiredPermissions().isEmpty())wifiAccess();else a.toast("Wi-Fi identification permission was not granted.");}}
+    void connectionEdited(){reconnect=true;reconnectReason="settings_changed";inspectNetwork();}
+    void permissionsChanged(){if(!active)return;unregisterNetworkInfo();registerNetworkInfo();lastAttempt=0;ui.removeCallbacks(tick);ui.post(tick);if(permissionRequest){permissionRequest=false;if(requiredPermissions().isEmpty())wifiAccess();else a.toast("Wi-Fi identification permission was not granted.");}}
     void resumed(){if(!active)return;if(locationReturn){locationReturn=false;if(locationEnabled())openWifi();}inspectNetwork();}
     private void registerNetworkInfo(){
         if(Build.VERSION.SDK_INT<31||networkCallback!=null)return;
@@ -70,23 +102,35 @@ final class PiControls {
                     found=n;WifiInfo info=wifiInfo.get(n);
                     if(info==null&&Build.VERSION.SDK_INT>=31&&caps.getTransportInfo() instanceof WifiInfo)info=(WifiInfo)caps.getTransportInfo();
                     if(info==null||info.getSSID()==null||WifiManager.UNKNOWN_SSID.equals(info.getSSID())){WifiManager wm=(WifiManager)a.getApplicationContext().getSystemService(Context.WIFI_SERVICE);if(wm!=null)info=wm.getConnectionInfo();}
-                    if(info!=null){name=info.getSSID();if(name==null||name.equals(WifiManager.UNKNOWN_SSID))name="";else if(name.startsWith("\"")&&name.endsWith("\""))name=name.substring(1,name.length()-1);}
+                    if(info!=null)name=NetworkIdentity.ssid(info.getSSID());
                     LinkProperties link=cm.getLinkProperties(n);if(link!=null)for(LinkAddress address:link.getLinkAddresses())if(address.getAddress() instanceof Inet4Address){ip=address.getAddress().getHostAddress();break;}
                     break;
                 }
             }
             if(found==null&&cm!=null)for(Network n:cm.getAllNetworks()){NetworkCapabilities caps=cm.getNetworkCapabilities(n);if(caps!=null&&caps.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)&&!caps.hasTransport(NetworkCapabilities.TRANSPORT_VPN)){found=n;LinkProperties link=cm.getLinkProperties(n);if(link!=null)for(LinkAddress address:link.getLinkAddresses())if(address.getAddress() instanceof Inet4Address){ip=address.getAddress().getHostAddress();break;}break;}}
         }catch(SecurityException ignored){name="";}
-        String key=(found==null?"none":Long.toString(found.getNetworkHandle()))+"/"+name+"/"+settings.prefs.getString("pi.networks","")+"/"+settings.prefs.getString("address","");
         network=found;ssid=name;deviceIp=ip;
-        if(!key.equals(networkKey)){
-            networkKey=key;invalidate();error=found==null?"Join a configured Wi-Fi network.":configured()?"Reading Pi API status…":"Set the Pi API address/token in Settings.";
-            a.pauseForPiNetwork();
-            String target=endpoint();if(found!=null&&configured()&&target!=null)try{a.selectPiEndpoint(target);}catch(IllegalArgumentException e){error=e.getMessage();}
+        try{
+            JSONObject saved=settings.connectionSnapshot();String config=saved.toString();
+            long handle=found==null?-1:found.getNetworkHandle();
+            String reason=identity.observe(handle,routeKey(cm,found),name,config);
+            String host=endpoint(saved,identity.routingSsid());
+            String base=host==null||saved.optString("address").isEmpty()?"":PiNetworkConfig.replaceApiHost(saved.optString("address"),host);
+            if(reconnect||!reason.equals("unchanged")||!base.equals(selectedBase)){
+                String trigger=reconnect?reconnectReason:reason.equals("unchanged")?"endpoint_changed":reason;
+                reconnect=false;invalidate();endpointHost=host;selectingConnection=saved;
+                a.connectionDiagnostics().network(trigger,generation,handle,!ssid.isEmpty());
+                error=found==null?"Join a configured Wi-Fi network.":configured()?"Reading Pi API status…":"Set the Pi API address/token in Settings.";
+                a.pauseForPiNetwork();
+                if(found!=null&&configured()&&host!=null)a.selectPiEndpoint(host);
+            }
+        }catch(Exception e){
+            if(target!=null){invalidate();a.pauseForPiNetwork();a.connectionDiagnostics().network("invalid_settings",generation,found==null?-1:found.getNetworkHandle(),!ssid.isEmpty());}
+            reconnect=true;reconnectReason="settings_changed";error="Check the saved Pi API connection.";
         }
         if(!pendingSsid.isEmpty()){if(ssid.equals(pendingSsid)){pendingSsid="";lastAttempt=0;}else if(SystemClock.elapsedRealtime()>pendingUntil){pendingSsid="";error="Requested Wi-Fi network was not connected. Open Wi-Fi settings and retry.";}}
     }
-    private void invalidate(){generation++;busy=false;lastAttempt=0;stats=null;selectedBase="";resolver.reset();ApiClient c=client;if(c!=null)c.cancel();client=null;}
+    private void invalidate(){generation++;busy=false;lastAttempt=0;stats=null;selectedBase="";target=null;resolver.reset();ApiClient c=client;if(c!=null)c.cancel();client=null;}
     private void tick(){
         if(!active)return;inspectNetwork();render();
         if(!busy&&network!=null&&configured()&&permitted()&&(lastAttempt==0||SystemClock.elapsedRealtime()-lastAttempt>=(visible?15000:30000)))request("status",false);
@@ -99,7 +143,7 @@ final class PiControls {
         LinearLayout policy=a.row();modes=new Button[3];String[] names={"Pi Auto","Pi Home","Pi M1"},actions={"auto","home","m1"};
         for(int i=0;i<3;i++){final String action=actions[i];modes[i]=a.uiButton(names[i],false,()->a.themedAlertBuilder().setMessage("Set the Pi upstream to "+action+"? This changes the Pi, not this device's Wi-Fi.").setPositiveButton("Apply",(d,w)->request(action,true)).setNegativeButton("Cancel",null).show());add(policy,modes[i],i==0?0:6,35);}
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,6,0,0);controls.addView(policy,p);
-        LinearLayout actionsRow=a.row();add(actionsRow,a.uiButton("Refresh",false,()->request("status",true)),0,35);Button terminal=a.uiButton("Open terminal",false,this::openTerminal);terminal.setOnLongClickListener(v->{editSsh();return true;});add(actionsRow,terminal,6,35);add(actionsRow,a.uiButton("Wi-Fi access",false,this::wifiAccess),6,35);LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-1,-2);ap.setMargins(0,6,0,0);controls.addView(actionsRow,ap);
+        LinearLayout actionsRow=a.row();Button refresh=a.uiButton("Refresh",false,()->request("status",true));refresh.setOnLongClickListener(v->{showDiagnostics();return true;});add(actionsRow,refresh,0,35);Button terminal=a.uiButton("Open terminal",false,this::openTerminal);terminal.setOnLongClickListener(v->{editSsh();return true;});add(actionsRow,terminal,6,35);add(actionsRow,a.uiButton("Wi-Fi access",false,this::wifiAccess),6,35);LinearLayout.LayoutParams ap=new LinearLayout.LayoutParams(-1,-2);ap.setMargins(0,6,0,0);controls.addView(actionsRow,ap);
         LinearLayout connection=a.settingsGroup(parent,"PI CONNECTION");connectionReadout=a.uiText("",12,a.getThemeConfig().text);connection.addView(connectionReadout);
         LinearLayout resources=a.settingsGroup(parent,"PI DATA");resourceReadout=a.uiText("",12,a.getThemeConfig().text);resources.addView(resourceReadout);render();
     }
@@ -115,13 +159,13 @@ final class PiControls {
     private void request(String action,boolean explicit){
         if(!active||busy)return;if(!permitted()){a.requestPermissions(new String[]{"android.permission.ACCESS_LOCAL_NETWORK"},37);return;}
         if(!configured()||network==null){if(explicit)a.toast("Save the Pi API address/token and join its network first.");return;}
-        final int version=generation;final Network route=network;final String base=apiBase();final String host=endpoint();
+        final int version=generation;final String host=endpoint();
         busy=true;lastAttempt=SystemClock.elapsedRealtime();render();
         worker.execute(()->{
             ApiClient c=null;
             try{
                 if(!active||version!=generation)return;
-                c=new ApiClient(base,settings.token(),new NetworkTransport(route,resolver));client=c;
+                c=apiClient();client=c;
                 if(!active||version!=generation){c.cancel();return;}
                 JSONObject response=action.equals("status")?c.get("/api/v1/pi"):c.mode(action);
                 final PiStats result=action.equals("status")?new PiStats(response,host,SystemClock.elapsedRealtime()):null;
@@ -139,7 +183,7 @@ final class PiControls {
         Dialog d=remember(new Dialog(a));LinearLayout panel=a.styledDialogRoot();panel.addView(a.styledTitle(PiNetworkConfig.ROLES[index]+" connection"));JSONObject original=entry(index);
         EditText name=editor(original.optString("ssid"),"Exact Wi-Fi network name",false),host=editor(original.optString("host"),"Pi IP address / hostname",false);panel.addView(name,new LinearLayout.LayoutParams(-1,a.dialogDp(38)));panel.addView(host,new LinearLayout.LayoutParams(-1,a.dialogDp(38)));
         LinearLayout row=a.row();TextView cancel=a.dialogButton("CANCEL",a.getThemeConfig().border),save=a.dialogButton("SAVE",a.getThemeConfig().controls);add(row,cancel,0,a.dialogDp(35));add(row,save,a.dialogDp(6),a.dialogDp(35));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.setMargins(0,a.dialogDp(6),0,0);panel.addView(row,p);
-        cancel.setOnClickListener(v->d.dismiss());save.setOnClickListener(v->{try{JSONArray entries=settings.piNetworks();entries.put(index,new JSONObject().put("ssid",PiNetworkConfig.ssid(name.getText().toString())).put("host",PiNetworkConfig.host(host.getText().toString())));settings.savePiNetworks(entries);networkKey="";invalidate();a.refreshPiPresetChanges();d.dismiss();render();}catch(Exception e){host.setError(e.getMessage());}});a.showStyledDialog(d,panel,460);
+        cancel.setOnClickListener(v->d.dismiss());save.setOnClickListener(v->{try{JSONArray entries=settings.piNetworks();entries.put(index,new JSONObject().put("ssid",PiNetworkConfig.ssid(name.getText().toString())).put("host",PiNetworkConfig.host(host.getText().toString())));settings.savePiNetworks(entries);connectionEdited();a.refreshPiPresetChanges();d.dismiss();render();}catch(Exception e){host.setError(e.getMessage());}});a.showStyledDialog(d,panel,460);
     }
     @SuppressWarnings("deprecation") private void connectAndroid(int index){
         JSONObject saved=entry(index);String wanted=saved.optString("ssid");if(wanted.isEmpty()||saved.optString("host").isEmpty()){editNetwork(index);return;}
@@ -174,6 +218,14 @@ final class PiControls {
             String uri=new URI("ssh",user,target,port,"/",null,"Ella Pi").toASCIIString();
             ui.post(()->{if(!active||version!=generation)return;try{a.startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(uri)).setPackage("org.connectbot"));}catch(ActivityNotFoundException e){a.themedAlertBuilder().setMessage("Install ConnectBot to open the Pi terminal. SSH passwords and keys are managed inside ConnectBot.").setPositiveButton("Download",(d,w)->{try{a.startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("https://connectbot.org/download/")));}catch(RuntimeException ignored){a.toast("Download ConnectBot from connectbot.org.");}}).setNegativeButton("Close",null).show();}});
         }catch(Exception e){ui.post(()->{if(active&&version==generation)a.toast("Pi hostname unavailable on this network. Check the configured address.");});}});
+    }
+    private void showDiagnostics(){
+        String details=a.connectionDiagnostics().text(BuildConfig.VERSION_NAME);
+        Dialog d=remember(new Dialog(a));LinearLayout panel=a.styledDialogRoot();panel.addView(a.styledTitle("Connection diagnostics"));
+        ScrollView scroll=new ScrollView(a);TextView text=a.uiText(details,a.dialogTextSize(11.5f),a.getThemeConfig().text);text.setTextIsSelectable(true);scroll.addView(text);panel.addView(scroll,new LinearLayout.LayoutParams(-1,a.dialogDp(210)));
+        LinearLayout row=a.row();TextView copy=a.dialogButton("COPY",a.getThemeConfig().controls),close=a.dialogButton("CLOSE",a.getThemeConfig().border);
+        add(row,copy,0,a.dialogDp(35));add(row,close,a.dialogDp(6),a.dialogDp(35));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,a.dialogDp(6),0,0);panel.addView(row,lp);
+        copy.setOnClickListener(v->{android.content.ClipboardManager clipboard=(android.content.ClipboardManager)a.getSystemService(Context.CLIPBOARD_SERVICE);if(clipboard!=null)clipboard.setPrimaryClip(ClipData.newPlainText("Connection diagnostics",details));a.toast("Diagnostics copied.");});close.setOnClickListener(v->d.dismiss());a.showStyledDialog(d,panel,650);
     }
     private void editSsh(){
         Dialog d=remember(new Dialog(a));LinearLayout panel=a.styledDialogRoot();panel.addView(a.styledTitle("ConnectBot connection"));

@@ -58,6 +58,8 @@ public final class MainActivity extends Activity {
     private final ExecutorService liveWorker = Executors.newSingleThreadExecutor(), historyWorker = Executors.newSingleThreadExecutor(), metadataWorker=Executors.newSingleThreadExecutor();
     private PrivateSettings settings;
     private PiControls piControls;
+    private final ConnectionDiagnostics diagnostics=new ConnectionDiagnostics();
+    ConnectionDiagnostics connectionDiagnostics(){return diagnostics;}
     private ScreenControl screen;
     private Palette palette;
     private LinearLayout root, content, dashboard;
@@ -260,6 +262,7 @@ public final class MainActivity extends Activity {
         return String.format(Locale.UK, d.unit.equals("hPa") || d.unit.equals("mV") || d.unit.equals("%") ? "%.0f %s" : d.unit.equals("V") ? "%.3f %s" : d.unit.equals("°C") ? "%.1f %s" : "%.2f %s", d.value, d.unit);
     }
     private void updateLive() {
+        diagnostics.snapshot(SystemClock.elapsedRealtime()-receivedMono,live!=null);
         if (settings == null || status == null) return;
         Map<String, MonitorData.Datum> next = MonitorData.display(metrics, live, live == null ? 0 : (SystemClock.elapsedRealtime() - receivedMono) / 1000d);
         // Retain metadata/layout when source snapshots disappear, but never retain their current values.
@@ -292,9 +295,7 @@ public final class MainActivity extends Activity {
         throw new java.io.IOException("Join the Pi's Wi-Fi network.");
     }
     private ApiClient client() throws Exception {
-        final Network route=piControls.network();
-        if(route==null)throw new java.io.IOException("Join the Pi network first.");
-        return new ApiClient(piControls.apiBase(),settings.token(),new NetworkTransport(route,piControls.resolver));
+        return piControls.apiClient();
     }
     private boolean allowed() { return Build.VERSION.SDK_INT < 37 || checkSelfPermission(LAN_PERMISSION) == PackageManager.PERMISSION_GRANTED; }
     private void restartConnection() {
@@ -309,7 +310,7 @@ public final class MainActivity extends Activity {
             try {
                 ApiClient prepared = client();
                 handler.post(() -> { if (active && generation == epoch) { liveClient = prepared; handler.post(poll);if(elementPopup!=null)elementPopup.resume(); } });
-            } catch (Exception e) { handler.post(() -> { if (active && generation == epoch) { connectionState = "Set the Pi address and API token in Settings."; updateLive(); } }); }
+            } catch (Exception e) { diagnostics.request("live","prepare",0,0,e); handler.post(() -> { if (active && generation == epoch) { connectionState = "Set the Pi address and API token in Settings."; updateLive(); } }); }
         });
     }
     private void poll() {
@@ -803,7 +804,7 @@ public final class MainActivity extends Activity {
             persistent=p.getBoolean("persistent");
             localClock=p.getBoolean("localClock");hideStatus=p.getBoolean("hideStatus");range=p.getInt("range");defined=p.getBoolean("defined");
             selectedMetric=p.getString("metric");quantity=p.getString("quantity");bars=p.getBoolean("bars");theme.fontFamily=p.getString("fontFamily");currentPreset=name;offset=0;cachedPreset=null;cachedPresetName=null;
-            screen.setKeep(keepScreen);windowMode();persistence(true);updates.schedule();build();restartConnection();if(historyScreen&&!settingsScreen)loadHistory();
+            screen.setKeep(keepScreen);windowMode();persistence(true);updates.schedule();build();piControls.connectionEdited();if(historyScreen&&!settingsScreen)loadHistory();
         }catch(Exception e){toast("Could not load preset. File may be malformed or its encrypted connection belongs to another installation. Current settings were kept.");}
     }
     private void manage(boolean themes){

@@ -36,9 +36,10 @@ final class PrivateSettings {
         if (!prefs.edit().putString("address", address).putString("token", encrypted).putString("tokenIv", iv).commit()) throw new Exception("Cannot save connection.");
     }
     org.json.JSONObject connectionSnapshot() throws Exception {
-        org.json.JSONObject out=new org.json.JSONObject().put("address",prefs.getString("address",""));
-        if(prefs.contains("token"))out.put("token",prefs.getString("token","")).put("tokenIv",prefs.getString("tokenIv",""));
-        if(prefs.contains("pi.networks"))out.put("networks",piNetworks());
+        java.util.Map<String,?> saved=prefs.getAll();
+        org.json.JSONObject out=new org.json.JSONObject().put("address",saved.containsKey("address")?saved.get("address"):"");
+        if(saved.containsKey("token"))out.put("token",saved.get("token")).put("tokenIv",saved.get("tokenIv"));
+        if(saved.containsKey("pi.networks"))out.put("networks",PiNetworkConfig.validate(new org.json.JSONArray((String)saved.get("pi.networks"))));
         return out;
     }
     private String decrypt(org.json.JSONObject snapshot) throws Exception {
@@ -48,6 +49,7 @@ final class PrivateSettings {
         return new String(cipher.doFinal(Base64.decode(snapshot.getString("token"),Base64.NO_WRAP)),java.nio.charset.StandardCharsets.UTF_8);
     }
     String token() throws Exception { return decrypt(connectionSnapshot()); }
+    String token(org.json.JSONObject snapshot)throws Exception{return decrypt(snapshot);}
     java.util.Set<String> connectionDifferences(org.json.JSONObject saved) throws Exception {
         java.util.Set<String> out=new java.util.LinkedHashSet<>();
         org.json.JSONObject current=connectionSnapshot();

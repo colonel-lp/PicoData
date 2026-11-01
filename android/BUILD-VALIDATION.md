@@ -1,3 +1,17 @@
+# Source 0.32 / build 14 validation — 2026-11-01
+
+Source-only Android change; output configured as Ella-monitoring-v0.32.apk. Collector 0.7.5 and AP watch 1.1 source/versions are retained; no Pi installation, APK assembly or device action is performed here.
+
+- PASS: actual NetworkIdentity, ConnectionDiagnostics and ApiClient classes compile with Java 8 source/target on JDK 17 plus upstream org.json. A pure-JVM harness passed 32 checks for transient Wi-Fi-name redaction, confirmed network/route/config changes, retained/discarded endpoint roles, bounded diagnostic history/redaction, snapshot expiry transitions, API failure phase, cancellation/allowlisted operations and a real delayed loopback HTTP response. This is not OkHttp or Android radio execution.
+- PASS: 70 app/test Java files syntax-parse as Java 8, including the new transport/network tests. This is parsing only, not Android SDK/dependency type checking.
+- PASS: full changelog/asset identity, manifest XML parsing, Android versionCode 14/versionName 0.32 and Gradle output filename configuration; source publication checked against current main with a guarded update and blob readback.
+- ADDED, NOT RUN: ConnectionStabilityTest (five focused cases), NetworkTransportTest (three actual OkHttp loopback cases: recovery after a primed socket drops its GET response, no replay of a dropped mode POST, and no replay after HTTP 503 Retry-After: 0), and the PiControlTest encrypted selected-token regression. Existing tests are retained. Run these with the project's Android Studio/Gradle unit tests.
+- NOT RUN: Android SDK/AGP compilation, OkHttp integration tests, Robolectric suite, APK/signing, Joying/phone rendering, permission/routing/legacy-mDNS behavior and actual flicker/stall recovery. Android SDK/Gradle and resolved Android dependencies are unavailable in this workspace. No passing Android compilation or proven hardware cause/fix is claimed.
+
+Owner checks: build with the retained signing key, use both numeric and local-name endpoints, compare the phone/Joying on hotspot/upstream paths, verify transient SSID metadata does not rebuild live values while real network/preset changes do, verify mode actions are never replayed, and inspect/copy the long-press Refresh diagnostics during a genuine failure. Preserve honest expiry and credentials. The helper 1.1 installation/real AP verification remains separate.
+
+Previous source validation follows.
+
 # Source 0.31 / collector 0.7.5 validation — 2026-11-01
 
 - PASS: 47 Node tests on Node 24.22.1, selected Pi status/API/history/logger/clock suites. These include unchanged migration/retention/integration behavior, HTTPS/authentication, new cache/coalescing/resource parsing, strict fixed actions and HTTP opt-in/body limits. Pi runtime Node 22.23.3 remains a hardware verification target.
