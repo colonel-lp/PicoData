@@ -1,5 +1,15 @@
 # Android changelog
 
+## 0.31 — 2026-11-01
+
+- Fix phone Settings footer clipping by measuring full column content before filling the viewport; keep the Changelog / Update / Back / version area reachable by scrolling when needed. Preserve existing panel order, footer/button dimensions, themes and 6px gaps. Correct native Android padding/minimum-height/font alignment in the API address and saved-token fields; retain token masking and blank-keeps-saved behavior.
+- Keep the three Android network buttons and long-press SSID/host editing. Add network-scoped local-hostname resolution for Android 8.1 with bounded one-shot mDNS, scoped caches/cancellation and IPv4/IPv6 handling. Preserve the logical HTTPS hostname and standard certificate checks. Local naming still requires a reachable shared LAN.
+- Read Pi RAM, CPU/load, temperature, upstream network and mode through the authenticated collector API (collector 0.7.5), without SSH credentials or an SSH status probe. Keep foreground refresh, unavailable/stale dashes, network-change cancellation and runtime selection outside presets. Older collectors retain sensor/history access but need updating for Pi resource readouts.
+- Send confirmed Pi Auto/Home/M1 requests through the fixed opt-in API control route. Queue acknowledgement is not connection confirmation. A one-time Pi setup enables only the three existing pi-wifi commands; no arbitrary command endpoint or resource history is added.
+- Replace SSH setup with Open terminal, launching the separately installed ConnectBot app for the selected Pi. Long-press to edit SSH username/port. Resolve the local host before handoff where needed; ConnectBot manages authentication and host verification. Ella no longer reads/sends its old SSH passwords/keys for monitoring or control.
+- Wi-Fi access requests needed identification permissions, opens Wi-Fi settings when ready, and offers Location guidance only when Location is disabled. Recheck network state after returning.
+- Source versionName 0.31 / versionCode 13; owner-built filename Ella-monitoring-v0.31.apk. Replace the bundled JSch client with OkHttp 5.5.1 for scoped DNS with normal HTTP/TLS handling; update licence notices. No APK assembled, signing/package/SDK change, sensor calculation, history schema/retention or logging-cadence change. Android Studio and real device/network verification remain required.
+
 ## 0.30 — 2026-10-31
 
 - Add themed Settings panels for Android Wi-Fi selection, per-network Pi endpoints, SSH setup and Pi Auto/Home/M1 controls. Long-press a network button to edit its SSID and Pi host; confirm device-network changes and use Android Wi-Fi settings when direct saved-network switching is unavailable. Highlight the device's actual network separately from the Pi upstream mode.

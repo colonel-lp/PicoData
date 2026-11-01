@@ -15,7 +15,7 @@ const { check } = require('../bin/api-check');
 const { range } = require('../lib/history-reader');
 const { decodeSbms } = require('../lib/sbms');
 const BASE = Date.parse('2026-01-15T12:00:00Z'), TOKEN = 'a'.repeat(64);
-async function setup(t, {tls}={}) {
+async function setup(t, {tls,piStatus,allowWifiControl=false}={}) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(),'pico-api-'));
   const config = validateConfig({database:path.join(directory,'history.sqlite'), metrics:[
     {id:'pico-battery',source:'pico',sensorId:101,sensorType:'battery',kind:'electrical',role:'battery',polarity:1,voltage:'sbms'},
@@ -29,7 +29,7 @@ async function setup(t, {tls}={}) {
   const sensors = {101:{type:'battery',name:'House  '},102:{type:'current',name:'Load'},103:{type:'volt',name:'Module [test]'},104:{type:'thermometer',name:'Outdoor'},105:{type:'barometer',name:'Pressure'}};
   logger.configurePico({sensorList:sensors,config:{}},BASE);
   const clock = {time:BASE+30000,mono:0};
-  const api = new ReadingApi({config:{host:'127.0.0.1',port:0,token:TOKEN,tls},logger,now:()=>clock.time,monotonic:()=>clock.mono});
+  const api = new ReadingApi({config:{host:'127.0.0.1',port:0,token:TOKEN,tls,pi:{allowWifiControl}},logger,now:()=>clock.time,monotonic:()=>clock.mono,piStatus});
   api.configurePico(sensors); await api.start();
   t.after(async()=> {await api.close();logger.close({advance:false});fs.rmSync(directory,{recursive:true,force:true});});
   const url = 'http://127.0.0.1:'+api.server.address().port;
@@ -62,7 +62,7 @@ test('private API configuration generates a random token, refuses overwrite and 
 
 test('HTTP requires header authentication on every route and rejects writes without changing SQLite', async t=> {
   const {get,logger,api}=await setup(t);const before=logger.store.db.prepare('SELECT COUNT(*) AS n FROM history').get().n;
-  for(const route of ['/api/v1/status','/api/v1/live','/api/v1/metrics','/api/v1/history/battery','/api/v1/history/metrics/load']) {
+  for(const route of ['/api/v1/status','/api/v1/pi','/api/v1/live','/api/v1/metrics','/api/v1/history/battery','/api/v1/history/metrics/load']) {
     assert.equal((await get(route,{headers:{}})).status,401);
     assert.equal((await get(route,{headers:{Authorization:'Bearer '+'b'.repeat(64)}})).status,401);
   }
@@ -213,4 +213,22 @@ test('live SBMS gaps use the receiver timeout, not the shorter integration cutof
   api.status('sbms','disconnected');assert.equal(api.source('sbms').reading,null);
   assert.equal(logger.config.maxGapSeconds.sbms,3);
   assert.throws(()=>api.setLiveTimeout('sbms',0));assert.throws(()=>api.setLiveTimeout('unknown',6000));
+});
+
+test('Pi resource endpoint is authenticated and independent of sensor history',async t=>{
+  const value={sampledAt:new Date(BASE).toISOString(),ageSeconds:0,ram:{totalBytes:2097152,availableBytes:1048576},cpu:{percent:null,load:[0,0,0]},network:{ssid:'Test network'},wifi:{mode:'auto',controlEnabled:false}};
+  const {get,logger}=await setup(t,{piStatus:{status:async()=>value,close(){}}});
+  const before=logger.store.db.prepare('SELECT COUNT(*) AS n FROM history').get().n;
+  const response=await get('/api/v1/pi');assert.equal(response.status,200);assert.deepEqual(response.body.pi,value);
+  assert.equal((await get('/api/v1/pi?extra=1')).status,400);
+  assert.equal((await get('/api/v1/pi/wifi',{method:'POST',headers:{'Content-Type':'application/json'},body:'{"mode":"auto"}'})).status,401);
+  assert.equal((await get('/api/v1/pi/wifi',{method:'POST',body:'{"mode":"auto"}'})).status,403);
+  assert.equal(logger.store.db.prepare('SELECT COUNT(*) AS n FROM history').get().n,before);
+});
+test('opt-in Pi control accepts only one bounded mode field and returns unconfirmed queue acknowledgement',async t=>{
+  const calls=[];const {get}=await setup(t,{allowWifiControl:true,piStatus:{close(){},requestMode:async mode=>{calls.push(mode);return{accepted:true,requestedMode:mode,confirmed:false};}}});
+  const post=body=>get('/api/v1/pi/wifi',{method:'POST',headers:{Authorization:'Bearer '+TOKEN,'Content-Type':'application/json'},body});
+  const ok=await post('{"mode":"m1"}');assert.equal(ok.status,202);assert.equal(ok.body.confirmed,false);assert.deepEqual(calls,['m1']);
+  for(const bad of ['{"mode":"reboot"}','{"mode":"auto","command":"other"}','{"mode":"auto","mode":"m1"}','not JSON','x'.repeat(65)])assert.equal((await post(bad)).status,400);
+  assert.deepEqual(calls,['m1']);assert.equal((await get('/api/v1/status',{method:'POST',body:'x'})).status,405);
 });

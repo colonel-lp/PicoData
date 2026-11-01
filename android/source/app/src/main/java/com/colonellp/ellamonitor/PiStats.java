@@ -1,21 +1,23 @@
 package com.colonellp.ellamonitor;
 
-import java.util.*;
+import org.json.JSONObject;
+import java.util.Locale;
 
-/** Readout parsing is independent of rendering and never substitutes zero for missing data. */
+/** Read-only live system sample from the authenticated collector API. */
 final class PiStats {
-    final Map<String,String> values=new HashMap<>();final long at;final String endpoint;
-    PiStats(String text,String endpoint,long at){
-        if(text.length()>16384)throw new IllegalArgumentException("Pi response exceeds limit.");
-        for(String line:text.split("\n")){int tab=line.indexOf('\t');if(tab>0){String key=line.substring(0,tab),value=line.substring(tab+1);values.put(key,key.equals("ssid")?value:value.trim());}}
-        if(!"ella-pi-control-1".equals(values.get("protocol")))throw new IllegalArgumentException("Unexpected Pi response.");this.endpoint=endpoint;this.at=at;
+    final JSONObject pi;final long at;final String endpoint;
+    PiStats(JSONObject response,String endpoint,long at){
+        if(response.optInt("apiVersion")!=1||!(response.opt("pi") instanceof JSONObject))throw new IllegalArgumentException("Unexpected Pi response.");
+        pi=response.optJSONObject("pi");this.endpoint=endpoint;
+        double age=number(pi,"ageSeconds");if(!Double.isFinite(age)||age<0||age>45)throw new IllegalArgumentException("Pi sample is stale.");
+        this.at=at-Math.round(age*1000);
     }
-    String get(String key){String v=values.get(key);return v==null||v.isEmpty()?"—":v;}
-    String memory(){try{String[] v=get("memory").split("\\s+");long total=Long.parseLong(v[0]),available=Long.parseLong(v[1]);if(total<=0||available<0||available>total)return "—";return String.format(Locale.UK,"%.0f / %.0f MiB used (%.0f MiB available)",(total-available)/1024d,total/1024d,available/1024d);}catch(Exception e){return "—";}}
-    String temperature(){try{double c=Double.parseDouble(get("temperature"))/1000;if(!Double.isFinite(c)||c< -50||c>150)return "—";return String.format(Locale.UK,"%.1f °C",c);}catch(Exception e){return "—";}}
-    String cpu(PiStats previous){
-        if(previous==null||!get("boot").equals(previous.get("boot"))||get("boot").equals("—"))return "—";
-        try{long[] a=counts(previous.get("cpu")),b=counts(get("cpu"));long total=0;for(int i=0;i<8;i++){if(b[i]<a[i])return "—";total+=b[i]-a[i];}long idle=b[3]-a[3]+b[4]-a[4];return total<=0?"—":String.format(Locale.UK,"%.0f%%",100d*(total-idle)/total);}catch(Exception e){return "—";}
-    }
-    private static long[] counts(String text){String[] a=text.split("\\s+");long[] v=new long[8];for(int i=0;i<8;i++)v[i]=Long.parseLong(a[i]);return v;}
+    private JSONObject object(String key){JSONObject o=pi.optJSONObject(key);return o==null?new JSONObject():o;}
+    private static double number(JSONObject o,String key){Object n=o.opt(key);return n instanceof Number?((Number)n).doubleValue():Double.NaN;}
+    String get(String key){JSONObject o=key.equals("mode")||key.equals("controlState")?object("wifi"):object("network");Object v=o.opt(key.equals("ip")?"address":key);return v instanceof String&&!((String)v).isEmpty()?(String)v:"—";}
+    boolean controlEnabled(){return object("wifi").optBoolean("controlEnabled",false);}
+    String memory(){JSONObject m=object("ram");double total=number(m,"totalBytes"),available=number(m,"availableBytes");return Double.isFinite(total)&&Double.isFinite(available)&&total>0&&available>=0&&available<=total?String.format(Locale.UK,"%.0f / %.0f MiB used (%.0f MiB available)",(total-available)/1048576d,total/1048576d,available/1048576d):"—";}
+    String temperature(){double c=number(pi,"temperatureC");return Double.isFinite(c)&&c>=-50&&c<=150?String.format(Locale.UK,"%.1f °C",c):"—";}
+    String cpu(){double n=number(object("cpu"),"percent");return Double.isFinite(n)&&n>=0&&n<=100?String.format(Locale.UK,"%.0f%%",n):"—";}
+    String load(){org.json.JSONArray a=object("cpu").optJSONArray("load");if(a==null||a.length()!=3)return "—";StringBuilder s=new StringBuilder();for(int i=0;i<3;i++){Object o=a.opt(i);if(!(o instanceof Number)||!Double.isFinite(((Number)o).doubleValue()))return "—";if(i>0)s.append(" / ");s.append(String.format(Locale.UK,"%.2f",((Number)o).doubleValue()));}return s.toString();}
 }

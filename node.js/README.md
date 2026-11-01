@@ -1,3 +1,7 @@
+## Current source: collector 0.7.5
+
+Normal Pi RAM/CPU/temperature/upstream readouts now use the existing authenticated API. Read [PI-STATUS.md](PI-STATUS.md) for updating with the existing ~/update-pico.sh, checking GET /api/v1/pi and optional one-time setup of the three fixed Pi Wi-Fi mode actions. The update does not reset private configuration/history, install sudo rules, change networks or add resource logging. Interactive SSH is handled by a separately installed terminal app. Earlier release/setup sections follow.
+
 # Ella Pico base — 0.7.4
 
 Standalone Node.js starting point for the Android Pico reader. It uses the updated acquisition code preserved in [`../_old/pico2signalk/`](../_old/pico2signalk/), with the owner's [`../python/pico-mqtt.py`](../python/pico-mqtt.py) sensor mappings, calculations and Ella JSON format carried over. MQTT publishing is enabled by default using `PicoData/mqtt` and the existing Ella JSON contract; `--no-mqtt` selects reader-only operation. SignalK remains excluded.

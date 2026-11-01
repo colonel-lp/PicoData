@@ -1,5 +1,11 @@
 # Pico base changelog
 
+## 0.7.5 — 2026-11-01
+
+- Add authenticated live Pi system/network readouts at GET /api/v1/pi, with one shared ten-second cache, coalesced refresh, bounded network-status commands, whole-system memory/CPU and missing/reset-aware values. Do not write resource snapshots to SQLite or change sensor collection, history, retention or MQTT.
+- Add one opt-in POST /api/v1/pi/wifi accepting only auto/home/m1. Require the existing Bearer token, bounded JSON/content length, exact fields, safe root-owned helper and noninteractive privilege for the fixed command. Queue acknowledgement precedes execution; keep one pending command, a cooldown and bounded execution/output. All history routes stay read-only.
+- Provide a separate local installer for the narrow sudo rule/API opt-in, preserving private credentials, file ownership and an original backup. No automatic network/service/setup changes are made by the ordinary source update. Document setup/removal, API versus ConnectBot terminal use and source/device verification limits in PI-STATUS.md.
+
 ## 0.7.4 — 2026-10-31
 
 - Recover the logging status from clock-step to started only after normal clock progression, completion of any backward-time hold, and a successful save. Preserve the persistent clockSteps counter and all existing interval-skipping/integration safeguards.

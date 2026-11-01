@@ -14,6 +14,10 @@ function readApiConfig(filename) {
     tls = { cert: fs.readFileSync(path.resolve(path.dirname(filename), input.tls.cert)),
       key: fs.readFileSync(path.resolve(path.dirname(filename), input.tls.key)), minVersion: 'TLSv1.2' };
   }
-  return { host, port, token: input.token, tls };
+  const pi=input.pi??{};
+  if(!pi || typeof pi!=='object' || Array.isArray(pi) || Object.keys(pi).some(k=>!['allowWifiControl','uplinkInterface'].includes(k)) ||
+      (pi.allowWifiControl!==undefined && typeof pi.allowWifiControl!=='boolean') ||
+      (pi.uplinkInterface!==undefined && (typeof pi.uplinkInterface!=='string' || !/^[a-zA-Z0-9_-]{1,15}$/.test(pi.uplinkInterface)))) throw Error('Invalid Pi API settings');
+  return { host, port, token: input.token, tls, pi:{allowWifiControl:pi.allowWifiControl??false,uplinkInterface:pi.uplinkInterface??null} };
 }
 module.exports = { readApiConfig };

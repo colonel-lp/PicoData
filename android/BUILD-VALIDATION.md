@@ -1,3 +1,15 @@
+# Source 0.31 / collector 0.7.5 validation — 2026-11-01
+
+- PASS: 47 Node tests on Node 24.22.1, selected Pi status/API/history/logger/clock suites. These include unchanged migration/retention/integration behavior, HTTPS/authentication, new cache/coalescing/resource parsing, strict fixed actions and HTTP opt-in/body limits. Pi runtime Node 22.23.3 remains a hardware verification target.
+- PASS: two Python offline installer tests using isolated temporary files and mocked sudoers verification; validate exact action policy, credential/ownership/private-mode preservation, original backup and refusal to replace an unrelated rule.
+- PASS: actual MdnsPacket, ApiClient, PiNetworkConfig and PiStats Java classes compile with Java 8 source/target on JDK 17 and upstream org.json. JVM checks cover compressed mDNS answers, hostname/TTL/truncation/pointer bounds, subnet scoping, null/stale resources, endpoint scheme/port preservation and rejected commands. These checks use synthetic data and no Android radio.
+- PASS: all app/test Java source files syntax-parse with Java 8. This is not Android SDK type checking or Android compilation. Manifest XML parsing, Android 0.31/build 13 and collector 0.7.5 version checks, Gradle output-name configuration, and byte-identical full app/repository changelogs also passed. Publication is verified against the guarded GitHub commit.
+- NOT RUN: Android SDK/AGP dependency resolution/compilation, APK assembly/signing, Android/Robolectric tests, TLS transport integration on Android, Android 8.1/modern multicast routing/permissions, ConnectBot handoff, actual Pi status/control install or mode changes. No Android SDK/Gradle executable is available in this workspace. Owner compiles Ella-monitoring-v0.31.apk and verifies on phone/Joying/Pi.
+
+Required device checks: API-only monitoring with no SSH setup; missing/old collector and failed API permission/auth; Settings footer and input text in normal/fullscreen/scaled windows; all three network buttons and their editing/highlights; native/legacy .local, IPv4/IPv6, denied multicast/permissions, stale addresses and Wi-Fi/VPN changes; ConnectBot absent/present, correct SSH target and its own key verification; live resource freshness/first CPU sample, resource cost, optional narrow mode-control setup, accepted versus confirmed modes and recovery through the independent hotspot. Preserve the existing signing identity and private API/history files.
+
+Previous source validation follows for history; it does not override these 0.31 limits.
+
 # Build validation
 
 ## Android 0.30 / collector 0.7.4 — Pi Settings controls and clock recovery — 2026-10-31

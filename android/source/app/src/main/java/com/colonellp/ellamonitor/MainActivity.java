@@ -124,7 +124,7 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); out.putBoolean("settingsPage", settingsScreen); out.putBoolean("history", historyScreen); out.putString("quantity", quantity); out.putInt("offset", offset); }
     @Override protected void onStart() { super.onStart(); active = true; screen.start(keepScreen); windowMode(); persistence(true); piControls.start(); restartConnection(); handler.post(expire); }
-    @Override protected void onResume() { super.onResume(); screen.apply(); windowMode(); if(updates!=null)updates.onResumed(); }
+    @Override protected void onResume() { super.onResume(); screen.apply(); windowMode(); if(updates!=null)updates.onResumed(); if(piControls!=null)piControls.resumed(); }
     @Override protected void onPause(){if(updates!=null)updates.onPaused();super.onPause();}
     @Override public void onWindowFocusChanged(boolean focus) { super.onWindowFocusChanged(focus); if (focus && screen != null) { screen.apply(); windowMode(); } }
     @Override protected void onStop() {
@@ -293,7 +293,8 @@ public final class MainActivity extends Activity {
     }
     private ApiClient client() throws Exception {
         final Network route=piControls.network();
-        return new ApiClient(piControls.apiBase(),settings.token(),url->route==null?open(url):(HttpURLConnection)route.openConnection(url));
+        if(route==null)throw new java.io.IOException("Join the Pi network first.");
+        return new ApiClient(piControls.apiBase(),settings.token(),new NetworkTransport(route,piControls.resolver));
     }
     private boolean allowed() { return Build.VERSION.SDK_INT < 37 || checkSelfPermission(LAN_PERMISSION) == PackageManager.PERMISSION_GRANTED; }
     private void restartConnection() {
@@ -301,7 +302,7 @@ public final class MainActivity extends Activity {
         handler.removeCallbacks(poll); if (liveClient != null) liveClient.cancel(); if (metadataClient!=null)metadataClient.cancel();metadataLoading=false; if (historyClient != null) historyClient.cancel();
         if (!active) return;
         if (!allowed()) { connectionState = "Local network permission is needed. Open Settings to connect."; updateLive(); return; }
-        if(piControls.awaitingIdentity()){connectionState="Checking Pi identity on this Wi-Fi network…";build();return;}
+
         connectionState = "Connecting to Pi…"; liveClient = null; build();
         final int generation = epoch;
         liveWorker.execute(() -> {
@@ -572,16 +573,16 @@ public final class MainActivity extends Activity {
         else if(view instanceof EqIconButton)((EqIconButton)view).changed(changed);
     }
     private void buildSettingsPage() {
-        content.removeAllViews();ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);LinearLayout columns=row();columns.setGravity(Gravity.TOP);columns.setPadding(8,0,8,6);scroll.addView(columns);content.addView(scroll,new LinearLayout.LayoutParams(-1,-1));
-        LinearLayout left=column(),right=column();LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(0,0,6,0);columns.addView(left,lp);columns.addView(right,new LinearLayout.LayoutParams(0,-1,1));
+        content.removeAllViews();ScrollView scroll=new ScrollView(this);scroll.setFillViewport(true);SettingsColumns columns=new SettingsColumns(this);columns.setGravity(Gravity.TOP);columns.setPadding(8,0,8,6);scroll.addView(columns);content.addView(scroll,new LinearLayout.LayoutParams(-1,-1));
+        LinearLayout left=column(),right=column();LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,-2,1);lp.setMargins(0,0,6,0);columns.addView(left,lp);columns.addView(right,new LinearLayout.LayoutParams(0,-2,1));columns.right=right;
         piControls.build(left);
         LinearLayout connection=settingsGroup(right,"CONNECTION");
         TextView help=uiText("Pi API address and private token from api.json. HTTP is for a trusted LAN; HTTPS verifies its certificate.",12,theme.text);help.setPadding(0,0,0,6);connection.addView(help);
-        EditText address=new EditText(this);address.setHint("http://PI_HOST:8080");address.setSingleLine();address.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);address.setText(settings.prefs.getString("address",""));styleEditor(address);trackChange(address,"connection.address");connection.addView(address,new LinearLayout.LayoutParams(-1,42));
-        EditText token=new EditText(this);token.setHint(settings.prefs.contains("token")?"Blank keeps saved token":"Private API token");token.setSingleLine();token.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);token.setSaveEnabled(false);styleEditor(token);trackChange(token,"connection.token");connection.addView(token,new LinearLayout.LayoutParams(-1,42));
+        EditText address=new EditText(this);address.setHint("http://PI_HOST:8080");address.setSingleLine();address.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_URI);address.setText(settings.prefs.getString("address",""));styleConnectionEditor(address);trackChange(address,"connection.address");connection.addView(address,new LinearLayout.LayoutParams(-1,42));
+        EditText token=new EditText(this);token.setHint(settings.prefs.contains("token")?"Blank keeps saved token":"Private API token");token.setSingleLine();token.setInputType(InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD);token.setSaveEnabled(false);styleConnectionEditor(token);trackChange(token,"connection.token");connection.addView(token,new LinearLayout.LayoutParams(-1,42));
         settingButton(connection,"Save & connect",()->{
             String enteredToken=token.getText().toString().trim(),enteredAddress=address.getText().toString();
-            liveWorker.execute(()->{try{settings.saveConnection(enteredAddress,enteredToken.isEmpty()?settings.token():enteredToken);handler.post(()->{if(isDestroyed())return;token.setText("");refreshChangedIndicators();if(active){if(!allowed())requestPermissions(new String[]{LAN_PERMISSION},37);else restartConnection();}});}catch(Exception e){handler.post(()->toast(e instanceof IllegalArgumentException?e.getMessage():"Could not save credentials. Re-enter the token."));}});
+            liveWorker.execute(()->{try{settings.saveConnection(enteredAddress,enteredToken.isEmpty()?settings.token():enteredToken);handler.post(()->{if(isDestroyed())return;token.setText("");refreshChangedIndicators();if(active){if(!allowed())requestPermissions(new String[]{LAN_PERMISSION},37);else piControls.connectionEdited();}});}catch(Exception e){handler.post(()->toast(e instanceof IllegalArgumentException?e.getMessage():"Could not save credentials. Re-enter the token."));}});
         });
         LinearLayout display=settingsGroup(right,"DISPLAY & APP");
         trackChange(setting(display,"Hide connection status",hideStatus,on->{hideStatus=on;settings.prefs.edit().putBoolean("hideStatus",on).apply();status.setVisibility(settingsScreen||on?View.GONE:View.VISIBLE);}),"hideStatus");
@@ -620,6 +621,7 @@ public final class MainActivity extends Activity {
         if(!persistent){stopService(service);return;}
         try { if(visible)startService(service);else startForegroundService(service); }catch(RuntimeException e){toast("Android could not keep the app notification active.");}
     }
+    private void styleConnectionEditor(EditText v){styleEditor(v);v.setMinHeight(0);v.setMinimumHeight(0);v.setIncludeFontPadding(false);v.setGravity(Gravity.START|Gravity.CENTER_VERTICAL);v.setPadding(6,0,6,0);}
     void styleEditor(EditText v){v.setTextColor(theme.text);v.setHintTextColor(theme.buttonTextOn);v.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,14);v.setBackgroundTintList(android.content.res.ColorStateList.valueOf(theme.controls));v.setTypeface(Typeface.create(theme.fontFamily,Typeface.NORMAL));}
     private AlertDialog themed(AlertDialog dialog) {
         dialog.setOnShowListener(v->styleDialog(dialog));dialog.show();styleDialog(dialog);return dialog;

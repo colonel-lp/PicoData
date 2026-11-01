@@ -9,9 +9,10 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
-/** Bounded GET-only client. No token in a URL, redirect, log or exception. */
+/** Bounded client; the only write is the allowlisted Pi Wi-Fi mode action. */
 final class ApiClient {
-    interface Connections { HttpURLConnection open(URL url) throws IOException; }
+    interface Connections { HttpURLConnection open(URL url) throws IOException; default void close(){} }
+    static final class Failure extends IOException {final int status;Failure(int s,String m){super(m);status=s;}}
     private final String base, token;
     private final Connections connections;
     private volatile HttpURLConnection active;
@@ -31,17 +32,25 @@ final class ApiClient {
         } catch (Exception e) { throw new IllegalArgumentException("Use http://PI_HOST:8080 or an HTTPS origin, without a path or credentials."); }
     }
     JSONObject get(String path) throws Exception {
+        return request(path,null);
+    }
+    JSONObject mode(String mode)throws Exception{
+        if(!mode.equals("auto")&&!mode.equals("home")&&!mode.equals("m1"))throw new IllegalArgumentException("Invalid Pi mode.");
+        return request("/api/v1/pi/wifi",new JSONObject().put("mode",mode).toString());
+    }
+    private JSONObject request(String path,String payload)throws Exception{
         if (cancelled) throw new IOException("Request cancelled.");
         if (!path.startsWith("/api/v1/") || path.contains("#") || path.contains("\r") || path.contains("\n")) throw new IOException("Invalid API route.");
         HttpURLConnection c = connections.open(new URL(base + path)); active = c;
         try {
             if (cancelled) throw new IOException("Request cancelled.");
             c.setInstanceFollowRedirects(false); c.setConnectTimeout(4000); c.setReadTimeout(4000);
-            c.setRequestMethod("GET"); c.setUseCaches(false);
+            c.setRequestMethod(payload==null?"GET":"POST"); c.setUseCaches(false);
             c.setRequestProperty("Authorization", "Bearer " + token);
             c.setRequestProperty("Accept", "application/json");
+            if(payload!=null){byte[] data=payload.getBytes(StandardCharsets.UTF_8);c.setDoOutput(true);c.setRequestProperty("Content-Type","application/json");c.setRequestProperty("Content-Length",Integer.toString(data.length));try(java.io.OutputStream out=c.getOutputStream()){out.write(data);}}
             int status = c.getResponseCode();
-            if (status != 200) throw new IOException(status == 401 ? "API token rejected." : status == 429 ? "API busy; retrying." : "API request failed (" + status + ").");
+            if (status != 200 && !(payload!=null&&status==202)) throw new Failure(status,status == 401 ? "API token rejected." : status == 403 ? "Pi Wi-Fi control needs the one-time API control setup." : status == 404 ? "Update the Pi collector to enable Pi status/API controls." : status == 429 ? "API busy; retry later." : "API request failed (" + status + ").");
             if (c.getContentLengthLong() > 4 * 1024 * 1024) throw new IOException("API response too large.");
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             long deadline = System.nanoTime() + 8_000_000_000L;
@@ -59,5 +68,5 @@ final class ApiClient {
             return body;
         } finally { active = null; c.disconnect(); }
     }
-    void cancel() { cancelled = true; HttpURLConnection c = active; if (c != null) c.disconnect(); }
+    void cancel() { cancelled = true; HttpURLConnection c = active; if (c != null) c.disconnect(); connections.close(); }
 }

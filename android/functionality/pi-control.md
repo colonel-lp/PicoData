@@ -1,35 +1,39 @@
 # Pi controls
 
-Implemented in Android **0.30 / build 12**. This page controls the existing Pi, not logging destinations or backup policy.
+Updated in Android **0.31 / build 13**, with collector **0.7.5**.
 
-## Layout and appearance
+Settings keeps NETWORK & PI at the top left, PI CONNECTION and PI DATA below, and the API CONNECTION editor plus DISPLAY & APP on the right. The update/back/version area remains bottom right. The columns measure their complete contents, fill a taller viewport, and scroll when the footer cannot fit. Existing themes, button sizes, 6px column/panel gaps and bottom clearance remain. The API address and masked token editors have explicit vertical alignment/minimum-height handling within their existing rows; blank token input keeps the saved token. Settings screenshot protection remains.
 
-Settings has a top-left NETWORK & PI control panel, PI CONNECTION and PI DATA panels below it, and the API CONNECTION editor plus DISPLAY & APP on the right. The existing lower-right update/back/version panel remains. Columns/panels have 6 logical pixel gaps, with a 6px content inset above the unchanged bottom bar. No Pi bottom-bar button is added. All application panels/buttons/labels/editors/confirmations use the current theme and font. Android-owned Wi-Fi settings/panels follow the Android system appearance.
+## Three network buttons
 
-## Device networks and endpoints
+Hotspot, Home and Mobile are editable roles. Long-press to edit the exact Wi-Fi SSID and Pi IP/hostname. Hosts contain no scheme, path, port or username; API scheme/port/token and normal TLS checks come from the Connection editor. Duplicate configured SSIDs are rejected. The highlight follows the Android device's actual SSID, separately from the Pi's upstream network. Unknown/redacted SSIDs have no guessed highlight.
 
-Hotspot, Home and Mobile are roles, not hardcoded installation SSIDs. Long-press a button to enter the exact saved SSID and Pi IP/hostname. Hosts accept no scheme, path, port, credentials, query or fragment; the configured API scheme/port/token/TLS checks are retained. Three entries are bounded/type-checked, duplicate nonempty SSIDs are rejected, and Cancel changes nothing.
+Pressing another network asks for confirmation. Android 8.1 tries an already saved network; newer Android opens its Wi-Fi panel/settings. A request is not reported as a successful connection. Wi-Fi access requests identification permissions and opens Wi-Fi settings when ready. When Location is off, themed guidance offers Location or Wi-Fi settings directly; returning rereads the actual network. No Wi-Fi passwords are stored by the app.
 
-The highlight follows the current device Wi-Fi SSID, not the requested network or Pi upstream. Android may redact SSID without location/Wi-Fi permissions and enabled location services; Wi-Fi access provides the user-controlled permission/settings route. Unknown SSID has no guessed highlight. Pressing a different button asks for confirmation; Android 8.1 tries an already saved network and newer platforms open system Wi-Fi settings/panel. A request is not reported as a successful connection. The app neither stores Wi-Fi passwords nor changes the Android target SDK to bypass restrictions.
+Network changes cancel old HTTP work and invalidate replies, sockets and address caches. The selected runtime endpoint retains the saved API scheme/port and does not overwrite presets or create a changed-preset indication. Network SSID/host definitions remain preset-owned. A reachable common LAN/hotspot is still required; hostnames do not bridge isolated networks.
 
-An Android network change cancels old HTTP/SSH requests and invalidates their callbacks. The selected network's configured Pi endpoint is probed through that Android Wi-Fi Network using pinned SSH identity before using the existing API token at the new origin. The selected runtime API origin does not overwrite the saved origin or produce a modified-preset indication. Network SSIDs/hosts themselves are preset-owned under connection.networks; older presets have empty network definitions. SSH setup, pin and runtime Pi mode stay outside presets/themes.
+## Local hostnames
 
-## SSH and Pi controls
+Enter a hostname such as `pi-name.local` in each appropriate network button's host field, or use `http://pi-name.local:8080` as the API address. Do not put `username@` in an API hostname. SSH username is separate.
 
-Use the existing SSH service and `/usr/local/sbin/pi-wifi` helper. The application does not install/change the helper, Pi sudo rules, collector configuration or network profiles. Status reads use fixed unprivileged Linux/NetworkManager commands. Auto/Home/M1 are the only remote mutations and require separate confirmation. They use `sudo -S` with the password on stdin, never in a shell command or command-line argument. A failed/disconnected mutation is unconfirmed until a new status read succeeds; it is not automatically repeated.
+Modern Android first uses network-specific system DNS. Legacy Android uses a bounded, foreground one-shot mDNS A/AAAA query for configured `.local` names, with a short per-network cache, multicast lock and on-link answer checks. Network/background changes close sockets and clear the cache. Only the configured hostname is queried; no service advertisement is required. OkHttp 5.5.1 supplies custom DNS while preserving the URL hostname and standard TLS certificate/hostname verification. Local discovery is not server authentication; the existing private token and HTTPS policy remain.
 
-JSch 2.28.8 is pinned as the maintained SSH dependency, with its licence in the app assets. Android 8.1 platform crypto is used with ECDSA/RSA SHA-2 SSH host keys, avoiding legacy SHA-1 host keys. Pasted private keys need a format/algorithm supported by that platform/library combination; unsupported keys require conversion or password authentication. Do not silently downgrade cryptography. Credentials, private keys and passphrases are AES-GCM encrypted with the existing Android Keystore key, excluded from view-state saving/presets/exports; the SSH editor is screenshot-protected. Save is atomic and Clear saved credentials is staged until Save.
+## Pi readouts and controls
 
-First use requires comparing and explicitly trusting the displayed SHA256 host-key fingerprint (or entering the verified fingerprint in SSH setup). For the selected ECDSA algorithm, compare with `ssh-keygen -lf /etc/ssh/ssh_host_ecdsa_key.pub -E sha256` on the Pi. An existing mismatched pin is rejected without an automatic replacement button. The same verified identity is used across all three network endpoints. No API token is sent to a newly selected endpoint until the SSH identity check succeeds. Explicit existing API-editor connections retain their prior behavior.
+Normal monitoring needs the collector API, with **no SSH setup or tunnel**. GET `/api/v1/pi` supplies whole-system RAM, first/reset-aware CPU utilization, load, available temperature, Pi upstream SSID/profile/address and Wi-Fi mode. Missing values show dashes. The collector coalesces reads into one ten-second cache with bounded fixed status commands. It never logs these resources to history.
 
-## Status and lifecycle
+The app refreshes Pi status every 15 seconds on Settings and 30 seconds elsewhere while foregrounded. Readouts expire after 45 seconds or a failed request. The main-page status bar includes the confirmed Pi SSID, following the existing theme/font/hide setting. Sensor/source/history polling remains independent of resource reads. Background/network changes cancel pending work and reject old callbacks.
 
-The Pi's actual upstream SSID comes from `iw dev wlan1 link`, separately from its NetworkManager profile, IPv4 address and `/etc/pi-wifi-mode`. Missing fields show dashes. RAM uses MemTotal/MemAvailable; CPU is the change in non-idle counters between same-boot samples, not the process lifetime average. The first/reset CPU sample is unavailable. Temperature uses the available CPU thermal reading. Collector/source/logging readouts continue to come from the authenticated read-only API.
+Pi Auto / Home / M1 remain separate from Android network selection. They require confirmation and the optional fixed API action setup described in [PI-STATUS.md](../../node.js/PI-STATUS.md). The ordinary collector update enables readouts but does not install privileges or change modes. The separate local installer grants only those three existing `pi-wifi` helper commands and enables private API opt-in. An accepted request is queued, not proof of a completed connection; later status confirms the resulting mode/network. There is no generic remote command endpoint.
 
-SSH refresh is foreground-only: 15 seconds on Settings, 30 seconds elsewhere. The existing main status bar includes the confirmed Pi SSID, following its normal theme/font/visibility setting. Readouts expire after 45 seconds or a failed request. Work has bounded connection/read/command deadlines and a 16KiB output limit. Network changes/background/destroy disconnect transports, reject old callbacks and cancel refresh work. Application-owned credential/address editors dismiss when backgrounded. No new background notification/service polling is added.
+Update the Pi with the existing `~/update-pico.sh`, preserving parent private configuration/history. See the Pi guide for optional control install/removal and API checks.
 
-Reachability still depends on the network topology. If the Pi leaves the upstream used by the Android device, join the monitoring hotspot to regain a common path. Address editing/hostnames do not bridge isolated networks.
+## Open terminal
 
-## Validation limits
+Open terminal launches the separately installed [ConnectBot](https://connectbot.org/download/) app. First use asks for SSH username/port; long-press edits these later. The current configured Pi host is resolved on the current network and passed in an explicit ConnectBot SSH intent. ConnectBot handles passwords, keys and host-key verification. No password, key or API token is sent through this intent. Missing ConnectBot produces a themed download prompt.
 
-See BUILD-VALIDATION.md for this update's actual checks. Java parsing/JVM core tests do not establish Android SDK type/resource compilation, JSch packaging, runtime permissions, FYT saved-network switching, router behavior or SSH/sudo success on hardware. Those remain owner Android Studio/device checks.
+The former embedded JSch client/runtime dependency is removed. Previously saved private SSH credentials are retained privately but unused, not exported or imported into ConnectBot. SSH username/port and runtime Pi mode stay outside presets/themes.
+
+## Verification
+
+See [BUILD-VALIDATION.md](../BUILD-VALIDATION.md) for actual Node/Python/JVM/parser checks. Android SDK compilation, dependency packaging, Settings measurements, legacy multicast/routing/permissions, ConnectBot handoff and real Pi controls still require Android Studio and phone/Joying/Pi verification. Source tests do not establish radio stability or measured hardware overhead.

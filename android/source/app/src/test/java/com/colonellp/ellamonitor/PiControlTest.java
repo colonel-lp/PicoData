@@ -22,21 +22,22 @@ public class PiControlTest {
             try{PiNetworkConfig.host(bad);fail(bad);}catch(IllegalArgumentException expected){}
         }
     }
-    @Test public void sshOnlyAllowsTheFixedOperationsBeforeOpeningAnySocket()throws Exception{
-        PiSshClient client=new PiSshClient((host,port)->{throw new AssertionError("Must not connect");});
-        try{client.run("pi.example.invalid",new PiSshClient.Credentials("test-user",22,"","","",""),"reboot");fail();}catch(IllegalArgumentException expected){}
-        assertTrue(PiSshClient.fingerprint(new byte[]{1,2,3}).matches("SHA256:[A-Za-z0-9+/]{43}"));
+    @Test public void apiControlRejectsOtherOperationsBeforeOpeningAnyConnection()throws Exception{
+        ApiClient client=new ApiClient("http://pi.example.invalid:8080",new String(new char[64]).replace('\0','a'),url->{throw new AssertionError("Must not connect");});
+        try{client.mode("reboot");fail();}catch(IllegalArgumentException expected){}
     }
     @Test public void networkEditsBelongToPresetsButSshAndRuntimeSelectionDoNot()throws Exception{
         PrivateSettings s=new PrivateSettings(RuntimeEnvironment.getApplication());JSONObject before=s.connectionSnapshot();JSONArray networks=PiNetworkConfig.empty();networks.getJSONObject(1).put("ssid","Test home").put("host","pi.example.invalid");s.savePiNetworks(networks);
         assertTrue(s.connectionDifferences(before).contains("connection.network.1"));JSONObject saved=s.connectionSnapshot();s.prefs.edit().putString("pi.ssh.user","test-user").putString("pi.ssh.fingerprint","test-pin").apply();assertTrue(s.connectionDifferences(saved).isEmpty());
         networks.getJSONObject(2).put("ssid","Test home");try{s.savePiNetworks(networks);fail();}catch(IllegalArgumentException expected){}
     }
-    @Test public void missingAndResetCpuCountersNeverBecomeFreshZero() {
-        PiStats first=new PiStats("protocol\tella-pi-control-1\nboot\ttest-boot\ncpu\t10 0 10 80 0 0 0 0\nmemory\t2048 1024\n", "pi.example.invalid",0);
-        PiStats next=new PiStats("protocol\tella-pi-control-1\nboot\ttest-boot\ncpu\t20 0 20 160 0 0 0 0\n", "pi.example.invalid",1);
-        assertEquals("20%",next.cpu(first));assertEquals("—",next.cpu(null));assertEquals("—",next.temperature());assertEquals("—",next.memory());assertEquals("—",first.cpu(next));
-        try{new PiStats("arbitrary response","pi.example.invalid",0);fail();}catch(IllegalArgumentException expected){}
+    @Test public void missingAndStaleApiResourcesNeverBecomeFreshZero()throws Exception {
+        JSONObject pi=new JSONObject().put("ageSeconds",0).put("cpu",new JSONObject().put("percent",20));
+        PiStats next=new PiStats(new JSONObject().put("apiVersion",1).put("pi",pi),"pi.example.invalid",1);
+        assertEquals("20%",next.cpu());assertEquals("—",next.temperature());assertEquals("—",next.memory());
+        pi.getJSONObject("cpu").put("percent",JSONObject.NULL);assertEquals("—",next.cpu());
+        try{new PiStats(new JSONObject(),"pi.example.invalid",0);fail();}catch(IllegalArgumentException expected){}
+        pi.put("ageSeconds",60);try{new PiStats(new JSONObject().put("apiVersion",1).put("pi",pi),"pi.example.invalid",0);fail();}catch(IllegalArgumentException expected){}
     }
     @Test public void settingsPanelsUseRequestedColumnsAndBottomGap()throws Exception{
         try(org.robolectric.android.controller.ActivityController<MainActivity> c=Robolectric.buildActivity(MainActivity.class).create()){

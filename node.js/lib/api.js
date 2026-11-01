@@ -4,9 +4,10 @@ const https = require('node:https');
 const { createHash, timingSafeEqual } = require('node:crypto');
 const { performance } = require('node:perf_hooks');
 const { HistoryReader, ApiError } = require('./history-reader');
+const { PiStatus } = require('./pi-status');
 const finite = value => typeof value === 'number' && Number.isFinite(value) ? value : null;
 class ReadingApi {
-  constructor({ config, logger, now = Date.now, monotonic = ()=>performance.now() }) {
+  constructor({ config, logger, now = Date.now, monotonic = ()=>performance.now(), piStatus }) {
     this.config = config; this.logger = logger; this.now = now; this.monotonic = monotonic;
     this.reader = new HistoryReader(logger.config.database);
     this.tokenHash = createHash('sha256').update(config.token).digest();
@@ -14,6 +15,7 @@ class ReadingApi {
     this.sources = Object.fromEntries(['pico','sbms'].map(source=>[source,{state:'waiting-data',latest:null,receivedAt:null}]));
     this.liveTimeoutMs = {pico:15000,sbms:30000};
     this.loggingState = 'started'; this.budget = 60; this.budgetAt = monotonic();
+    this.pi=piStatus??new PiStatus({...config.pi,now,monotonic});
   }
   configurePico(sensorList) { this.sensorList = sensorList; this.sources.pico.latest = null; }
   status(source, state) {
@@ -76,12 +78,28 @@ class ReadingApi {
     res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});
     res.end(body);
   }
-  handle(req,res) {
+  async handle(req,res) {
     try {
       const at = this.monotonic(); this.budget = Math.min(60,this.budget+Math.max(0,at-this.budgetAt)/100); this.budgetAt = at;
       if (this.budget<1) { res.setHeader('Retry-After','1'); throw new ApiError(429,'rate_limited'); }
       this.budget--;
       if (!this.authorize(req)) { res.setHeader('WWW-Authenticate','Bearer'); throw new ApiError(401,'unauthorized'); }
+      if(req.method==='POST' && req.url==='/api/v1/pi/wifi') {
+        if(!this.config.pi?.allowWifiControl)throw new ApiError(403,'pi_control_disabled');
+        if(req.headers['transfer-encoding'] || !/^application\/json(?:\s*;.*)?$/i.test(req.headers['content-type']||'') ||
+            !/^\d+$/.test(req.headers['content-length']||'') || Number(req.headers['content-length'])>64)throw new ApiError(400,'invalid_body');
+        const text=await new Promise((resolve,reject)=> {
+          let value='';const timer=setTimeout(()=>{cleanup();req.resume();reject(new ApiError(408,'body_timeout'));},2000);
+          const cleanup=()=>{clearTimeout(timer);req.removeListener('data',data);req.removeListener('end',end);req.removeListener('error',error);req.removeListener('aborted',error);};
+          const data=b=>{value+=b.toString('utf8');if(Buffer.byteLength(value)>64){cleanup();req.resume();reject(new ApiError(400,'invalid_body'));}};
+          const end=()=>{cleanup();resolve(value);};const error=()=>{cleanup();reject(new ApiError(400,'invalid_body'));};
+          req.on('data',data);req.once('end',end);req.once('error',error);req.once('aborted',error);
+        });
+        const match=text.match(/^\s*\{\s*"mode"\s*:\s*"(auto|home|m1)"\s*\}\s*$/);
+        if(!match)throw new ApiError(400,'invalid_wifi_mode');
+        try{return this.send(res,202,await this.pi.requestMode(match[1]));}
+        catch(e){throw new ApiError(e.status??503,e.code??'pi_control_unavailable');}
+      }
       if (req.method!=='GET') { res.setHeader('Allow','GET'); throw new ApiError(405,'read_only'); }
       if (req.headers['transfer-encoding'] || Number(req.headers['content-length'])>0) { res.setHeader('Connection','close'); req.resume(); throw new ApiError(400,'unexpected_body'); }
       if (!req.url.startsWith('/') || req.url.length>2048) throw new ApiError(400,'invalid_url');
@@ -90,7 +108,8 @@ class ReadingApi {
       else if (/^\/api\/v1\/history\/metrics\/[a-zA-Z0-9_-]{1,80}$/.test(url.pathname)) result = this.reader.history(url.pathname.split('/').at(-1),url.searchParams,now);
       else {
         if (url.search) throw new ApiError(400,'invalid_query');
-        if (url.pathname==='/api/v1/live') result = this.live();
+        if(url.pathname==='/api/v1/pi')result={pi:await this.pi.status()};
+        else if (url.pathname==='/api/v1/live') result = this.live();
         else if (url.pathname==='/api/v1/metrics') result = this.reader.view(()=>({ ...this.reader.catalogue(),picoSensors:Object.entries(this.sensorList || {}).map(([sensorId,s])=>({sensorId:Number(sensorId),name:s.name,type:s.type})) }));
         else if (url.pathname==='/api/v1/status') result = this.reader.view(()=> {
           const meta = this.reader.metadata();
@@ -117,6 +136,7 @@ class ReadingApi {
     this.server.on('error',()=>console.error('API listener failed. Check the private configuration and restart the collector.'));
   }
   async close() {
+    this.pi.close();
     if (this.server?.listening) await new Promise(resolve=> {this.server.close(resolve);this.server.closeAllConnections();});
     this.reader.close();
   }

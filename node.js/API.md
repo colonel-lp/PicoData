@@ -1,6 +1,6 @@
 # Local readings and history API — collector 0.7.2
 
-The existing collector can serve authenticated, read-only JSON through Node's built-in HTTP/HTTPS server. No additional npm dependency, database server or service is added. Only the Pi opens SQLite; Android/browser clients request JSON. Existing collection, logging, MQTT JSON and retention are unchanged. The database remains schema 2; this update does not require a history migration or new logging selection.
+The existing collector can serve authenticated measurement/history JSON and live Pi status through Node's built-in HTTP/HTTPS server. No additional npm dependency, database server or service is added. Only the Pi opens SQLite; Android/browser clients request JSON. Existing collection, logging, MQTT JSON and retention are unchanged. The database remains schema 2; this update does not require a history migration or new logging selection.
 
 ## Enable and check
 
@@ -46,7 +46,7 @@ Set `PICO_API_TOKEN` privately on that machine first; do not paste tokens into i
 
 ## Routes
 
-All routes accept GET only. JSON includes `apiVersion: 1`. Timestamps/boundaries are UTC ISO 8601; database responses also include `schemaVersion: 2`. Responses are not cached. No wildcard browser CORS access is enabled; native Android and command-line clients can request directly. A future web UI should use the same origin or an explicitly agreed proxy/origin policy.
+Measurement/history/status routes accept GET only. Collector 0.7.5 adds GET /api/v1/pi and one separately enabled fixed POST /api/v1/pi/wifi action; see [Pi status/control setup](PI-STATUS.md). There is no general write or command endpoint. JSON includes `apiVersion: 1`. Timestamps/boundaries are UTC ISO 8601; database responses also include `schemaVersion: 2`. Responses are not cached. No wildcard browser CORS access is enabled; native Android and command-line clients can request directly. A future web UI should use the same origin or an explicitly agreed proxy/origin policy.
 
 | Route | Response |
 | --- | --- |
@@ -96,7 +96,7 @@ Requests are bounded to 16 concurrent connections, 8KiB headers, 2048-character 
 | 400 | Invalid time/range/query/body. |
 | 401 | Missing/incorrect header token. |
 | 404 | Unknown route/metric. |
-| 405 | Write/non-GET method rejected. |
+| 405 | Unsupported write/non-GET method rejected; only the explicit opt-in Pi Wi-Fi action accepts POST. |
 | 413 | Response exceeds the size cap; reduce `limit`. |
 | 429 | Request rate exceeded; respect `Retry-After`. |
 | 503 | History cannot currently be read. Internal database/path/credential details are omitted. |
@@ -126,3 +126,7 @@ The electrical/selected-voltage catalogue reports minute: 24 hours, hour: 15 day
 ## Logging status recovery — collector 0.7.4
 
 The existing status logging.state returns from clock-step to started only after the logger observes normal progression beyond any backward-time hold and successfully saves. clockSteps remains a cumulative persistent counter. savedAt advancing alone is not evidence that an integration hold has ended. Failed logging remains failed; recovery does not clear unrelated later diagnostics. Authentication, routes, schema and history fields remain unchanged.
+
+## Pi resources and optional mode control — collector 0.7.5
+
+GET /api/v1/pi serves cached live whole-system/network values without SSH or resource history. POST /api/v1/pi/wifi is disabled by default; enable it only through the documented local setup for auto/home/m1. It uses the existing Bearer credential, strict bounded JSON and fixed helper commands. HTTP 202 acknowledges queueing with confirmed false; later status reports actual observations. Other API paths retain their method/schema behavior. [PI-STATUS.md](PI-STATUS.md) contains the full contract, optional private pi settings, setup/removal and limitations. No API config/history reset is needed for normal status reads.

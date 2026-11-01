@@ -1,6 +1,6 @@
 # Live connection and rendering
 
-Updated in **0.25 / build 7**.
+Updated in **0.31 / build 13**; earlier live-rendering behavior below is retained.
 
 The app polls /api/v1/live in the foreground, scheduling the next request one second after completion. Source freshness is determined independently by the collector's fresh/state fields. The app validates source age but no longer adds HTTP elapsed time to it or imposes its own Pico/SBMS 2/3-second source limits. This removes a duplicate cutoff that could blank SBMS despite a fresh API response. It does not establish an MQTT fault or change collector stale/repeat handling.
 
@@ -17,8 +17,10 @@ In 0.25 Pico temperature/pressure instruments keep their raw configuration finge
 Collector 0.7.2 uses each receiver's live stale deadline (default Pico 15 seconds, SBMS 30 seconds; SBMS follows sbms_stale_seconds) independently of maxGapSeconds integration limits. Rejected SBMS JSON cannot renew the last accepted reading, but one rejection does not clear a still-unexpired display. It immediately interrupts logging coverage. Actual source disconnects/stale states and the app's three-second cached HTTP bound still clear values. This corrects demonstrated software blanking paths; it does not prove or fix the separately reported device/Wi-Fi connection loss.
 
 
-## Pi/network selection — 0.30 / build 12
+## Pi/network selection — 0.31 / build 13
 
-The separate foreground SSH worker probes the selected network's Pi endpoint using a pinned SSH host identity before selecting that endpoint for the existing authenticated API client. It never reinterprets the Android SSID as the Pi upstream. Android network changes cancel old HTTP/SSH work and invalidate old replies; a successful identity/status probe selects a runtime origin preserving the saved API scheme/port. The original connection settings/token remain saved and preset comparisons do not change merely because runtime routing changes.
+The configured network role selects a runtime API endpoint directly, preserving the saved scheme/port/token and normal TLS verification. No SSH probe or credential is needed for viewing. The three buttons and exact SSID/host editing remain. Android network changes cancel old API work and invalidate callbacks and DNS/mDNS caches. Saved origin and preset comparisons do not change merely because the runtime route changes.
 
-The live top status bar adds the Pi SSID from the confirmed `iw` status; it becomes unavailable after a failed probe or 45 seconds without refresh. This follows the existing Hide connection status setting and theme. SSH polls every 30 seconds while the app is foregrounded outside Settings, 15 seconds on Settings, and stops in the background. Source freshness and readings still come independently from the collector API. See [Pi control](pi-control.md).
+NetworkTransport uses network-scoped OkHttp with the app's bounded local-hostname resolver. Android 8.1 `.local` lookup queries only the configured name over mDNS; newer Android first uses its native resolver. The URL hostname remains the TLS identity. Multicast availability and reachability still depend on the actual network.
+
+Pi status has its own foreground worker: GET /api/v1/pi every 15 seconds on Settings or 30 seconds elsewhere. Missing/stale resources become dashes after failure or 45 seconds. The live top bar shows the API-reported Pi upstream SSID, separately from the Android SSID, and follows Hide connection status/current theme. Resources never become sensor history or gate live source freshness. Open terminal separately launches ConnectBot. See [Pi control](pi-control.md).
