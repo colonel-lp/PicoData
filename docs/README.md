@@ -2,7 +2,7 @@
 
 Static homepage and privacy policy for the owner's personal-use Google Drive OAuth client named **Ella Backups**. These files document its purpose and data use; they do not implement a backup job, receive Google tokens, or contain monitoring history.
 
-For Pi installation and Google authentication, follow [Rclone setup](RCLONE-SETUP.md).
+For day-to-day setup checks and Wi-Fi/logging recovery, use the [Pi quick reference](PI-QUICK-REFERENCE.md). For Google authentication, follow [Rclone setup](RCLONE-SETUP.md).
 
 ## Publish with GitHub Pages
 
