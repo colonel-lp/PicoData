@@ -1,3 +1,10 @@
+## Next investigation — Joying readings flicker on hotspot only — 2026-11-01
+
+- [ ] Owner reports repeated live readings disappearing/reappearing when the head unit joins the Pi monitoring hotspot, while viewing through the Pi's upstream network is stable. Installed app/collector versions and endpoint format during this comparison are not yet established.
+- [ ] Separate radio association loss, hotspot/AP reachability or HTTP latency, Android network/endpoint changes and collector source freshness. Check local API source timestamps during an event and compare hostapd/client evidence; do not infer a collector, MQTT or firmware fault solely from app blanking.
+- [ ] Review the existing three-second HTTP snapshot expiry measured from request start alongside request/retry/DNS timing. Delayed responses can blank otherwise fresh collector data. Preserve honest stale/unavailable reporting; do not simply extend retention of displayed values or add AP restarts without evidence.
+- [ ] Compare the same API path using the hotspot's numeric Pi address versus a configured local hostname if necessary, preserving authentication/TLS identity and approved network configuration. Keep private network/device details and captures outside the public repository. Record confirmed permanent setup fixes in docs/PI-QUICK-REFERENCE.md; diagnostic proposals alone do not change the live setup.
+
 ## Implemented source 0.31 / collector 0.7.5 — 2026-11-01
 
 Owner authorized the next source build and confirmed external ConnectBot terminal launch. Source is prepared for owner-built Ella-monitoring-v0.31.apk; no APK or live Pi changes are performed here. The three network buttons are retained; the single-entry replacement proposal is superseded.
