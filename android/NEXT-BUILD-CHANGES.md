@@ -1,3 +1,12 @@
+## Next build — phone Settings clipping and connection readouts — 2026-11-01
+
+Owner confirms the configured local Pi hostname works on the phone but not the Android 8.1 head unit. Retain the hostname/mDNS compatibility request below; native phone success does not prove head-unit resolution support.
+
+- [ ] Correct the phone Settings layout: the Changelog / Update / Back buttons and content below them are reported off-screen. Keep the complete footer/version and bottom navigation accessible within the actual available landscape window, including Android system insets and fullscreen changes. Preserve the approved panel order, themes, button/text sizes and 6px panel/bottom-bar gaps; do not change unrelated padding.
+- [ ] Correct both connection lines/readouts reported as displaying incorrectly. Obtain a screenshot to identify which two lines the owner means and the exact clipping/wrapping/overlap; do not guess or remove status information to fit.
+- [ ] Source finding for review: the Settings right column uses match-parent height inside a ScrollView, with a weighted spacer above its footer and multiple fixed-height rows. Reconcile viewport and child minimum/content measurements so the full content is scrollable when it cannot fit. This is a plausible layout constraint, not a device-verified root cause.
+- [ ] Validate on the phone and head unit, normal/fullscreen, with long connection names/endpoints and permitted/denied Wi-Fi information. Keep API/SSH state, hostname resolution and network reachability separate from visual readout faults.
+
 ## Next build — stable Pi hostname and Android mDNS resolution — 2026-11-01
 
 The owner wants phone/head-unit monitoring through the current local Wi-Fi without repeatedly editing numeric Pi endpoints. Record the request; no Android source/version changes are authorized by this investigation.
