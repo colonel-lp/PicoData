@@ -9,10 +9,12 @@ Owner confirms the configured local Pi hostname works on the phone but not the A
 
 ## Next build — stable Pi hostname and Android mDNS resolution — 2026-11-01
 
-### Owner-proposed connection simplification
+### Owner-confirmed network buttons and Wi-Fi access behavior — updated 2026-11-01
 
-- [ ] With working local hostname resolution, simplify endpoint setup to one shared Pi hostname instead of three network-specific IP endpoints/buttons. The owner asks whether a single `user@hostname.local` entry can replace them. Accepting that shorthand would split SSH username and host internally; the API must use only the host with its retained scheme/port, never SSH user information in an HTTP URL. Keep API token and SSH credential ownership unchanged.
-- [ ] Distinguish the three Android network-connect buttons from Pi Auto/Home/M1 upstream controls. A stable hostname removes the need for three endpoint-address selectors; optional Android Wi-Fi switching is a separate convenience. Preserve Pi upstream policy controls and actual-network status. Reconcile the simplified UI with the owner before expanding/removing any additional network functionality. Same-LAN/reachability limits still apply.
+- [ ] Keep all three existing network buttons (Hotspot / Home / Mobile roles), their Wi-Fi switching and long-press address configuration. The owner has superseded the earlier proposal to replace them with a single entry. Continue allowing the same configured local Pi hostname for different roles where reachable; do not remove the buttons or force numeric IP endpoints. Preserve the separate Pi Auto/Home/M1 upstream controls and actual-network highlights.
+- [ ] Correct the Settings Wi-Fi access action. Current `wifiAccess()` requests missing Wi-Fi/location permissions, but otherwise unconditionally launches Android Location settings; its Wi-Fi settings action is only an exception fallback. Request only required permissions and explain why location access/services may be needed for SSID identification on applicable Android versions. Once requirements are satisfied, open the system Wi-Fi panel/settings rather than always redirecting to Location. Open Location settings only when actually needed, with clear app-themed guidance. Recheck permissions/location/network state on return; preserve Android 8.1 and current-Android compatibility.
+- [ ] Verify the button with permissions granted/denied, Location already enabled/disabled and different supported Android versions. Keep permissions/SSID access distinct from mDNS hostname resolution; this action is not a fix for the head unit's missing native local-hostname resolver.
+
 
 The owner wants phone/head-unit monitoring through the current local Wi-Fi without repeatedly editing numeric Pi endpoints. Record the request; no Android source/version changes are authorized by this investigation.
 
