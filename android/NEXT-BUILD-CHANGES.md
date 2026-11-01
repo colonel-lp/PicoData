@@ -1,3 +1,14 @@
+## Next build — Pi status through collector API; SSH for terminal access — 2026-11-01
+
+Owner clarifies that normal Pi status/resource reads should come from the collector, and SSH was intended for opening a terminal. Supersede the implemented 0.30 reliance on recurring SSH commands for status; do not implement an SSH tunnel for monitoring.
+
+- [ ] Expose bounded read-only Pi system information through the existing authenticated collector API: whole-Pi RAM available/total, CPU utilization/load and available temperature, plus current upstream network/address and Wi-Fi policy mode. Reuse existing source/logging status. Keep resources as live readouts, outside sensor history/SQLite retention; do not add resource logging or change acquisition/cadence/calculations.
+- [ ] Switch the Android resource/network/status panels and main-page Pi-network status to API data. Normal viewing/reconnection must not require SSH credentials, sessions or a successful SSH probe. Preserve configured-host selection, hostname resolution, existing API token/TLS behavior and connection/freshness/error handling; do not treat a discovered hostname as authenticated server identity.
+- [ ] Use a modest cached sampling interval and bounded reads/commands where needed, with first-sample/reset-aware CPU deltas, monotonic timing and honest unavailable/stale fields. Avoid spawning status commands for each sensor message/client request and keep collector polling independent of UI refresh.
+- [ ] Provide an explicit Open terminal action for the owner's SSH use. Clarify whether this should be an embedded terminal or launch an external SSH app before implementing the terminal UI. Preserve SSH credential/key/host-identity protections for actual SSH use.
+- [ ] Preserve Pi Auto/Home/M1 actions, distinct from read-only status and Android Wi-Fi switching. Reconcile their transport when implementing the API/status change; do not silently add an unrestricted remote command endpoint.
+- [ ] Verify monitoring with no SSH setup, wrong/unavailable SSH credentials, source staleness, missing Linux resource fields, network changes and older Android. Keep the three network buttons and all other pending Settings/mDNS fixes.
+
 ## Next build — phone Settings clipping and connection readouts — 2026-11-01
 
 Owner confirms the configured local Pi hostname works on the phone but not the Android 8.1 head unit. Retain the hostname/mDNS compatibility request below; native phone success does not prove head-unit resolution support.
