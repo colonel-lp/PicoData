@@ -1,3 +1,10 @@
+## Next changes — Pi statistics refresh and phone network highlight — 2026-11-01
+
+- [ ] Investigate owner-reported Pi CPU/RAM/resource readings remaining unchanged, including after pressing Refresh. Current source requests Pi status every 15 seconds on Settings / 30 seconds elsewhere in the foreground; Refresh requests immediately unless a request is already busy. The collector reuses its sample for up to 10 seconds. CPU and MiB are displayed rounded to whole numbers, so unchanged text alone does not establish a frozen sample. Check sample timestamp/age, request completion, cache advancement and display binding before changing cadence or declaring a cause; distinguish cached, refreshed and failed data clearly in the agreed UI.
+- [ ] Investigate missing active-network highlight on the phone while the head unit highlights correctly. Compare the app's Device Wi-Fi readout, identification permissions/precise Location and system Location state, modern callback delivery and exact configured SSID matching. Current buttons highlight only a known matching Android-device SSID; do not substitute the Pi upstream network or guess a network when Android redacts it. Preserve endpoint/credential safeguards, approved theming and padding. Phone Android version/readout and real permission state remain to establish.
+
+Questions/bug reports recorded only; application source, versions, Pi configuration and logging are unchanged.
+
 ## Implemented source 0.32 — connection recovery and diagnostics — 2026-11-01
 
 Owner authorized the next source build with all active changes. Android 0.32 / build 14 is configured for owner-built Ella-monitoring-v0.32.apk; no APK or live Pi changes are made here. Collector 0.7.5 and the already published AP watch 1.1 remain unchanged and are preserved.
