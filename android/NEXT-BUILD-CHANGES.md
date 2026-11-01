@@ -1,3 +1,13 @@
+## Next build — stable Pi hostname and Android mDNS resolution — 2026-11-01
+
+The owner wants phone/head-unit monitoring through the current local Wi-Fi without repeatedly editing numeric Pi endpoints. Record the request; no Android source/version changes are authorized by this investigation.
+
+- [ ] Support the configured Pi hostname consistently for API access and SSH controls across supported Android versions, preserving the existing API scheme/port, token and TLS checks and pinned SSH identity. Store only a hostname in the per-network host fields; SSH username is separate and an API origin must not contain user information.
+- [ ] Use native resolution when available and add a bounded, network-scoped mDNS fallback for older Android/head units where ordinary DNS does not resolve local hostnames. Current source accepts hostnames but delegates lookup to the platform; it has no explicit app mDNS/NSD fallback. Review direct hostname resolution versus DNS-SD service discovery: service discovery requires a corresponding Pi advertisement and must not be assumed to work from a hostname announcement alone.
+- [ ] Resolve again on Wi-Fi changes, scope caches/results to the current network, cancel obsolete lookups/connections and release discovery/multicast resources promptly. Preserve logical host identity, IPv4/IPv6 behavior, API credentials, foreground lifecycle and the existing configurable address fallback.
+- [ ] Verify on modern Android and Android 8.1, including unavailable multicast, local-network permission/VPN restrictions, hostname conflicts, stale addresses and reconnection. Do not promise cross-network routing: a local hostname only identifies a reachable Pi on the same multicast-capable LAN; it does not connect isolated home/mobile networks.
+- [ ] Document configuration and any Pi advertisement prerequisite, with generic names in source/docs and the owner's actual hostname only in private setup guidance. No logging, AP, uplink, DHCP/router or firmware changes are requested here.
+
 ## Operational helper — AP diagnostics and bounded recovery — 2026-10-31
 
 Implemented separately at the owner's immediate request to investigate hotspot stalls and recover automatically. This is not a new Android/collector build; their versions and source behavior are unchanged. The owner must install the helper on the Pi; no live configuration was changed remotely.
