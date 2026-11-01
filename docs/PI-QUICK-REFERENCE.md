@@ -9,7 +9,7 @@
 - **Update collector:** `~/update-pico.sh` — installs the latest `node.js` source/dependencies and restarts the collector; no `git pull` in the installed folder.
 - **Fresh-install essentials:** privately back up the updater, `/usr/local/sbin/pi-wifi`, its mode/timer/service configuration, hotspot service units and their hostapd/DHCP/firewall configuration, NetworkManager profiles and the private PicoData files above. The collector updater does not recreate the hotspot or `pi-wifi` installation. [Collector setup](../node.js/README.md).
 - **Rclone/Google Drive:** [installation and authentication](RCLONE-SETUP.md). Use the normal login account, without `sudo`, for `rclone config` and `rclone lsd gdrive:`. Preserve its private configuration.
-- **Optional AP diagnostics/recovery** — prepared separately; installation not confirmed here. After updating, with both sensors connected, install using their reserved hotspot IPs:
+- **AP diagnostics/recovery** — installation confirmed; active in `recover` mode. Automatic handling of the reported outage remains under investigation. For reinstalling, with both sensors connected, use their reserved hotspot IPs:
   `sudo python3 ~/PicoData/node.js/tools/ap-watch.py install --target SENSOR_ONE_IP --target SENSOR_TWO_IP`
   [Details/removal](../node.js/AP-WATCH.md).
 - **Optional app Pi-mode controls** — collector 0.7.5 needs the [one-time setup](../node.js/PI-STATUS.md#optional-pi-autohomem1-buttons). API resource readouts need no SSH; Open terminal uses separately installed ConnectBot.
@@ -24,8 +24,8 @@
 - **Connected clients:** `sudo iw dev wlan0 station dump`
 - **Restart stalled hotspot:** `sudo systemctl restart ella-hotspot.service` — disconnects hotspot clients briefly; leaves the collector running.
 - **Recent evidence:** `sudo journalctl -u ella-hotspot.service -u ella-hotspot-dns.service -n 40 --no-pager`; `sudo journalctl -k -b -n 40 --no-pager`
-- **AP power saving:** `iw dev wlan0 get power_save`; temporarily disable with `sudo iw dev wlan0 set power_save off`. The optional AP watch startup hook maintains this.
-- **If AP watch installed:** `sudo ella-ap-watch status`; `sudo ella-ap-watch capture`. `observe` disables automatic recovery; `recover` re-enables it. Private incidents: `/var/lib/ella-ap-watch/`.
+- **AP power saving:** `iw dev wlan0 get power_save`; temporarily disable with `sudo iw dev wlan0 set power_save off`. The AP watch startup hook maintains this.
+- **AP watch:** `sudo ella-ap-watch status`; `sudo ella-ap-watch capture`. `observe` disables automatic recovery; `recover` re-enables it. Private incidents: `/var/lib/ella-ap-watch/`.
 
 ## Logging: check and restart
 
