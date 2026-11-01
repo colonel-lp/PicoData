@@ -29,6 +29,7 @@ These instructions apply throughout `colonel-lp/PicoData`, branch `main`. Read t
 
 ## Documentation
 
+- Keep `docs/PI-QUICK-REFERENCE.md` updated whenever a confirmed working, permanent change is made to the Pi setup, scripts, installation, Wi-Fi or logging. Keep it concise and include the current necessary setup, checks and restart/recovery commands. Remove superseded instructions; exclude failed, temporary or reverted experiments. Clearly mark optional or not-yet-installed additions, and keep private credentials and installation-specific details out of the public document.
 - Where changes are made in core app functionality, keep files in `android/functionality/` updated with the latest changes, or create a new file where needed. Update each file with the build version where changes were made. Do not create files with the build number in the name.
 - Where changes affect how to use the Android app, keep `android/README.md` up to date. For Pi collector changes, update the relevant guides under `node.js/`.
 - Do not generate source ZIPs unless requested.
