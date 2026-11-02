@@ -1,3 +1,8 @@
+## Deferred — Pi mode buttons and final hardware test — 2026-11-02
+
+- [ ] Owner reports the app's Pi Auto, Pi Home and Pi M1 buttons produce no observable action when pressed. Cause is unconfirmed. Record the bug without changing app/control source, API permissions or the live Pi. Defer investigation/fix until the owner decides whether to retain the dual-radio setup after the planned hardware test; if retained, check enabled/disabled state, confirmation/action dispatch, API opt-in/authentication, response/error feedback and resulting mode separately.
+- [ ] Owner plans one final hub-bypass hardware test while preserving the software configuration. The test has not yet been completed. If it fails, the owner has explicitly chosen to restore the Pi to station operation and abandon the USB Wi-Fi arrangement. Preserve sensor connectivity/logging during any subsequently requested restoration; do not perform or claim a rollback now. Keep existing diagnosis and longer-log proposals deferred unless separately requested. Update the concise Pi setup reference only after a working permanent change is confirmed.
+
 ## Confirmed diagnostic gap — AP receive traffic can mask transmit failure — 2026-11-02
 
 - [x] Source audit of monitor 1.1: observe() skips its ICMP round-trip probe whenever a sensor's received-byte/packet counters progress, and alive is receive progress OR successful probe. Policy reports traffic-ok if any configured target is alive. A one-way AP transmit failure with continuing inbound sensor traffic can therefore be reported healthy without a round-trip check; missing error records do not exclude it. This is a confirmed diagnostic limitation, not proof of the initiating radio fault or of which direction failed in the owner's incident.
