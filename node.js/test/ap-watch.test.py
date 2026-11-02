@@ -200,7 +200,10 @@ assert w.journal("fixture warning") is False
         self.assertFalse(value["targets"][MACS[1]]["alive"])
         self.assertEqual(counters[MACS[0]]["rx bytes"], 20)
         probes = [call.args[0] for call in commands.call_args_list if call.args[0][0] == "ping"]
-        self.assertEqual(probes, [["ping", "-n", "-I", "test0", "-c", "1", "-W", "2", TARGETS[1]["ip"]]])
+        self.assertEqual(probes, [["ping", "-n", "-I", "test0", "-c", "1", "-W", "2", t["ip"]] for t in TARGETS])
+        self.assertFalse(value['targets'][MACS[0]]['probe'])
+        self.assertEqual(armed().decide({**value, 'uptime': 500}, 'recover'),
+                         ('rx-present-roundtrip-failed', False))
 
     def test_probe_is_interface_bound_and_skipped_on_wrong_route(self):
         c = {"interface": "test0", "unit": "test.service", "targets": TARGETS}
@@ -402,7 +405,8 @@ class PrivateFiles(unittest.TestCase):
             hook = (root / "units/fixture-ap.service.d/70-ap-watch.conf").read_text()
             self.assertIn("ExecStartPost=", hook)
             self.assertNotIn("ExecStart=", hook)
-            self.assertFalse(any("pico" in str(cmd) for cmd in commands))
+            self.assertFalse(any(cmd[0] == 'systemctl' and any(x in cmd for x in ('restart', 'stop', 'start'))
+                                 and any('pico' in x for x in cmd) for cmd in commands))
             self.assertNotIn(["systemctl", "restart", "fixture-ap.service"], commands)
             self.assertIn("After=fixture-ap.service", w.SERVICE.read_text())
             self.assertIn("ExecStart=/usr/bin/python3 -u ", w.SERVICE.read_text())
@@ -477,3 +481,4 @@ def subprocess_verify(path):
 
 if __name__ == "__main__":
     unittest.main()
+

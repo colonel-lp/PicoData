@@ -1,240 +1,206 @@
-# Hotspot diagnostics and recovery
+# AP and upstream Wi-Fi diagnostics
 
-Operational helper version 1.1. This does not release or change the Android app
-or collector. It is installed separately; the normal collector updater does not
-install, enable or run this helper.
+Standalone helper **1.2**, for the existing stock-hostapd installation. Collector
+0.7.5 and Android version 0.32 are separate. The normal collector updater does
+not install or activate this helper. Source checks do not mean it is installed:
+the last owner-confirmed installation is 1.1.
 
-This is for the existing stock-hostapd installation, not a NetworkManager AP.
-The default AP interface is `wlan0`, its custom service `ella-hotspot.service`,
-and its control directory `/run/hostapd-ella`. The installer reads actual client
-MACs from local DHCP leases/neighbours. No installation addresses, SSIDs, keys,
-credentials or captures belong in this repository.
+## Update an existing monitor to 1.2
 
-## Install
-
-Use a working SSH session through the independent upstream connection while
-installing. Have both always-on sensor clients connected. Install needs Python
-3.9+, systemd, `iw`, `ip`, and `ping`; `ethtool` is optional for incident details.
-No pip packages, driver, kernel, firmware or network-profile changes are needed.
-
-Download `tools/ap-watch.py` from this repository to the Pi, then run:
-
-```bash
-sudo python3 ~/ap-watch.py install --target SENSOR_ONE_IP --target SENSOR_TWO_IP
-sudo ella-ap-watch status
-sudo journalctl -u ella-ap-watch.service -n 15 --no-pager
-```
-
-Replace both placeholders with the existing reserved hotspot IPv4 addresses.
-They must be different, on the AP's directly connected subnet, and have known
-MACs in `/run/ella-hotspot-dns/leases` or the local neighbour table. The installer
-refuses an unresponsive/inactive hostapd service, invalid or duplicate targets,
-and unrelated existing service/drop-in files. Re-running install retains mode
-and original diagnostic settings. It restarts only the monitor during install,
-not the AP or collector. Never infer successful installation from source tests.
-
-The helper installs:
-
-- `/usr/local/sbin/ella-ap-watch`: this standalone Python program.
-- `/etc/ella-ap-watch.json`: root-only configuration, learned target MACs and
-  previous diagnostic settings.
-- `ella-ap-watch.service`: a low-priority monitor with a 64 MiB memory ceiling.
-- An additive `70-ap-watch.conf` drop-in for the existing hotspot service. Its
-  startup hook disables AP power saving and enables hostapd DEBUG messages via
-  the local control socket. It preserves the original ExecStart/security config;
-  it never uses hostapd `-K` or reads the password/API/MQTT configuration.
-
-The monitor also applies those diagnostic settings to the currently running AP.
-No initial hotspot restart is needed. DEBUG can increase existing journal traffic;
-this does not change journald's storage policy or globally enable kernel tracing.
-On the owner's existing installation the system logs use RAM-backed storage.
-
-## Update an existing monitor to 1.1
-
-Use SSH through the independent upstream connection, while the AP and both sensors
-are working. This updates only the monitor; do not run the collector updater just
-for this repair:
+Use working SSH through the independent upstream connection, with the AP and both
+sensors working:
 
 ```bash
 curl -fL https://raw.githubusercontent.com/colonel-lp/PicoData/main/node.js/tools/ap-watch.py -o ~/ap-watch.py
 sudo python3 ~/ap-watch.py install
 sudo ella-ap-watch status
+sudo journalctl -u ella-ap-watch.service -n 15 --no-pager
 ```
 
-Install without `--target` retains the existing private targets, AP interface,
-service/control paths, mode and original diagnostic settings. It keeps runtime
-state/evidence and restarts only `ella-ap-watch.service`; the hotspot and collector
-are not restarted. Check that status says **Monitor version: 1.1**, a recent check
-and, after the sensors are observed, the complete baseline and traffic-ok state.
-The two-minute startup grace still applies. Updating from 1.0 preserves saved
-restart limits/latch; because 1.0 never stored a sensor baseline, both sensors
-must be observed once after this first upgrade. Later 1.1 restarts restore the
-validated same-boot/config baseline automatically.
+No-target install preserves private targets, AP paths, mode, recovery state and
+original diagnostic settings. It restarts **only the monitor**, retaining the
+hotspot and collector. Check version **1.2**, recent Wi-Fi diagnostic samples,
+the correct AP/STA interfaces, local API probe configuration and independent
+round-trip results. The existing two-minute recovery startup grace still applies.
+Same-boot/config learned recovery and diagnostic baselines survive monitor-only
+restarts; new boots/configurations require fresh healthy observations.
 
-## Changes in 1.1
+First installation requires Python 3.9+, systemd, `iw`, `ip`, `ping` and an active,
+responsive hostapd service. No pip packages or driver replacement is needed.
+With two to four always-on sensors connected, substitute their reserved hotspot
+IPv4 addresses:
 
-- Retain established sensor observations and last-good monotonic time across
-  monitor restarts on the same Pi boot and exact AP/target configuration. A helper
-  restart during an already armed outage no longer waits indefinitely to see
-  healthy sensors again. New boots and changed AP/target configuration require
-  fresh observations; old restart limits/latch remain conservative. Invalid state
-  stays inhibited across subsequent saves/restarts until explicit reset.
-- Journal messages use small, nonblocking writes. Broken/full journal output and
-  RAM event-log failures are recorded when possible and do not terminate recovery.
-  The service and startup hook run Python unbuffered. Diagnostics cannot justify
-  bypassing safety: an AP restart is sent only after its accounting/latch has been
-  saved successfully. A failed state write skips the action without inventing a
-  completed attempt. An incident-archive failure still allows an accounted restart.
-- Record the monitor version, startup/restored-baseline state, decision changes,
-  recovery intent/result and error stage. Unexpected exceptions include bounded
-  traceback text without local-variable dumps. Status exposes baseline progress
-  and the timestamp/type/stage of the latest RAM error, which may be historical.
-  `sudo ella-ap-watch errors` reads the private error records.
+```bash
+sudo python3 ~/ap-watch.py install --target SENSOR_ONE_IP --target SENSOR_TWO_IP
+```
 
-The reported monitor exit occurred after a traffic-loss sample and before its
-journal warning appeared. A state-save or output failure is not proven by that
-sequence alone. These changes repair demonstrated recovery weaknesses and improve
-future evidence; they do not claim to fix or identify the original AP/radio stall.
+Targets must be distinct and directly routed through the AP, with known MACs in
+its DHCP lease file/neighbour table. Default AP is `wlan0`, service
+`ella-hotspot.service`, control path `/run/hostapd-ella`. The actual upstream
+wireless interface is discovered from local interfaces/default routes; optional
+`install --uplink INTERFACE` pins it when automatic identification is ambiguous.
+No scan or internet speed test is performed.
 
-## What triggers recovery
+## What is recorded and why
 
-Checks run about every 30 seconds, using monotonic time. There is a two-minute
-startup grace. A sensor is responsive if its incoming Wi-Fi byte/packet counters
-advance or it answers a short interface-bound local ping. The IP route must still
-point directly through the AP interface. Probes never target the internet.
+| Evidence | Target cadence | Diagnostic purpose |
+| --- | --- | --- |
+| AP and STA presence, carrier/state, byte/packet/error/drop counters | 1 second | Distinguish interface disappearance and traffic direction/progress |
+| AP firmware `fc_xoff`, `fc_xon`, `f2txdata`, resolved through the AP's current phy | 1 second, if exposed | Correlate a possible firmware transmit/flow-control stall; a counter alone is not a diagnosis |
+| Driver and USB runtime-power/autosuspend state | 1 second | Correlate USB device/power state changes without changing them |
+| Local collector API listener response, latency and error/errno | 1 second | Separate local HTTP/listener trouble from remote radio reachability |
+| AP station counters and independent sensor round trips | 10 seconds | Check both directions even when inbound sensor traffic continues |
+| STA association, signal, rates, station retries/failures/beacon/drop counters | 10 seconds | Trace upstream-link degradation independently of the AP |
+| STA default route and interface-bound local gateway probe/RTT | 10 seconds | Separate uplink/local-router reachability from internet service |
+| Collector service state/PID/restart count | 10 seconds | Correlate process loss/replacement with connection failures |
+| Relevant kernel/USB/SDIO, hostapd, NetworkManager/supplicant, DHCP, collector, broker and selection-helper journal events | As emitted, bounded | Preserve reported errors, disassociation, resets and source-state transitions around a fault |
+| New Mosquitto file-log messages, when `/var/log/mosquitto/mosquitto.log` is readable | 1 second, bounded | Preserve broker socket/malformed-packet/timeout evidence when it is absent from journald |
+| Kernel/service journal, addresses, routes and hotspot firewall snapshots | At fault and during its tail | Preserve configuration and event context before recovery changes the scene |
 
-Traffic recovery arms only after **each configured client has been seen alive**
-on this Pi boot for this exact AP/target configuration. A validated saved baseline
-is restored after monitor-only restarts. If all of them subsequently have no confirmed traffic
-or ping responses for at least 90 seconds, the monitor captures evidence and
-issues the same `systemctl restart ella-hotspot.service` recovery used manually.
-A non-responsive/non-ENABLED hostapd control interface for 90 seconds can also
-trigger recovery after the startup grace, provided no target is still responsive
-and target routes are correct. The current service's DHCP/DNS dependencies follow
-its existing systemd relationships. The collector is never stopped/restarted.
+Cadences are targets, not deadlines guaranteed by Linux. Slow commands run in a
+separate worker and have time/output bounds. Samples include actual times,
+query outcomes, slow-sample age and the largest health-sampling gap. Unsupported
+counters are explicitly unavailable, never invented as zero. The recovery-policy
+loop remains separate at about 30 seconds.
 
-Important limits:
+The installer discovers only the collector's public bind/port/TLS properties from
+its existing local configuration; tokens and TLS keys are never copied or used.
+For HTTP, an unauthenticated `/api/v1/status` response normally returns **401**:
+that proves HTTP listener/event-loop availability, **not source freshness**. TLS
+installations use TCP-only reachability, without bypassing certificate checks.
+If automatic discovery is unavailable, status says not configured. Set the known
+local HTTP port explicitly with `install --api-port PORT --api-http`, or omit
+`--api-http` for TCP-only. Source freshness comes from collector state events and
+the usual authenticated API check, not this credential-free availability probe.
 
-- One responsive sensor suppresses a whole-AP restart. This intentionally does
-  not restart the AP for an isolated sensor, MQTT, app/API or internet failure.
-- No connected clients, asleep phones or failed internet probes alone do not
-  trigger a restart. The route-error state asks for diagnosis instead of changing
-  addresses, routing or NAT automatically.
-- Both always-on sensors being deliberately powered off can resemble a global
-  failure after arming. That can cause one unnecessary restart; use observe mode
-  during maintenance. Client traffic does not prove application readings are fresh.
-- At most two recoveries per rolling 30 minutes, at least ten minutes apart.
-  One attempt per unresolved incident: without 90 seconds of healthy observations
-  after recovery, it stays latched and requests manual investigation. It never
-  loops on reboots, resets either Wi-Fi interface, reloads drivers, restarts
-  NetworkManager or changes the upstream connection.
-- Restart limits/latch are saved in RAM and survive monitor-service restarts.
-  They reset on Pi reboot. Malformed state inhibits recovery until explicit reset.
-  A validated same-boot/config baseline survives monitor restarts; new boots,
-  changed targets/AP and the first upgrade from 1.0 require new observations.
-- A deliberately inactive/failed AP service pauses this monitor; hostapd's existing
-  `Restart=on-failure` handles process exits. Disable monitoring before maintenance.
-- A silent AP failure before both sensors have ever been seen cannot be reliably
-  distinguished from switched-off sensors; enabled/responsive hostapd then remains
-  unarmed. This is a recovery aid, not a proof of radio health or a replacement for
-  fixing the cause. Readings missed during an outage cannot be recovered by it.
+The startup hook retains the existing AP power-saving-off and hostapd DEBUG
+settings, without `-K`, password reads or a hotspot restart. Version 1.2 also adds
+brcmfmac's firmware-console debug bit `0x100000` when supported. This enables
+firmware messages; it does not replace firmware, reload a driver or change radio
+security. The previous flag is saved for restoration. Status reports flag
+availability. To restore the previous firmware verbosity while retaining other
+recording, re-run `install --no-firmware-console`. DEBUG/firmware messages can
+increase journal traffic; actual hardware resource/volume measurements remain
+required. Journald's storage policy is unchanged.
 
-## Evidence and storage limits
+## Automatic private fault windows
 
-The monitor keeps timestamped station counters, probe results, state transitions
-and hostapd control events in `/run/ella-ap-watch`. The event ring uses two files
-of up to 2 MiB each. Status and restart state are also in RAM, with no per-check
-database writes. Hostapd events are capped in size/rate. Every command has a
-deadline and captured-byte limit, including an unresponsive control socket.
+A time-based RAM buffer holds up to 180 seconds of context, with separate bounded
+health/event queues so journal noise cannot evict health samples. After learning
+healthy behavior, repeated local API, interface, sensor round-trip, STA
+association/route/gateway or collector-service failures trigger a saved incident.
+High latency after a learned low-latency baseline, process replacement, relevant
+kernel radio/USB errors, collector stale/retrying events and critical monitor
+errors also capture diagnostics. A client which has never answered ping is not
+silently treated as ping-capable. These triggers save evidence; they do not add
+new radio-reset criteria.
 
-Before an automatic restart it writes a root-only compressed incident file in
-`/var/lib/ella-ap-watch`. At most five files are retained, each bounded to 2 MiB
-uncompressed (at most roughly 10 MiB in total). A partial write from an interrupted
-capture is cleaned up on the next capture. An archive failure does not prevent
-recovery; RAM evidence and a journal warning remain.
+Each incident records first observed onset separately from confirmation. It
+freezes the available preceding **60 seconds**, immediately writes a durable
+private prefix, then collects through **60 seconds after onset**. The pending
+file is checkpointed every ten seconds during that incident and finalized as
+compressed JSON. Recovery does not wait for that tail. Repeated symptoms are
+grouped into one episode; the diagnostic latch re-arms after a quiet minute.
+The original prefix is retained even if the live RAM ring rotates.
 
-Each incident includes pre-restart monitor events, hostapd state, station counters,
-interface/power-save/driver details, addresses/routes/neighbours, selected service
-state, and bounded recent kernel/hotspot/network/DHCP journal extracts. This can
-expose private network names, MACs, addresses and diagnostic messages. Keep the
-reports private; they are never uploaded automatically. Firmware stalls may remain
-silent even with this logging, but the timeline/counters can narrow the failure.
+Completed incident archives live in `/var/lib/ella-ap-watch`, with root-only
+permissions. Retention is **latest five completed incidents**, each at most
+**2 MiB uncompressed**, plus one pending incident and temporary atomic-write
+space. It is count/size bounded, not a promised number of hours. Routine health
+samples remain in RAM; no per-sample SD-card logging is added. The older two-file
+RAM event ring and bounded monitor-error records remain available (one persistent
+error record, at most 16 KiB, updated at most once per five minutes per boot).
 
-Incident/manual captures keep the existing maximum five archives. In 1.1 the
-latest monitor error also uses `/run/ella-ap-watch/last-error.json` (RAM, rate-limited
-per error class/stage). Fatal exceptions, failed state writes and failed recovery
-or incident capture additionally keep one `/var/lib/ella-ap-watch/last-error.json`,
-updated at most once per five minutes within a Pi boot. Each JSON record is at most
-16 KiB plus a newline, private/root-only; it includes version, UTC/monotonic time,
-boot, error class/message, failing stage and bounded traceback. The persistent
-record can be older than the RAM record because of this write limit. These are
-private diagnostics, not sensor history. No per-sample card logging is introduced.
+Archives include UTC, monotonic time and boot identity, explicit short/truncated
+context, sampling gaps and event-drop counts. A monitor restart recovers the
+already-saved prefix as **interrupted**, without inventing post-crash data. A
+cold start cannot supply preceding context it never collected. Sudden power
+loss/kernel freeze before confirmation can lose the RAM prefix; no crashed
+machine can record the following minute. Continuous durable checkpoints or an
+independent receiver would be needed for that stronger guarantee, with extra
+writes/resources. Storage failure is reported best-effort; no logger can
+promise saved evidence on inaccessible storage.
 
-The five archives and one persistent error file survive a normal reboot; the RAM
-ring/baseline does not. If both journal and private storage are unavailable, no
-software can guarantee saved evidence. A failed recovery-state write inhibits
-that check's AP action. Sensor SQLite history, retention, cadence and backups stay
-unchanged.
+Private Pi reports contain network names, MACs, addresses and diagnostic messages.
+Credential-like fields in journal messages are redacted; configuration secrets,
+HTTP headers/bodies and sensor readings are not deliberately copied. Review
+reports privately rather than posting them to the repository. Firmware may still
+fail silently: this evidence narrows the fault boundary but cannot guarantee a
+root cause.
 
-## Operator commands
+## Recovery policy remains conservative
+
+After two minutes of startup grace, each always-on sensor must have been observed
+alive on this boot/configuration. A validated same-boot baseline survives a
+monitor restart. Existing inbound traffic **or** a valid interface-bound ping
+counts for recovery safety; independent failed round trips are separately
+reported as `rx-present-roundtrip-failed` rather than `traffic-ok`.
+
+Only the existing global-stall/control-failure policy can restart the existing
+hotspot service: no confirmed client traffic for at least 90 seconds, correct
+routes, no responsive sensor, saved restart accounting and the established
+cooldown/latch. One responsive sensor suppresses a whole-AP restart. An isolated
+sensor, app, MQTT or internet failure does not reset a radio. Inactive hotspot
+services pause recovery. Deliberately powering off all sensors can resemble a
+stall; use observe mode for maintenance.
+
+At most two AP recoveries per rolling 30 minutes, at least ten minutes apart; an
+unresolved incident stays latched until 90 seconds of healthy observations.
+Invalid recovery state inhibits action until explicit reset. The helper never
+restarts the collector, upstream interface, NetworkManager or Pi, changes
+addresses/NAT/profiles, reloads drivers or migrates sensors. Missed sensor samples
+cannot be reconstructed by diagnostic logging.
+
+## Retrieve evidence and operate
 
 ```bash
 sudo ella-ap-watch status
-sudo ella-ap-watch observe     # keep diagnostics; disable automatic recovery
-sudo ella-ap-watch recover     # re-enable conservative recovery
-sudo ella-ap-watch capture     # save a diagnostic snapshot; no restart
-sudo ella-ap-watch report      # print the newest private incident JSON
-sudo ella-ap-watch errors      # latest private RAM/persistent error details
-sudo journalctl -u ella-ap-watch.service -n 30 --no-pager
+sudo ella-ap-watch faults
+sudo ella-ap-watch report
+sudo ella-ap-watch export --output "$HOME/ella-wifi-fault.json"
+sudo ella-ap-watch errors
+sudo ella-ap-watch capture
+sudo ella-ap-watch observe
+sudo ella-ap-watch recover
 ```
 
-Mode changes take effect within a check cycle. An already-started recovery is not
-cancelled by changing mode. `status` shows its last-check timestamp; a stale check
-is not live health confirmation. For uninterrupted manual maintenance stop it:
+`faults` lists saved and collecting/partial files. `report` prints the newest
+incident. `export` writes the newest incident to a **new**, private file owned by
+the invoking sudo user and refuses overwrites; choose a new filename for another
+export. Retrieve that file through the SSH client's file transfer. A pending
+report contains only the tail collected so far. `capture` requests the same
+60-second tail while monitoring is active; with an inactive monitor it reports
+an explicitly instantaneous snapshot. Commands do not upload files.
+
+Mode changes take effect within a policy cycle; they do not cancel an already
+started action. For uninterrupted maintenance:
 
 ```bash
 sudo systemctl disable --now ella-ap-watch.service
 ```
 
-If recovery stayed latched after manual repair, or state was malformed:
+After investigating/repairing an inhibited or latched incident,
+`sudo ella-ap-watch reset` resets recovery state and requires a fresh baseline;
+it does not restart the hotspot. `sudo ella-ap-watch uninstall` removes the
+monitor/startup hook and restores saved diagnostic settings, including firmware
+verbosity where available, without restarting AP/collector. Incident files remain.
+The hotspot installation/rollback helper is separate.
 
-```bash
-sudo ella-ap-watch reset
-```
+## Validation and limits
 
-This intentionally resets its recovery history and re-arms monitoring after a new
-startup/baseline; it does not restart the AP. Use only after investigating/repair.
+From `node.js`, run `python3 test/ap-watch.test.py` and
+`python3 test/wifi-flight.test.py`. Version 1.2 has **40 existing recovery/I/O/
+installer tests plus 36 new focused diagnostic tests**. These use synthetic
+interfaces/addresses, isolated files, mocked radio/service actions and a real
+systemd unit parser. They cover independent pings, current-phy mapping, loopback
+401/TCP-only probes, learned faults, slow-worker isolation, frozen prefixes,
+complete/partial tails, restart recovery, bounds, redaction, firmware debug-bit
+restoration, bounded broker-file following/rotation and private non-overwriting export. No live Pi/network action runs.
 
-To remove this installation and restore the diagnostic verbosity/power-save
-setting captured on first install:
+Android's separate same-version 0.32 source correction adds call IDs/address
+families and private automatic app incident files. Rebuild it in Android Studio;
+installing this Pi helper does not update the app.
 
-```bash
-sudo ella-ap-watch uninstall
-```
-
-It removes the monitor, config and additive startup hook, leaves private incident
-files available, and does not restart the AP or collector. A power-save setting
-already disabled before install remains disabled on removal. The underlying
-hotspot migration/rollback tool is separate and remains unchanged.
-
-## Validation
-
-Run the focused offline tests with `python3 test/ap-watch.test.py` from `node.js`.
-They test recovery decisions/arming/grace, isolated-sensor and routing failures,
-manual stop/observe mode, cooldown/latching, saved/corrupt state, output/time bounds,
-parsing, private file permissions, RAM rotation, incident retention and mocked
-control-protocol replies. No live network/systemd operations run in these tests.
-Root-owned file helper checks skip when run as a regular user.
-
-Version 1.1 has 40 passing focused offline tests on Python 3.12, including all 26
-previous tests and regressions for restart during a proven stall, cold/legacy/
-changed-target and corrupt state, retained inhibition/limits, broken/full journal
-pipes, failed event/state/accounting/archive writes, byte-bounded private traceback
-records and persistent error-write throttling. Reinstallation preserves private
-configuration/runtime files; a real systemd parser verifies the generated unit.
-The tests use isolated files, synthetic addresses and mocked radio/service actions;
-no Pi installation, network change or real recovery was performed here.
-
-Pi radio behavior, service integration, actual resource usage and recovery under
-a real AP stall still require owner verification. Do not deliberately disconnect
-both live sensors or stop hostapd merely to force a demonstration of recovery.
+Actual RAM/CPU cost, firmware output, device/service integration and behavior
+during a real stall remain owner verification. Do not disconnect live sensors or
+force a stall merely to demonstrate these tests.

@@ -220,12 +220,21 @@ final class PiControls {
         }catch(Exception e){ui.post(()->{if(active&&version==generation)a.toast("Pi hostname unavailable on this network. Check the configured address.");});}});
     }
     private void showDiagnostics(){
-        String details=a.connectionDiagnostics().text(BuildConfig.VERSION_NAME);
-        Dialog d=remember(new Dialog(a));LinearLayout panel=a.styledDialogRoot();panel.addView(a.styledTitle("Connection diagnostics"));
+        showDiagnosticText("Connection diagnostics",a.connectionDiagnostics().text(BuildConfig.VERSION_NAME),true);
+    }
+    private void showDiagnosticText(String title,String details,boolean saved){
+        Dialog d=remember(new Dialog(a));LinearLayout panel=a.styledDialogRoot();panel.addView(a.styledTitle(title));
         ScrollView scroll=new ScrollView(a);TextView text=a.uiText(details,a.dialogTextSize(11.5f),a.getThemeConfig().text);text.setTextIsSelectable(true);scroll.addView(text);panel.addView(scroll,new LinearLayout.LayoutParams(-1,a.dialogDp(210)));
         LinearLayout row=a.row();TextView copy=a.dialogButton("COPY",a.getThemeConfig().controls),close=a.dialogButton("CLOSE",a.getThemeConfig().border);
-        add(row,copy,0,a.dialogDp(35));add(row,close,a.dialogDp(6),a.dialogDp(35));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,a.dialogDp(6),0,0);panel.addView(row,lp);
+        add(row,copy,0,a.dialogDp(35));if(saved){TextView faults=a.dialogButton("FAULT LOGS",a.getThemeConfig().controls);add(row,faults,a.dialogDp(6),a.dialogDp(35));faults.setOnClickListener(v->{d.dismiss();showFaultLogs();});}add(row,close,a.dialogDp(6),a.dialogDp(35));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,a.dialogDp(6),0,0);panel.addView(row,lp);
         copy.setOnClickListener(v->{android.content.ClipboardManager clipboard=(android.content.ClipboardManager)a.getSystemService(Context.CLIPBOARD_SERVICE);if(clipboard!=null)clipboard.setPrimaryClip(ClipData.newPlainText("Connection diagnostics",details));a.toast("Diagnostics copied.");});close.setOnClickListener(v->d.dismiss());a.showStyledDialog(d,panel,650);
+    }
+    private void showFaultLogs(){
+        java.io.File[] files=a.connectionDiagnostics().savedFaults();if(files.length==0){a.toast("No saved connection faults.");return;}
+        Dialog d=remember(new Dialog(a));LinearLayout panel=a.styledDialogRoot();panel.addView(a.styledTitle("Saved connection faults"));
+        ScrollView scroll=new ScrollView(a);LinearLayout list=a.column();scroll.addView(list);
+        for(java.io.File file:files){String title=java.time.Instant.ofEpochMilli(file.lastModified()).toString()+(file.getName().endsWith(".pending")?" (collecting)":"");TextView button=a.dialogButton(title,a.getThemeConfig().controls);LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,a.dialogDp(35));p.setMargins(0,list.getChildCount()==0?0:a.dialogDp(6),0,0);list.addView(button,p);button.setOnClickListener(v->{try{String text=a.connectionDiagnostics().savedFault(file);d.dismiss();showDiagnosticText("Saved connection fault",text,false);}catch(Exception e){a.toast("Fault file unavailable. Reopen the list.");}});}
+        panel.addView(scroll,new LinearLayout.LayoutParams(-1,a.dialogDp(210)));TextView close=a.dialogButton("CLOSE",a.getThemeConfig().border);LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,a.dialogDp(35));p.setMargins(0,a.dialogDp(6),0,0);panel.addView(close,p);close.setOnClickListener(v->d.dismiss());a.showStyledDialog(d,panel,650);
     }
     private void editSsh(){
         Dialog d=remember(new Dialog(a));LinearLayout panel=a.styledDialogRoot();panel.addView(a.styledTitle("ConnectBot connection"));
@@ -236,3 +245,4 @@ final class PiControls {
         cancel.setOnClickListener(v->d.dismiss());save.setOnClickListener(v->{try{String name=user.getText().toString().trim();int number=Integer.parseInt(port.getText().toString());if(!name.matches("[a-zA-Z_][a-zA-Z0-9_.-]{0,63}")||number<1||number>65535)throw new IllegalArgumentException();settings.prefs.edit().putString("pi.ssh.user",name).putInt("pi.ssh.port",number).apply();d.dismiss();openTerminal();}catch(Exception e){user.setError("Enter a valid SSH username and port.");}});a.showStyledDialog(d,panel,460);
     }
 }
+

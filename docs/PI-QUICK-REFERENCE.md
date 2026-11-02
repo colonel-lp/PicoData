@@ -9,7 +9,7 @@
 - **Update collector:** `~/update-pico.sh` — installs the latest `node.js` source/dependencies and restarts the collector; no `git pull` in the installed folder.
 - **Fresh-install essentials:** privately back up the updater, `/usr/local/sbin/pi-wifi`, its mode/timer/service configuration, `/etc/ella-ap-watch.json`, hotspot service units and their hostapd/DHCP/firewall configuration, NetworkManager profiles and the private PicoData files above. The collector updater does not recreate the hotspot or `pi-wifi` installation. [Collector setup](../node.js/README.md).
 - **Rclone/Google Drive:** [installation and authentication](RCLONE-SETUP.md). Use the normal login account, without `sudo`, for `rclone config` and `rclone lsd gdrive:`. Preserve its private configuration.
-- **AP diagnostics/recovery** — monitor **1.1 installation confirmed**; active in `recover` mode with the configured sensor baseline observed after reboot. Actual recovery from a future stall remains to verify. [Monitor-only update](../node.js/AP-WATCH.md#update-an-existing-monitor-to-11). For reinstalling, with both sensors connected, use their reserved hotspot IPs:
+- **AP diagnostics/recovery** — monitor **1.1 installation confirmed**; active in `recover` mode with the configured sensor baseline observed after reboot. Actual recovery from a future stall remains to verify. **1.2 source available, not yet confirmed installed**: [monitor-only update](../node.js/AP-WATCH.md#update-an-existing-monitor-to-12). For reinstalling, with both sensors connected, use their reserved hotspot IPs:
   `sudo python3 ~/PicoData/node.js/tools/ap-watch.py install --target SENSOR_ONE_IP --target SENSOR_TWO_IP`
   [Details/removal](../node.js/AP-WATCH.md).
 - **Optional app Pi-mode controls** — collector 0.7.5 needs the [one-time setup](../node.js/PI-STATUS.md#optional-pi-autohomem1-buttons). API resource readouts need no SSH; Open terminal uses separately installed ConnectBot.
@@ -25,7 +25,7 @@
 - **Restart stalled hotspot:** `sudo systemctl restart ella-hotspot.service` — disconnects hotspot clients briefly; leaves the collector running.
 - **Recent evidence:** `sudo journalctl -u ella-hotspot.service -u ella-hotspot-dns.service -n 40 --no-pager`; `sudo journalctl -k -b -n 40 --no-pager`
 - **AP power saving:** `iw dev wlan0 get power_save`; temporarily disable with `sudo iw dev wlan0 set power_save off`. The AP watch startup hook maintains this.
-- **AP watch:** `sudo ella-ap-watch status`; `sudo ella-ap-watch capture`; version 1.1 adds `sudo ella-ap-watch errors` for private crash/error evidence. `observe` disables automatic recovery; `recover` re-enables it. Private incidents: `/var/lib/ella-ap-watch/`.
+- **AP watch:** `sudo ella-ap-watch status`; `sudo ella-ap-watch errors`; `observe` disables automatic recovery, `recover` re-enables it. Version 1.2 records both radios/local API and saves bounded 60-second pre/post incident windows. Retrieve with `sudo ella-ap-watch faults`, `sudo ella-ap-watch report`, or `sudo ella-ap-watch export --output "$HOME/ella-wifi-fault.json"` (new filename required). `capture` requests a manual window. Private incidents: `/var/lib/ella-ap-watch/`; latest five, with explicit partial/crash limits. Routine samples remain in RAM. [Evidence, optional probe/verbosity settings and limits](../node.js/AP-WATCH.md).
 
 ## Logging: check and restart
 
@@ -37,3 +37,4 @@
 - **Restart collector/logger:** `sudo systemctl restart pico-mqtt.service`; recheck API status afterwards.
 - **Restart broker only if necessary:** `sudo systemctl restart mosquitto.service` — interrupts MQTT clients briefly.
 - **Safe shutdown:** `sudo poweroff`
+

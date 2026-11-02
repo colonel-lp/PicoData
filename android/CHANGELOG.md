@@ -1,5 +1,11 @@
 # Android changelog
 
+## 0.32 — diagnostic source correction — 2026-11-02
+
+- Save connection outages automatically in private, bounded fault files with available 60-second pre/post context, immediate prefix and honest foreground/process-interruption/truncation flags. Keep five completed files of at most 256 KiB each plus a pending capture; routine traffic remains in RAM. Long-press Settings → NETWORK & PI → Refresh → FAULT LOGS to select/copy later.
+- Correlate connection attempts and final request outcomes by local call ID, address family and numeric errno when available. A failed attempt followed by HTTP success is shown as recovered context, not a critical outage. Preserve credential/address redaction, network selection, TLS, safe-GET recovery, non-replayed mode POSTs, polling and snapshot/source-freshness rules.
+- Publish standalone Pi monitor 1.2 separately: both radios, independent sensor/gateway round trips, optional firmware counters/console evidence, local collector listener checks and private bounded fault windows. It retains existing conservative AP-only recovery. Owner Pi installation and Android rebuild are required; no APK or live network change is performed here. Android remains 0.32/build 14 and collector remains 0.7.5. No radio-fault cause or hardware fix is claimed.
+
 ## 0.32 — 2026-11-01
 
 - Enable bounded connection recovery for safe API GET reads, including failed reused sockets, while keeping Pi mode POST actions non-retrying with one-shot bodies. Preserve network-bound sockets/DNS, HTTPS hostname/certificate checks, redirect rejection, existing request/response limits and the three-second display freshness rule.
@@ -169,5 +175,6 @@ First authorized Android viewer build. Collector/database/API versions remain un
 - Add synthetic API/model/network and Android activity tests, pinned build tooling and validation records. No private runtime readings/network/system inventory is included.
 
 Development preview identity/signing is separate from the future production app. Hardware/LAN/UI fit, FYT timeout restoration, production identity/releases/updater, background alerts and future remote/direct-device features remain pending; no cloud uploads or monitor settings writes are enabled.
+
 
 

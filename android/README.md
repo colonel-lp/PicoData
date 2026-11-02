@@ -4,6 +4,8 @@ Version **0.32** (build 14). Native Java monitoring viewer with themed Settings/
 
 **Owner-built update:** compile `Ella-monitoring-v0.32.apk` in Android Studio and use the same signing key as the installed app to update in place and preserve settings. The package is unchanged. The earlier 0.1.0 key is different and still requires reinstalling. This remains the existing development package; a separate production identity is not introduced.
 
+**Diagnostic source correction, 2026-11-02:** this remains 0.32/build 14 and needs an owner rebuild. Long-press **Settings → NETWORK & PI → Refresh** for the short trace, or choose **FAULT LOGS → a record → COPY** for automatically saved outages. Call IDs distinguish recovered IPv4/IPv6 connection attempts from final failed requests. Two consecutive final live failures or actual snapshot expiry save available 60-second pre/post context privately; latest five completed files, at most 256 KiB each, plus a pending capture. Foreground/process interruptions and short/truncated windows are explicit. No fixed-hours retention, background network polling, uploads or sensor-logging changes. [Details and limits](functionality/live-connection.md#diagnostic-source-correction--032--build-14--2026-11-02).
+
 ## First connection
 
 1. Install the development preview APK. It is a separate app named **Ella Monitoring**, package `com.colonellp.ellamonitor.preview`; production identity/signing are still to be established.
@@ -104,3 +106,4 @@ Safe API GET reads can recover from connection failures within the existing call
 Long-press **Refresh** under **Settings → NETWORK & PI** to open **Connection diagnostics**; use **COPY** to share the text manually. It shows the latest 256 in-memory events with UTC/relative timing, request duration/error class/stage, snapshot expiry and reconnect reason. It excludes addresses, Wi-Fi names, API paths/metric identifiers, response data, headers, credentials and exception messages. Nothing is written per request or uploaded; the ring is lost when the app process exits. Normal Refresh still requests Pi status. Dialog controls use the current theme/font; approved Settings panels and bottom-bar layout are unchanged.
 
 The separate AP watch 1.1 update and its private Pi diagnostics are documented in [AP-WATCH.md](../node.js/AP-WATCH.md). A source commit does not install that helper on the Pi or establish hardware recovery. See [BUILD-VALIDATION.md](BUILD-VALIDATION.md) for checks and pending Android Studio/device tests.
+

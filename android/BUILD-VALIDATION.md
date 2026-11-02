@@ -1,3 +1,17 @@
+# Diagnostic source correction — Android 0.32 / helper 1.2 — 2026-11-02
+
+Immediate logging source edit authorized by the owner. Android remains 0.32/build 14; collector remains 0.7.5. The standalone Pi helper advances to 1.2. No APK assembly, owner-device access, live installation or network configuration change is performed.
+
+- PASS: 40 existing Pi recovery/safety/I/O/installer tests and 36 additional synthetic diagnostic tests. Cover independent round trips, current-phy/interface mapping and disappearance, credential-free HTTP 401/TCP-only probes, learned fault detection, slow-worker isolation, preserved prefix/full and interrupted tails, restart continuity, journal redaction, critical monitor-error capture, bounds/retention, reversible firmware logging bit and private non-overwriting export. Existing tests include generated-unit verification by the real systemd parser. Radio, service and kernel operations are mocked; no Pi behavior is established.
+- PASS: actual ConnectionFaultStore/ConnectionDiagnostics compile with Java 8 source/target on JDK 17. Seven pure-JVM cases execute 32 assertions for prefix/tail/partial/restart behavior, recovered-attempt versus final failure, redaction, storage error isolation and retention/read bounds. A compile-only JUnit Test annotation stand-in supports the direct main runner; this does not claim a JUnit/Android suite run.
+- PASS: existing pure-JVM core harness executes 32 further assertions against actual NetworkIdentity, ApiClient and ConnectionDiagnostics with upstream org.json, including a real delayed loopback HTTP response, cancellation and redaction. No OkHttp/Android runtime is involved.
+- PASS: 72 app/test Java files syntax-parse as Java 8. Full repository/bundled changelogs match; diagnostic changes do not alter Gradle/SDK/signing/package/version settings.
+- NOT RUN: Android SDK/AGP type checking/compilation, actual OkHttp transport integration tests, Robolectric, APK/signing, phone/Joying rendering/lifecycle/radio behavior, Pi installation/firmware output/resource overhead and genuine outage/recovery. SDK/Gradle/resolved Android dependencies are unavailable here. No root cause or hardware fix is claimed.
+
+Owner checks: separately install helper 1.2 using AP-WATCH.md and confirm both interface names, recent samples, independent round trips and local API probe capability. Rebuild Android source with the retained signing identity; verify FAULT LOGS retrieval after a genuine outage, matched call IDs/families/final outcomes, foreground/interrupted capture and preserved monitoring behavior. Do not deliberately interrupt live sensors to force a test. Source publication is checked against the current branch with a guarded update and immutable file readback.
+
+Previous source validation follows.
+
 # Source 0.32 / build 14 validation — 2026-11-01
 
 Source-only Android change; output configured as Ella-monitoring-v0.32.apk. Collector 0.7.5 and AP watch 1.1 source/versions are retained; no Pi installation, APK assembly or device action is performed here.
@@ -446,5 +460,6 @@ This is owner-reported hardware evidence; the raw capture has not been supplied 
 Incoming framing/CRC interpretation was derived from upstream request layouts and passed every recorded response/packet in the owner's reported capture. This validates that capture, not every firmware or failure condition. The recorder includes raw TCP data to diagnose failures. The live receiver currently bounds-checks fields but does not enforce receive CRCs.
 
 No real Pico, SBMS0, Pi or Android hardware test has been performed by the agent. The original 0.1.0 step built no MQTT transport; 0.2.0 adds the optional publisher described above. No APK, production broker or SignalK integration has been built.
+
 
 

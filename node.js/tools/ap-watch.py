@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 import fcntl
 import gzip
 import hashlib
+import http.client
 import ipaddress
 import json
 import math
@@ -24,10 +25,11 @@ import socket
 import subprocess
 import sys
 import tempfile
+import threading
 import time
 import traceback
 
-VERSION = "1.1"
+VERSION = "1.2"
 CONFIG = Path("/etc/ella-ap-watch.json")
 RUNTIME = Path("/run/ella-ap-watch")
 ARCHIVE = Path("/var/lib/ella-ap-watch")
@@ -38,6 +40,14 @@ MARKER = "# Managed by Ella AP watch\n"
 STOP = False
 PHASE = "startup"
 ERROR_TIMES = {}
+ERROR_CAPTURE = threading.local()
+RECORDER = None
+RING_LOCK = threading.RLock()
+SYS_NET = Path('/sys/class/net')
+DEBUG_NET = Path('/sys/kernel/debug/ieee80211')
+BROKER_LOG = Path('/var/log/mosquitto/mosquitto.log')
+PROC_ROUTES = Path('/proc/net/route')
+FW_DEBUG = Path('/sys/module/brcmfmac/parameters/debug')
 
 
 def run(argv, timeout=5, limit=65536):
@@ -112,6 +122,11 @@ def stamp():
 
 
 def ring(event):
+    with RING_LOCK:
+        _ring(event)
+
+
+def _ring(event):
     mkdir(RUNTIME)
     path = RUNTIME / "events.jsonl"
     record = {"utc": stamp(), "uptime": round(time.monotonic(), 3), **event}
@@ -125,6 +140,9 @@ def ring(event):
     fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT | os.O_NOFOLLOW, 0o600)
     with os.fdopen(fd, "a") as output:
         output.write(line)
+    recorder = RECORDER
+    if recorder is not None:
+        recorder.add(record)
 
 
 def journal(message, stream=None):
@@ -168,6 +186,19 @@ def report_error(error, phase, persistent=False):
         pass
     if persistent:
         persist_error(record, now)
+        recorder = RECORDER
+        if recorder is not None and not recorder.closed and not getattr(ERROR_CAPTURE, 'active', False):
+            ERROR_CAPTURE.active = True
+            try:
+                recorder.add({'type': 'monitor-error', 'utc': record['utc'], 'uptime': now,
+                              'phase': record['phase'], 'error': record['error'],
+                              'message': clean_message(record['message'])})
+                recorder.trigger('monitor-error:' + record['phase'], now)
+            except Exception:
+                # Archive/storage failure must not recurse or replace the original exception.
+                pass
+            finally:
+                ERROR_CAPTURE.active = False
 
 
 def persist_error(record, now):
@@ -246,6 +277,18 @@ def validate_config(c):
             raise ValueError("Invalid target MAC")
     if len({t["ip"] for t in targets}) != len(targets) or len({t["mac"] for t in targets}) != len(targets):
         raise ValueError("Targets must identify different clients")
+    if c.get("uplink") is not None and (not isinstance(c['uplink'], str) or not re.fullmatch(r"[a-zA-Z0-9_-]{1,15}", c["uplink"])):
+        raise ValueError("Invalid uplink interface")
+    if 'firmware_console' in c and type(c['firmware_console']) is not bool:
+        raise ValueError('Invalid firmware console option')
+    api = c.get("local_api")
+    if api is not None:
+        if (not isinstance(api, dict) or set(api) != {"host", "port", "scheme"} or
+                type(api["port"]) is not int or not 1 <= api["port"] <= 65535 or
+                api["scheme"] not in ("http", "tcp")):
+            raise ValueError("Invalid local API probe")
+        if not ipaddress.IPv4Address(api["host"]).is_loopback:
+            raise ValueError("API diagnostic probe must use loopback")
     return c
 
 
@@ -357,7 +400,7 @@ def stations(text):
             current = match[1].lower()
             result[current] = {}
         elif current:
-            match = re.match(r"\s*(rx bytes|rx packets|tx failed|connected time):\s*(\d+)", line)
+            match = re.match(r"\s*(rx bytes|rx packets|tx bytes|tx packets|tx failed|tx retries|beacon loss|beacon rx|rx drop misc|connected time):\s*(\d+)", line)
             if match:
                 result[current][match[1]] = int(match[2])
     return result
@@ -393,7 +436,7 @@ def observe(c, previous):
         except (ValueError, KeyError, TypeError):
             routed = False
         probe = None
-        if routed and not progressed:
+        if routed:
             probe = run(["ping", "-n", "-I", iface, "-c", "1", "-W", "2", target["ip"]], timeout=3)["code"] == 0
         observations[mac] = {"ip": target["ip"], "rx_progress": progressed,
                              "probe": probe, "route_ok": routed,
@@ -482,6 +525,8 @@ class Policy:
         if now - self.started < 120:
             return "startup-grace", False
         if alive:
+            if any(t.get('rx_progress') and t.get('probe') is False for t in targets.values()):
+                return 'rx-present-roundtrip-failed', False
             return "traffic-ok" if observation["enabled"] else "traffic-ok-control-warning", False
         if not all(t["route_ok"] for t in targets.values()):
             self.last_good = now
@@ -561,6 +606,8 @@ def checkpoint(c, identity, policy, reason, observation):
 
 def snapshot(c, reason, observation):
     """Only incidents/manual captures reach the card; at most five gzip files."""
+    if RECORDER is not None:
+        return RECORDER.trigger(reason, observation=observation)
     mkdir(ARCHIVE)
     commands = {
         "radio": ["iw", "dev", c["interface"], "info"],
@@ -605,6 +652,631 @@ def boot_id():
     return Path("/proc/sys/kernel/random/boot_id").read_text().strip()
 
 
+def bounded_text(path, limit=16384):
+    try:
+        with Path(path).open() as source:
+            value = source.read(limit + 1)
+        return value if len(value) <= limit else ""
+    except OSError:
+        return ""
+
+
+def clean_message(value):
+    value = str(value)[:2048]
+    return re.sub(r'''(?i)(bearer\s+|(?:token|password|passphrase|psk|secret)\s*[=:]\s*)(?:"[^"]*"|'[^']*'|[^\s,;]+)''',
+                  r"\1[REDACTED]", value)
+
+
+def default_wifi(ap, preferred=None):
+    """No scans or DNS; find the actual wireless uplink, not a fixed phy number."""
+    names = [p.name for p in SYS_NET.glob('*')
+             if p.name != ap and re.fullmatch(r'[a-zA-Z0-9_-]{1,15}', p.name)
+             and (p / 'phy80211').exists()]
+    if preferred:
+        return preferred
+    routes = bounded_text(PROC_ROUTES).splitlines()[1:]
+    candidates = []
+    for line in routes:
+        f = line.split()
+        if len(f) >= 8 and f[0] in names and f[1] == '00000000' and f[7] == '00000000':
+            try:
+                if int(f[3], 16) & 1:
+                    candidates.append((int(f[6]), f[0]))
+            except ValueError:
+                pass
+    return min(candidates)[1] if candidates else names[0] if len(names) == 1 else None
+
+
+def interface_sample(name):
+    if not name:
+        return {'interface': None, 'present': None, 'reason': 'uplink-not-identifiable'}
+    path = SYS_NET / name
+    if not path.exists():
+        return {'interface': name, 'present': False}
+    result = {'interface': name, 'present': True,
+              'state': bounded_text(path / 'operstate', 64).strip(),
+              'carrier': bounded_text(path / 'carrier', 64).strip(), 'counters': {}}
+    for key in ('rx_bytes', 'rx_packets', 'rx_errors', 'rx_dropped',
+                'tx_bytes', 'tx_packets', 'tx_errors', 'tx_dropped'):
+        text = bounded_text(path / 'statistics' / key, 64).strip()
+        result['counters'][key] = int(text) if text.isdigit() else None
+    try:
+        phy = (path / 'phy80211').resolve(strict=True).name
+        if not re.fullmatch(r'phy[0-9]+', phy):
+            raise ValueError()
+        result['phy'] = phy
+        text = bounded_text(DEBUG_NET / phy / 'counters')
+        values = {}
+        for key in ('fc_xoff', 'fc_xon', 'f2txdata'):
+            match = re.search(r'^' + key + r':\s*(\d+)\s*$', text, re.M)
+            values[key] = int(match[1]) if match else None
+        result['firmware'] = values
+    except (OSError, ValueError):
+        result['phy'] = None
+        result['firmware'] = None
+    try:
+        device = (path / 'device').resolve(strict=True)
+        result['driver'] = (device / 'driver').resolve(strict=True).name
+        usb = device.parent if ':' in device.name else device
+        if (usb / 'idVendor').exists():
+            result['usb'] = {key: bounded_text(usb / 'power' / key, 64).strip() or None
+                             for key in ('control', 'runtime_status', 'autosuspend_delay_ms')}
+    except OSError:
+        result['driver'] = None
+    return result
+
+
+def gateway_for(interface):
+    rows = []
+    for line in bounded_text(PROC_ROUTES).splitlines()[1:]:
+        f = line.split()
+        if len(f) >= 8 and f[0] == interface and f[1] == '00000000' and f[7] == '00000000':
+            try:
+                if int(f[3], 16) & 1 and int(f[2], 16):
+                    address = socket.inet_ntoa(int(f[2], 16).to_bytes(4, 'little'))
+                    rows.append((int(f[6]), address))
+            except (ValueError, OverflowError):
+                pass
+    return min(rows)[1] if rows else None
+
+
+def local_api_sample(c):
+    """A credential-free loopback HTTP response tests the listener, not sensor freshness."""
+    api = c.get('local_api')
+    if not api:
+        return {'configured': False, 'ok': None, 'reason': 'probe-not-configured'}
+    started = time.monotonic()
+    try:
+        if api['scheme'] == 'http':
+            connection = http.client.HTTPConnection(api['host'], api['port'], timeout=0.7)
+            try:
+                connection.request('GET', '/api/v1/status', headers={'Connection': 'close'})
+                response = connection.getresponse()
+                # The authenticated collector normally replies 401: this is a successful
+                # HTTP availability test, not an authenticated source-data/status read.
+                return {'configured': True, 'kind': 'http-without-credentials',
+                        'ok': True, 'expected_status': response.status in (200, 401), 'status': response.status,
+                        'elapsed_ms': round((time.monotonic() - started) * 1000)}
+            finally:
+                connection.close()
+        with socket.create_connection((api['host'], api['port']), timeout=0.7):
+            pass
+        return {'configured': True, 'kind': 'tcp-only', 'ok': True,
+                'elapsed_ms': round((time.monotonic() - started) * 1000)}
+    except (OSError, http.client.HTTPException) as error:
+        return {'configured': True, 'kind': api['scheme'], 'ok': False,
+                'error': type(error).__name__, 'errno': getattr(error, 'errno', None),
+                'elapsed_ms': round((time.monotonic() - started) * 1000)}
+
+
+class LearnedChecks:
+    """Diagnostic triggers only. Never authorizes a network/recovery operation."""
+    def __init__(self, saved=None):
+        self.values = saved if isinstance(saved, dict) else {}
+        if len(self.values) > 32:
+            self.values = {}
+        self.values = {k: v for k, v in self.values.items()
+                       if isinstance(k, str) and len(k) <= 96 and isinstance(v, dict)
+                       and type(v.get('successes')) is int and 0 <= v['successes'] <= 2
+                       and type(v.get('failures')) is int and 0 <= v['failures'] <= 10000
+                       and type(v.get('first_bad')) in (int, float)
+                       and math.isfinite(v['first_bad']) and v['first_bad'] >= 0}
+
+    def check(self, key, ok, now, minimum=2):
+        if ok is None:
+            return None
+        if key not in self.values and len(self.values) >= 32:
+            self.values.pop(next(iter(self.values)))
+        value = self.values.setdefault(key, {'successes': 0, 'failures': 0, 'first_bad': now})
+        if ok:
+            value['successes'] = min(2, value['successes'] + 1)
+            value['failures'] = 0
+            value['first_bad'] = now
+            return None
+        if value['failures'] == 0:
+            value['first_bad'] = now
+        value['failures'] = min(10000, value['failures'] + 1)
+        if value['successes'] >= 2 and value['failures'] >= minimum:
+            return value['first_bad']
+        return None
+
+
+def read_fault(path):
+    if path.is_symlink():
+        raise ValueError('Symlink is not a fault archive')
+    opener = gzip.open if path.suffix == '.gz' else open
+    with opener(path, 'rb') as source:
+        raw = source.read(2 * 1024 * 1024 + 1)
+    if len(raw) > 2 * 1024 * 1024:
+        raise ValueError('Fault exceeds read bound')
+    return json.loads(raw)
+
+
+def write_fault(path, document, compressed=False):
+    mkdir(ARCHIVE)
+    raw = json.dumps(document, ensure_ascii=True, allow_nan=False).encode()
+    while len(raw) > 2 * 1024 * 1024 and document.get('events'):
+        # Preserve the beginning of the fault, rather than overwriting it as
+        # a noisy broken driver repeats the same aftermath hundreds of times.
+        index = len(document['events']) // 2 if len(document['events']) > 20 else -1
+        document['events'].pop(index)
+        document['event_context_truncated'] = True
+        raw = json.dumps(document, ensure_ascii=True, allow_nan=False).encode()
+    if len(raw) > 2 * 1024 * 1024:
+        raise ValueError('Fault exceeds archive bound')
+    fd, temporary = tempfile.mkstemp(prefix='.fault-', dir=ARCHIVE)
+    try:
+        with os.fdopen(fd, 'wb') as output:
+            if compressed:
+                with gzip.GzipFile(fileobj=output, mode='wb', compresslevel=1) as zipped:
+                    zipped.write(raw)
+            else:
+                output.write(raw)
+            output.flush()
+            os.fsync(output.fileno())
+        os.replace(temporary, path)
+        directory = os.open(ARCHIVE, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        Path(temporary).unlink(missing_ok=True)
+
+
+def prune_faults():
+    files = sorted(ARCHIVE.glob('incident-*.json.gz'), key=lambda p: p.stat().st_mtime_ns)
+    for path in files[:-5]:
+        path.unlink()
+
+
+class FlightRecorder:
+    """Two-minute incident windows with immediate durable prefix and bounded RAM context."""
+    def __init__(self, c, now=time.monotonic):
+        self.c, self.now = c, now
+        self.boot = boot_id()
+        self.signature = hashlib.sha256(json.dumps({'ap': binding(c), 'uplink': c.get('uplink'),
+                                                    'api': c.get('local_api')}, sort_keys=True).encode()).hexdigest()
+        self.lock = threading.RLock()
+        self.health = deque(maxlen=241)
+        self.events = deque(maxlen=512)
+        self.active = None
+        self.last_bad = -math.inf
+        self.last_checkpoint = 0
+        self.closed = False
+        self.stop_event = threading.Event()
+        self.slow = {}
+        self.last_slow = -math.inf
+        self.slow_seen = -math.inf
+        self.slow_busy = False
+        self.background = False
+        self.last_status = -math.inf
+        self.last_pid = None
+        self.last_uplink = None
+        self.broker_cursor = None
+        self.broker_partial = b''
+        self.capture_busy = False
+        self.limited_events = 0
+        self.checks = LearnedChecks()
+        try:
+            saved = read_json(RUNTIME / 'flight-status.json')
+            if saved.get('boot') == self.boot and saved.get('binding') == self.signature:
+                self.checks = LearnedChecks(saved.get('learned'))
+        except (OSError, ValueError, AttributeError):
+            pass
+        # Never claim that a stopped process collected a post-event tail.
+        mkdir(ARCHIVE)
+        for path in sorted(ARCHIVE.glob('incident-*.pending.json'))[:5]:
+            try:
+                document = read_fault(path)
+                document['state'] = 'interrupted'
+                document['post_complete'] = False
+                document['resumed_on_boot'] = self.boot
+                write_fault(path.with_name(path.name.replace('.pending.json', '.json.gz')), document, True)
+                path.unlink()
+            except (OSError, ValueError, TypeError) as error:
+                report_error(error, 'fault-resume', True)
+        prune_faults()
+
+    def add(self, record):
+        with self.lock:
+            if self.closed:
+                return
+            record = json.loads(json.dumps(record, ensure_ascii=True, allow_nan=False))
+            if len(json.dumps(record).encode()) > 16384:
+                record = {'uptime': record.get('uptime', self.now()), 'utc': stamp(),
+                          'type': 'diagnostic-record-truncated'}
+            queue = self.health if record.get('type') == 'wifi-health' else self.events
+            if queue is self.events and len(queue) == queue.maxlen:
+                self.limited_events += 1
+            queue.append(record)
+            if self.active and self.active['confirmed_at'] <= record.get('uptime', -1) <= self.active['end']:
+                key = 'health' if record.get('type') == 'wifi-health' else 'events'
+                records = self.active[key]
+                if len(records) < (241 if key == 'health' else 1024):
+                    records.append(record)
+                else:
+                    self.active['event_context_truncated'] = True
+                    self.limited_events += 1
+            edge = self.now() - 180
+            for q in (self.health, self.events):
+                while q and q[0].get('uptime', 0) < edge:
+                    q.popleft()
+
+    def trigger(self, reason, onset=None, observation=None):
+        now = self.now()
+        onset = now if onset is None else min(now, max(0, onset))
+        with self.lock:
+            self.last_bad = now
+            if self.active:
+                if reason not in self.active['reasons'] and len(self.active['reasons']) < 32:
+                    self.active['reasons'].append(reason)
+                return self.active['path']
+            # One archive for an unresolved episode. Re-arm only after one quiet minute.
+            if getattr(self, 'latched', False):
+                return 'existing incident; waiting for a healthy minute before a new archive'
+            path = ARCHIVE / ('incident-' + str(time.time_ns()) + '.pending.json')
+            self.active = {'path': str(path), 'version': VERSION, 'format': 2,
+                           'boot': self.boot, 'utc': stamp(), 'onset': onset,
+                           'confirmed_at': now, 'end': onset + 60, 'reasons': [reason],
+                           'observation': observation, 'state': 'collecting',
+                           'pre_complete': bool(self.health and self.health[0]['uptime'] <= onset - 60),
+                           'post_complete': False, 'snapshots': [],
+                           'health': [r for r in self.health if onset - 60 <= r['uptime'] <= onset + 60],
+                           'events': [r for r in self.events if onset - 60 <= r['uptime'] <= onset + 60]}
+            self.latched = True
+            self._save(False)
+            self._extra('at-detection')
+            return str(path)
+
+    def _document(self):
+        document = dict(self.active)
+        document['health'] = list(document['health'])
+        document['events'] = list(document['events'])
+        document['last_updated'] = self.now()
+        document['event_drop_count'] = self.limited_events
+        times = [r['uptime'] for r in document['health']]
+        document['largest_sample_gap_seconds'] = max((b-a for a, b in zip(times, times[1:])), default=None)
+        document['limits'] = {'pre_seconds': 60, 'post_seconds': 60, 'health_interval_seconds': 1,
+                              'link_probe_interval_seconds': 10, 'events_max': 512,
+                              'archive_bytes_max': 2 * 1024 * 1024}
+        return document
+
+    def _save(self, finished):
+        document = self._document()
+        path = Path(document['path'])
+        if finished:
+            document['state'] = 'complete' if document['post_complete'] else 'interrupted'
+            destination = path.with_name(path.name.replace('.pending.json', '.json.gz'))
+            write_fault(destination, document, True)
+            path.unlink(missing_ok=True)
+            self.active = None
+            prune_faults()
+        else:
+            write_fault(path, document)
+        self.last_checkpoint = self.now()
+
+    def _extra(self, label):
+        if self.capture_busy or not self.active:
+            return
+        self.capture_busy = True
+        identity = self.active['path']
+        def collect():
+            try:
+                commands = {
+                    'kernel': ['journalctl', '-k', '-b', '--since', '-3min', '-n', '200', '--no-pager', '-o', 'short-iso'],
+                    'services': ['journalctl', '-b', '-u', self.c['unit'], '-u', 'NetworkManager',
+                                 '-u', 'ella-hotspot-dns.service', '-u', 'pico-mqtt.service', '-u', 'mosquitto.service',
+                                 '--since', '-3min', '-n', '300', '--no-pager', '-o', 'short-iso'],
+                    'routes': ['ip', '-4', 'route'],
+                    'addresses': ['ip', '-4', '-brief', 'address'],
+                    'firewall': ['nft', 'list', 'table', 'ip', 'ella_hotspot'],
+                }
+                details = {name: run(command, timeout=2, limit=32768) for name, command in commands.items()}
+                for result in details.values():
+                    result['text'] = '\n'.join(clean_message(line) for line in result['text'].splitlines())
+                # These are private system diagnostics; never read credential/config files.
+                with self.lock:
+                    if self.active and self.active['path'] == identity and not self.closed:
+                        self.active['snapshots'].append({'phase': label, 'utc': stamp(), 'details': details})
+            except Exception as error:
+                report_error(error, 'fault-context', True)
+            finally:
+                with self.lock:
+                    self.capture_busy = False
+        threading.Thread(target=collect, name='wifi-fault-context', daemon=True).start()
+
+    def _ping(self, interface, address):
+        if not interface or not address:
+            return None
+        started = self.now()
+        result = run(['ping', '-n', '-I', interface, '-c', '1', '-W', '1', address], timeout=1.5, limit=1024)
+        match = re.search(r'time[=<]([0-9.]+)\s*ms', result['text'])
+        return {'ok': result['code'] == 0, 'rtt_ms': float(match[1]) if match else None,
+                'elapsed_ms': round((self.now() - started) * 1000), 'code': result['code'], 'limited': result['limited']}
+
+    def _slow_sample(self, uplink):
+        ap = self.c['interface']
+        info = run(['iw', 'dev', ap, 'station', 'dump'], timeout=1.5, limit=32768)
+        all_stations = stations(info['text']) if info['code'] == 0 else {}
+        selected = {t['mac']: all_stations[t['mac']] for t in self.c['targets'] if t['mac'] in all_stations}
+        for mac, value in all_stations.items():
+            if len(selected) >= 16:
+                break
+            selected.setdefault(mac, value)
+        probes = {}
+        for t in self.c['targets']:
+            try:
+                route = ip_json(['route', 'get', t['ip']])
+                routed = bool(route and route[0].get('dev') == ap and not route[0].get('gateway'))
+            except (ValueError, KeyError, TypeError):
+                routed = False
+            probe = self._ping(ap, t['ip']) if routed else None
+            probes[t['mac']] = {'route_ok': routed, **(probe or {'ok': None, 'rtt_ms': None})}
+        link = run(['iw', 'dev', uplink, 'link'], timeout=1.5, limit=8192) if uplink else None
+        peer = run(['iw', 'dev', uplink, 'station', 'dump'], timeout=1.5, limit=8192) if uplink else None
+        gateway = gateway_for(uplink) if uplink else None
+        gateway_probe = self._ping(uplink, gateway)
+        service_read = run(['systemctl', 'show', 'pico-mqtt.service', '-p', 'ActiveState',
+                            '-p', 'MainPID', '-p', 'NRestarts'], timeout=1.5, limit=2048)
+        service = pairs(service_read['text']) if service_read['code'] == 0 else {}
+        text = link['text'] if link and link['code'] == 0 else ''
+        properties = {}
+        for key in ('SSID', 'signal', 'rx bitrate', 'tx bitrate', 'freq'):
+            match = re.search(r'^\s*' + re.escape(key) + r':\s*(.+)$', text, re.M)
+            properties[key] = match[1][:128] if match else None
+        self.slow = {'sampled_at': self.now(), 'ap_stations': selected,
+                     'station_query_ok': info['code'] == 0, 'ap_probes': probes,
+                     'uplink': uplink, 'associated': (text.startswith('Connected to ') if text else None),
+                     'link': properties, 'peer': stations(peer['text']) if peer and peer['code'] == 0 else None,
+                     'gateway': gateway, 'gateway_ok': gateway_probe['ok'] if gateway_probe else None,
+                     'gateway_probe': gateway_probe, 'collector_service': service,
+                     'query_codes': {'ap_stations': info['code'], 'sta_link': link['code'] if link else None,
+                                     'sta_peer': peer['code'] if peer else None, 'collector_service': service_read['code']}}
+
+    def broker_events(self):
+        """Mosquitto commonly logs to a file instead of journald. Read only new bounded text."""
+        try:
+            with BROKER_LOG.open('rb') as source:
+                info = os.fstat(source.fileno())
+                identity = (info.st_dev, info.st_ino)
+                if self.broker_cursor is None:
+                    self.broker_cursor = (identity, info.st_size)
+                    return {'available': True, 'baseline': True}
+                previous, offset = self.broker_cursor
+                if identity != previous or info.st_size < offset:
+                    offset, self.broker_partial = 0, b''
+                skipped = info.st_size - offset > 16384
+                if skipped:
+                    offset, self.broker_partial = max(0, info.st_size - 16384), b''
+                    self.limited_events += 1
+                source.seek(offset)
+                raw = self.broker_partial + source.read(16384)
+                self.broker_cursor = (identity, source.tell())
+            lines = raw.split(b'\n')
+            self.broker_partial = lines.pop()[:2048]
+            if skipped and lines:
+                lines.pop(0)  # first line may start in the middle of an old message
+            for line in lines[:32]:
+                message = clean_message(line.decode('utf-8', 'replace'))
+                now = self.now()
+                self.add({'type': 'broker-file', 'utc': stamp(), 'uptime': now, 'message': message})
+                if re.search(r'(?i)malformed packet|exceeded timeout|bad socket', message):
+                    self.trigger('mqtt-broker-client-error', now)
+            if len(lines) > 32:
+                self.limited_events += len(lines) - 32
+            return {'available': True, 'limited': skipped or len(lines) > 32}
+        except OSError as error:
+            return {'available': False, 'error': type(error).__name__}
+
+    def sample(self):
+        started = self.now()
+        uplink = default_wifi(self.c['interface'], self.c.get('uplink')) or self.last_uplink
+        if uplink:
+            self.last_uplink = uplink
+        if started - self.last_slow >= 10 and not self.slow_busy:
+            self.last_slow = started
+            if self.background:
+                self.slow_busy = True
+                def refresh():
+                    try:
+                        self._slow_sample(uplink)
+                    except Exception as error:
+                        report_error(error, 'radio-probes', True)
+                    finally:
+                        self.slow_busy = False
+                threading.Thread(target=refresh, name='wifi-radio-probes', daemon=True).start()
+            else:
+                self._slow_sample(uplink)
+        slow = self.slow
+        slow_stamp = slow.get('sampled_at', -math.inf)
+        slow_new = slow_stamp != self.slow_seen and slow.get('uplink') == uplink
+        if slow_new:
+            self.slow_seen = slow_stamp
+        now = self.now()
+        row = {'type': 'wifi-health', 'utc': stamp(), 'uptime': now,
+               'ap': interface_sample(self.c['interface']), 'sta': interface_sample(uplink),
+               'local_api': local_api_sample(self.c), 'slow': slow,
+               'broker_log': self.broker_events(),
+               'slow_in_progress': self.slow_busy,
+               'sample_elapsed_ms': round((self.now() - started) * 1000)}
+        self.add(row)
+        conditions = [('local-api', row['local_api'].get('ok'), 2)]
+        if 'expected_status' in row['local_api']:
+            conditions.append(('local-api-http-status', row['local_api']['expected_status'], 2))
+        conditions += [('ap-interface', row['ap'].get('present'), 2)]
+        if uplink:
+            conditions.append(('sta-interface:' + uplink, row['sta'].get('present'), 2))
+        if slow_new:
+            for mac, probe in slow.get('ap_probes', {}).items():
+                conditions.append(('ap-roundtrip:' + mac, probe['ok'] if probe['route_ok'] else None, 2))
+                if probe.get('rtt_ms') is not None:
+                    conditions.append(('ap-high-latency:' + mac, probe['rtt_ms'] <= 500, 2))
+            conditions.append(('sta-association:' + str(uplink), slow.get('associated'), 2))
+            gateway = slow.get('gateway')
+            if uplink:
+                conditions.append(('sta-default-route:' + uplink, gateway is not None, 2))
+            if gateway:
+                conditions.append(('sta-gateway:' + str(uplink) + ':' + gateway, slow.get('gateway_ok'), 2))
+                latency = (slow.get('gateway_probe') or {}).get('rtt_ms')
+                if latency is not None:
+                    conditions.append(('sta-high-latency:' + str(uplink), latency <= 500, 2))
+            service = slow.get('collector_service', {})
+            active = service.get('ActiveState')
+            conditions.append(('collector-service', active == 'active' if active else None, 2))
+            pid = service.get('MainPID')
+            if self.last_pid and pid and pid != '0' and pid != self.last_pid:
+                self.trigger('collector-process-replaced', now)
+            if pid and pid != '0':
+                self.last_pid = pid
+        bad = False
+        for key, ok, minimum in conditions:
+            onset = self.checks.check(key, ok, now, minimum)
+            if onset is not None:
+                bad = True
+                self.trigger(key, onset)
+        with self.lock:
+            if not bad and not self.active and now - self.last_bad >= 60:
+                self.latched = False
+            if self.active:
+                if now >= self.active['onset'] + 45 and len(self.active['snapshots']) < 2:
+                    self._extra('post-event')
+                if now >= self.active['end']:
+                    self.active['post_complete'] = True
+                    self._save(True)
+                elif now - self.last_checkpoint >= 10:
+                    self._save(False)
+            if now - self.last_status >= 10:
+                write_json(RUNTIME / 'flight-status.json', {'version': VERSION, 'boot': self.boot,
+                           'binding': self.signature, 'utc': row['utc'], 'sample': row,
+                           'learned': self.checks.values,
+                           'fault': self.active['path'] if self.active else None})
+                self.last_status = now
+        request = RUNTIME / 'incident-request.json'
+        if request.exists():
+            request.unlink()
+            self.trigger('manual-capture', now)
+
+    def journal_event(self, event):
+        unit = event.get('_SYSTEMD_UNIT', '')
+        kernel = event.get('_TRANSPORT') == 'kernel'
+        units = (self.c['unit'], 'NetworkManager.service', 'wpa_supplicant.service',
+                 'ella-hotspot-dns.service', 'pico-mqtt.service', 'mosquitto.service', 'pi-wifi.service')
+        if not kernel and unit not in units:
+            return
+        message = clean_message(event.get('MESSAGE', ''))
+        now = self.now()
+        self.add({'type': 'kernel' if kernel else 'service', 'utc': stamp(), 'uptime': now,
+                  'unit': unit, 'priority': str(event.get('PRIORITY', ''))[:8],
+                  'journal_monotonic_us': str(event.get('__MONOTONIC_TIMESTAMP', ''))[:24],
+                  'journal_utc_us': str(event.get('__REALTIME_TIMESTAMP', ''))[:24], 'message': message})
+        critical = (kernel and re.search(r'(?i)(firmware.*(?:crash|halt)|brcmf.*(?:bus is down|timeout|failed|error)|'
+                    r'rtl8xxxu.*(?:failed|error)|usb.*(?:disconnect|reset|error)|mmc1.*(?:timeout|inhibit|error))', message))
+        if critical:
+            self.trigger('kernel-radio-usb-event', now)
+        elif unit == 'pico-mqtt.service' and re.search(r'"state"\s*:\s*"(?:stale|retrying|failed)"', message):
+            self.trigger('collector-source-or-logging-fault', now)
+
+    def follow_journal(self):
+        while not self.stop_event.is_set():
+            child = None
+            try:
+                child = subprocess.Popen(['journalctl', '-f', '-n', '0', '--no-pager', '-o', 'json'],
+                                         stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, start_new_session=True)
+                os.set_blocking(child.stdout.fileno(), False)
+                pending = bytearray()
+                second, count = 0, 0
+                while not self.stop_event.is_set():
+                    if not select.select([child.stdout], [], [], 0.5)[0]:
+                        if child.poll() is not None:
+                            break
+                        continue
+                    data = os.read(child.stdout.fileno(), 8192)
+                    if not data:
+                        break
+                    pending.extend(data)
+                    while b'\n' in pending:
+                        line, _, rest = pending.partition(b'\n')
+                        pending = bytearray(rest)
+                        tick = int(self.now())
+                        if tick != second:
+                            second, count = tick, 0
+                        if count >= 10 or len(line) > 65536:
+                            self.limited_events += 1
+                            continue
+                        try:
+                            value = json.loads(line)
+                            # Count relevant events rather than unrelated system journal chatter.
+                            if value.get('_TRANSPORT') == 'kernel' or value.get('_SYSTEMD_UNIT') in (
+                                    self.c['unit'], 'NetworkManager.service', 'wpa_supplicant.service',
+                                    'ella-hotspot-dns.service', 'pico-mqtt.service', 'mosquitto.service', 'pi-wifi.service'):
+                                count += 1
+                                self.journal_event(value)
+                        except (ValueError, TypeError, AttributeError):
+                            self.limited_events += 1
+                    if len(pending) > 65536:
+                        pending.clear()
+                        self.limited_events += 1
+            except Exception as error:
+                report_error(error, 'journal-follow', True)
+            finally:
+                if child:
+                    try:
+                        os.killpg(child.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    child.wait(timeout=2)
+                    child.stdout.close()
+            if not self.stop_event.is_set():
+                report_error(RuntimeError('Journal event stream exited; retrying'), 'journal-follow', True)
+                self.stop_event.wait(5)
+
+    def start(self):
+        self.background = True
+        def sample_loop():
+            while not self.stop_event.is_set():
+                at = self.now()
+                try:
+                    self.sample()
+                except Exception as error:
+                    report_error(error, 'wifi-diagnostics', True)
+                self.stop_event.wait(max(0.1, 1 - (self.now() - at)))
+        self.threads = [threading.Thread(target=sample_loop, name='wifi-health', daemon=True),
+                        threading.Thread(target=self.follow_journal, name='wifi-journal', daemon=True)]
+        for thread in self.threads:
+            thread.start()
+
+    def close(self):
+        self.stop_event.set()
+        with self.lock:
+            self.closed = True
+            if self.active:
+                self.active['post_complete'] = False
+                self._save(True)
+        for thread in getattr(self, 'threads', []):
+            thread.join(timeout=1)
+
+
 def on_start(c):
     power = run(["iw", "dev", c["interface"], "set", "power_save", "off"])
     deadline = time.monotonic() + 10
@@ -616,6 +1288,23 @@ def on_start(c):
           "hostapd_debug": answer == "OK"})
     if power["code"] or answer != "OK":
         notice("AP watch: diagnostic setup incomplete; see events/status.")
+    firmware = 'disabled'
+    if c.get('firmware_console', True):
+        try:
+            value = bounded_text(FW_DEBUG, 64).strip()
+            if not value:
+                firmware = 'unsupported'
+            else:
+                FW_DEBUG.write_text(str(int(value, 0) | 0x100000))
+                firmware = 'enabled'
+        except (OSError, ValueError):
+            firmware = 'unavailable'
+    elif re.fullmatch(r'(?:0x[0-9a-fA-F]+|[0-9]+)', c.get('original_firmware_debug', '')):
+        try:
+            FW_DEBUG.write_text(str(int(c['original_firmware_debug'], 0)))
+        except (OSError, ValueError):
+            firmware = 'restore-unavailable'
+    safe_ring({'type': 'firmware-console', 'state': firmware})
 
 
 def check_once(c, identity, policy, counters, old_reason):
@@ -663,7 +1352,7 @@ def check_once(c, identity, policy, counters, old_reason):
 
 
 def daemon():
-    global PHASE
+    global PHASE, RECORDER
     PHASE = "startup"
     mkdir(RUNTIME)
     lock = (RUNTIME / "lock").open("a")
@@ -671,6 +1360,8 @@ def daemon():
     c = config()
     identity = boot_id()
     policy = load_policy(c, identity, time.monotonic())
+    RECORDER = FlightRecorder(c)
+    RECORDER.start()
     tap = Events(c)
     safe_ring({"type": "monitor-start", "version": VERSION, "baseline_restored": policy.baseline_restored,
                "seen_clients": len(policy.seen), "recovery_inhibited": policy.inhibited,
@@ -683,7 +1374,7 @@ def daemon():
         started = time.monotonic()
         PHASE = "configuration"
         current_config = config()
-        if any(current_config[k] != c[k] for k in ("interface", "unit", "control", "targets")):
+        if any(current_config.get(k) != c.get(k) for k in ("interface", "unit", "control", "targets", "uplink", "local_api")):
             raise ValueError("Target/interface configuration changed; restart watch service")
         c = current_config
         # Reattach after a hostapd restart without dropping the monitor process.
@@ -701,6 +1392,8 @@ def daemon():
     PHASE = "shutdown"
     safe_ring({"type": "monitor-stop", "reason": "termination requested"})
     tap.close()
+    RECORDER.close()
+    RECORDER = None
     lock.close()
 
 
@@ -711,6 +1404,30 @@ def managed_write(path, text):
     fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o644)
     with os.fdopen(fd, "w") as output:
         output.write(MARKER + text)
+
+
+def discover_local_api():
+    """Installer only: copy public listen properties, never credentials or TLS keys."""
+    command = run(['systemctl', 'show', 'pico-mqtt.service', '-p', 'ExecStart', '--value'], limit=8192)
+    if '--api-config' in command['text'] or '--no-api' in command['text']:
+        return None
+    match = re.search(r'(/[^ ;{}]+/bin/pico\.js)(?:\s|;|$)', command['text'])
+    if not match:
+        return None
+    script = Path(match[1])
+    if not script.is_absolute():
+        return None
+    try:
+        value = read_json(script.parents[2] / 'api.json')
+        host, port = value.get('host', '127.0.0.1'), value.get('port', 8080)
+        if type(port) is not int or not 1 <= port <= 65535:
+            return None
+        if host != '0.0.0.0' and not ipaddress.IPv4Address(host).is_loopback:
+            return None
+        return {'host': '127.0.0.1' if host == '0.0.0.0' else host,
+                'port': port, 'scheme': 'tcp' if value.get('tls') is not None else 'http'}
+    except (OSError, ValueError, TypeError, AttributeError, IndexError):
+        return None
 
 
 def install(args):
@@ -756,6 +1473,20 @@ def install(args):
     else:
         c["original_power"] = existing.get("original_power", "")
         c["original_log_level"] = existing.get("original_log_level", "")
+    if getattr(args, 'uplink', None):
+        c['uplink'] = args.uplink
+    if getattr(args, 'api_port', None) is not None:
+        c['local_api'] = {'host': '127.0.0.1', 'port': args.api_port,
+                          'scheme': 'http' if getattr(args, 'api_http', False) else 'tcp'}
+    elif not c.get('local_api'):
+        detected_api = discover_local_api()
+        if detected_api:
+            c['local_api'] = detected_api
+    if 'firmware_console' not in c:
+        c['firmware_console'] = True
+        c['original_firmware_debug'] = bounded_text(FW_DEBUG, 64).strip()
+    if getattr(args, 'no_firmware_console', False):
+        c['firmware_console'] = False
     # Validate before any service/config mutation, using the same rules as runtime.
     if not 2 <= len(targets) <= 4 or len({t["mac"] for t in targets}) != len(targets):
         raise ValueError("Supply two to four distinct always-on client addresses")
@@ -782,7 +1513,7 @@ def install(args):
         PROGRAM.chmod(0o700)
     managed_write(dropin, "[Service]\nExecStartPost=-/usr/bin/python3 -u /usr/local/sbin/ella-ap-watch _on-start\n")
     managed_write(SERVICE, """[Unit]
-Description=Bounded hotspot diagnostics and recovery
+Description=Bounded AP/STA fault recording and hotspot recovery
 After=HOTSPOT_UNIT
 
 [Service]
@@ -804,7 +1535,7 @@ NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectHome=yes
 ProtectSystem=strict
-ReadWritePaths=/run/ella-ap-watch /var/lib/ella-ap-watch
+ReadWritePaths=/run/ella-ap-watch /var/lib/ella-ap-watch -/sys/module/brcmfmac/parameters/debug
 TimeoutStopSec=10
 
 [Install]
@@ -818,7 +1549,9 @@ WantedBy=multi-user.target
         if run(command, timeout=20)["code"]:
             raise ValueError("Watch service installation failed; inspect its journal")
     print("Installed AP watch " + VERSION + ". Hotspot and collector were not restarted.")
-    print("30-second checks; 120-second startup grace; established same-boot/config baseline survives monitor restarts.")
+    print("AP/STA fault recording enabled: 60 seconds before/after, 5 persistent archives.")
+    print("Existing 30-second recovery checks and limits preserved; diagnostic samples aim for 1 second, radio/probes 10 seconds.")
+    print("Local API probe: " + (c.get('local_api', {}).get('scheme', 'not configured')))
     print("sudo ella-ap-watch status")
 
 
@@ -836,6 +1569,12 @@ def uninstall():
         control(c, "LOG_LEVEL " + match[1])
     if c.get("original_power") == "Power save: on":
         run(["iw", "dev", c["interface"], "set", "power_save", "on"])
+    previous_debug = c.get('original_firmware_debug', '')
+    if re.fullmatch(r'(?:0x[0-9a-fA-F]+|[0-9]+)', previous_debug):
+        try:
+            FW_DEBUG.write_text(str(int(previous_debug, 0)))
+        except (OSError, ValueError):
+            print('Firmware debug setting could not be restored; a reboot clears the runtime setting.')
     CONFIG.unlink()
     PROGRAM.unlink(missing_ok=True)
     print("Watch and startup drop-in removed. AP/collector not restarted. Incident files retained in " + str(ARCHIVE))
@@ -847,12 +1586,17 @@ def main():
     os.umask(0o077)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--version", action="version", version="Ella AP watch " + VERSION)
-    parser.add_argument("action", choices=("install", "daemon", "status", "observe", "recover", "capture", "report", "errors", "reset", "uninstall", "_on-start"))
+    parser.add_argument("action", choices=("install", "daemon", "status", "observe", "recover", "capture", "report", "faults", "export", "errors", "reset", "uninstall", "_on-start"))
     parser.add_argument("--interface", default="wlan0")
     parser.add_argument("--unit", default="ella-hotspot.service")
     parser.add_argument("--control", default="/run/hostapd-ella")
     parser.add_argument("--leases", default="/run/ella-hotspot-dns/leases")
     parser.add_argument("--target", action="append")
+    parser.add_argument("--uplink", help="Optional explicit wireless client interface; normally discovered")
+    parser.add_argument("--api-port", type=int, help="Optional loopback collector TCP probe port")
+    parser.add_argument("--api-http", action="store_true", help="Use credential-free HTTP availability probe with --api-port")
+    parser.add_argument("--output", help="New private export file; existing files are never overwritten")
+    parser.add_argument("--no-firmware-console", action="store_true", help="Restore original firmware-console verbosity; keep other diagnostics")
     args = parser.parse_args()
     if os.geteuid() != 0:
         parser.error("Run with sudo")
@@ -890,6 +1634,20 @@ def main():
         except (OSError, ValueError, KeyError, TypeError, AttributeError):
             print("No readable runtime status yet; inspect service journal.")
         try:
+            flight = read_json(RUNTIME / 'flight-status.json')
+            row = flight['sample']
+            print('Wi-Fi diagnostics last sample: ' + flight['utc'])
+            print('AP: ' + str(row['ap'].get('interface')) + ' / phy: ' + str(row['ap'].get('phy')))
+            print('STA: ' + str(row['sta'].get('interface')) + ' / phy: ' + str(row['sta'].get('phy')))
+            print('Local API availability: ' + str(row['local_api']))
+            debug = bounded_text(FW_DEBUG, 64).strip()
+            console = bool(int(debug, 0) & 0x100000) if re.fullmatch(r'(?:0x[0-9a-fA-F]+|[0-9]+)', debug) else None
+            print('Firmware console diagnostic flag: ' + ('unavailable' if console is None else 'enabled' if console else 'disabled'))
+            print('Independent AP round trips: ' + str(row['slow'].get('ap_probes', {})))
+            print('Active fault capture: ' + str(flight.get('fault') or 'none'))
+        except (OSError, ValueError, KeyError, TypeError):
+            print('No readable Wi-Fi diagnostic sample yet.')
+        try:
             error = read_json(RUNTIME / "last-error.json")
             print("Latest monitor error: " + error["utc"] + " / " + error["phase"] + " / " + error["error"])
             print("Use sudo ella-ap-watch errors for details; this entry may be historical.")
@@ -909,16 +1667,38 @@ def main():
             print("No readable monitor error records.")
     elif args.action == "capture":
         c = config()
-        o, _ = observe(c, {})
-        print(snapshot(c, "manual-no-restart", o))
-    elif args.action == "report":
-        files = list(ARCHIVE.glob("incident-*.json.gz"))
+        if run(['systemctl', 'is-active', 'ella-ap-watch.service'])['text'].strip() == 'active':
+            write_json(RUNTIME / 'incident-request.json', {'utc': stamp()})
+            print('Fault window requested. Available prefix is saved on the next diagnostic cycle; tail completes after 60 seconds.')
+        else:
+            o, _ = observe(c, {})
+            print(snapshot(c, "manual-monitor-inactive-instant-only", o))
+            print('Monitor is inactive: this is an instantaneous snapshot, without an automatic post-event tail.')
+    elif args.action in ('report', 'faults', 'export'):
+        files = list(ARCHIVE.glob('incident-*.json.gz')) + list(ARCHIVE.glob('incident-*.pending.json'))
         if not files:
             print("No incident files.")
+        elif args.action == 'faults':
+            for path in sorted(files, key=lambda p: p.stat().st_mtime_ns, reverse=True):
+                print(path.name + (' [collecting/partial]' if path.name.endswith('.pending.json') else ' [saved]'))
         else:
             path = max(files, key=lambda p: p.stat().st_mtime_ns)
-            with gzip.open(path, "rt") as source:
-                print(json.dumps(json.load(source), indent=2))
+            document = read_fault(path)
+            if args.action == 'report':
+                print(json.dumps(document, indent=2))
+            else:
+                if not args.output:
+                    raise ValueError('Use export --output NEW_FILE; the export contains private network diagnostics')
+                fd = os.open(args.output, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+                with os.fdopen(fd, 'w') as output:
+                    json.dump(document, output, indent=2, allow_nan=False)
+                    output.write('\n')
+                    output.flush()
+                    os.fsync(output.fileno())
+                    user, group = os.environ.get('SUDO_UID', ''), os.environ.get('SUDO_GID', '')
+                    if user.isdigit() and group.isdigit():
+                        os.fchown(output.fileno(), int(user), int(group))
+                print('Private diagnostic export saved: ' + args.output)
     elif args.action == "reset":
         if run(["systemctl", "stop", "ella-ap-watch.service"], timeout=15)["code"]:
             raise ValueError("Could not stop monitor; recovery state retained")
@@ -937,3 +1717,4 @@ if __name__ == "__main__":
         report_error(error, PHASE, True)
         journal("AP watch error [" + PHASE + "]: " + type(error).__name__ + ": " + str(error)[:1024], sys.stderr)
         sys.exit(1)
+

@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 
 /** Bounded client; the only write is the allowlisted Pi Wi-Fi mode action. */
 final class ApiClient {
-    interface Connections { HttpURLConnection open(URL url) throws IOException; default void close(){} }
+    interface Connections { HttpURLConnection open(URL url) throws IOException; default long requestId(HttpURLConnection c){return 0;} default void close(){} }
     static final class Failure extends IOException {final int status;Failure(int s,String m){super(m);status=s;}}
     private final String base, token;
     private final Connections connections;
@@ -46,9 +46,9 @@ final class ApiClient {
     private JSONObject request(String path,String payload)throws Exception{
         if (cancelled) throw new IOException("Request cancelled.");
         if (!path.startsWith("/api/v1/") || path.contains("#") || path.contains("\r") || path.contains("\n")) throw new IOException("Invalid API route.");
-        long started=System.nanoTime();String stage="open";int status=0;HttpURLConnection c=null;
+        long started=System.nanoTime(),callId=0;String stage="open";int status=0;HttpURLConnection c=null;
         try {
-            c=connections.open(new URL(base+path));active=c;
+            c=connections.open(new URL(base+path));callId=connections.requestId(c);active=c;
             if (cancelled) throw new IOException("Request cancelled.");
             c.setInstanceFollowRedirects(false); c.setConnectTimeout(4000); c.setReadTimeout(4000);
             c.setRequestMethod(payload==null?"GET":"POST"); c.setUseCaches(false);
@@ -73,10 +73,11 @@ final class ApiClient {
             try { body = new JSONObject(new String(bytes.toByteArray(), StandardCharsets.UTF_8)); }
             catch (Exception e) { throw new IOException("Invalid API response."); }
             if (!(body.opt("apiVersion") instanceof Number) || body.optInt("apiVersion") != 1) throw new IOException("Unsupported API version.");
-            if(diagnostics!=null)diagnostics.request(ConnectionDiagnostics.operation(path),"complete",(System.nanoTime()-started)/1_000_000,status,null);
+            if(diagnostics!=null)diagnostics.request(ConnectionDiagnostics.operation(path),"complete",(System.nanoTime()-started)/1_000_000,status,null,callId);
             return body;
-        } catch(Exception e){if(diagnostics!=null)diagnostics.request(ConnectionDiagnostics.operation(path),stage,(System.nanoTime()-started)/1_000_000,status,e);throw e;
+        } catch(Exception e){if(diagnostics!=null)diagnostics.request(ConnectionDiagnostics.operation(path),stage,(System.nanoTime()-started)/1_000_000,status,e,callId);throw e;
         } finally { active = null; if(c!=null)c.disconnect(); }
     }
     void cancel() { cancelled = true; HttpURLConnection c = active; if (c != null) c.disconnect(); connections.close(); }
 }
+

@@ -107,7 +107,7 @@ public final class MainActivity extends Activity {
     };
 
     @Override public void onCreate(Bundle state) {
-        super.onCreate(state); settings = new PrivateSettings(this); screen = new ScreenControl(this, settings.prefs); piControls=new PiControls(this,settings);
+        super.onCreate(state); diagnostics.attach(new java.io.File(getFilesDir(),"connection-faults"),BuildConfig.VERSION_NAME);settings = new PrivateSettings(this); screen = new ScreenControl(this, settings.prefs); piControls=new PiControls(this,settings);
         setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         appearance = new AppearanceStore(this,settings.prefs); theme = appearance.active();migrateViewerSettings();
         presets=new PresetStore(this,settings.prefs);popupSettings=new PopupSettingsStore(this);
@@ -125,18 +125,18 @@ public final class MainActivity extends Activity {
         build();updates.onCreated();
     }
     @Override protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); out.putBoolean("settingsPage", settingsScreen); out.putBoolean("history", historyScreen); out.putString("quantity", quantity); out.putInt("offset", offset); }
-    @Override protected void onStart() { super.onStart(); active = true; screen.start(keepScreen); windowMode(); persistence(true); piControls.start(); restartConnection(); handler.post(expire); }
+    @Override protected void onStart() { super.onStart(); active = true; diagnostics.foreground(true);screen.start(keepScreen); windowMode(); persistence(true); piControls.start(); restartConnection(); handler.post(expire); }
     @Override protected void onResume() { super.onResume(); screen.apply(); windowMode(); if(updates!=null)updates.onResumed(); if(piControls!=null)piControls.resumed(); }
     @Override protected void onPause(){if(updates!=null)updates.onPaused();super.onPause();}
     @Override public void onWindowFocusChanged(boolean focus) { super.onWindowFocusChanged(focus); if (focus && screen != null) { screen.apply(); windowMode(); } }
     @Override protected void onStop() {
         dismissAnchoredMenu();
         if(Build.VERSION.SDK_INT>=29||checkSelfPermission("android.permission.WRITE_EXTERNAL_STORAGE")==PackageManager.PERMISSION_GRANTED)flushPopupSettings();
-        active = false;piControls.stop();if(elementPopup!=null)elementPopup.pause(); epoch++; historyEpoch++; handler.removeCallbacks(poll); handler.removeCallbacks(expire);
+        active = false;diagnostics.foreground(false);piControls.stop();if(elementPopup!=null)elementPopup.pause(); epoch++; historyEpoch++; handler.removeCallbacks(poll); handler.removeCallbacks(expire);
         if (liveClient != null) liveClient.cancel(); if (metadataClient!=null)metadataClient.cancel();metadataLoading=false; if (historyClient != null) historyClient.cancel(); if (summaryClient != null) summaryClient.cancel();if(popupMonthClient!=null)popupMonthClient.cancel();
         live = null; history = null; historyLoading = false; screen.stop(); persistence(false); super.onStop();
     }
-    @Override protected void onDestroy() { if(piControls!=null)piControls.destroy();if(elementPopup!=null)elementPopup.dialog.dismiss();if(colourDialog!=null)colourDialog.dismiss();if(appearanceDialog!=null){appearanceDialog.setOnDismissListener(null);appearanceDialog.dismiss();} if(updates!=null)updates.destroy();handler.removeCallbacks(savePopupSettings);popupWorker.shutdownNow();viewSettingsWorker.shutdown();liveWorker.shutdownNow(); historyWorker.shutdownNow();metadataWorker.shutdownNow(); super.onDestroy(); }
+    @Override protected void onDestroy() { diagnostics.close();if(piControls!=null)piControls.destroy();if(elementPopup!=null)elementPopup.dialog.dismiss();if(colourDialog!=null)colourDialog.dismiss();if(appearanceDialog!=null){appearanceDialog.setOnDismissListener(null);appearanceDialog.dismiss();} if(updates!=null)updates.destroy();handler.removeCallbacks(savePopupSettings);popupWorker.shutdownNow();viewSettingsWorker.shutdown();liveWorker.shutdownNow(); historyWorker.shutdownNow();metadataWorker.shutdownNow(); super.onDestroy(); }
 
     private int dp(float value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     LinearLayout column() { LinearLayout v = new LinearLayout(this); v.setOrientation(LinearLayout.VERTICAL); return v; }
@@ -871,4 +871,5 @@ public final class MainActivity extends Activity {
     private void dismissAnchoredMenu(){if(anchoredPopup!=null){android.widget.PopupWindow popup=anchoredPopup;anchoredPopup=null;popup.dismiss();}}
     void toast(String value) { Toast.makeText(this, value, Toast.LENGTH_LONG).show(); }
 }
+
 
