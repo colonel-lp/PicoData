@@ -9,7 +9,7 @@
 - **Update collector:** `~/update-pico.sh` — installs the latest `node.js` source/dependencies and restarts the collector; no `git pull` in the installed folder.
 - **Fresh-install essentials:** privately back up the updater, `/usr/local/sbin/pi-wifi`, its mode/timer/service configuration, `/etc/ella-ap-watch.json`, hotspot service units and their hostapd/DHCP/firewall configuration, NetworkManager profiles and the private PicoData files above. The collector updater does not recreate the hotspot or `pi-wifi` installation. [Collector setup](../node.js/README.md).
 - **Rclone/Google Drive:** [installation and authentication](RCLONE-SETUP.md). Use the normal login account, without `sudo`, for `rclone config` and `rclone lsd gdrive:`. Preserve its private configuration.
-- **AP diagnostics/recovery** — monitor **1.1 installation confirmed**; active in `recover` mode with the configured sensor baseline observed after reboot. Actual recovery from a future stall remains to verify. **1.2 source available, not yet confirmed installed**: [monitor-only update](../node.js/AP-WATCH.md#update-an-existing-monitor-to-12). For reinstalling, with both sensors connected, use their reserved hotspot IPs:
+- **AP diagnostics/recovery** — monitor **1.2 installation confirmed**; active in `recover` mode. Actual fault diagnosis/recovery remains under hardware verification: [monitor-only update](../node.js/AP-WATCH.md#update-an-existing-monitor-to-12). For reinstalling, with both sensors connected, use their reserved hotspot IPs:
   `sudo python3 ~/PicoData/node.js/tools/ap-watch.py install --target SENSOR_ONE_IP --target SENSOR_TWO_IP`
   [Details/removal](../node.js/AP-WATCH.md).
 - **Optional app Pi-mode controls** — collector 0.7.5 needs the [one-time setup](../node.js/PI-STATUS.md#optional-pi-autohomem1-buttons). API resource readouts need no SSH; Open terminal uses separately installed ConnectBot.
@@ -37,4 +37,15 @@
 - **Restart collector/logger:** `sudo systemctl restart pico-mqtt.service`; recheck API status afterwards.
 - **Restart broker only if necessary:** `sudo systemctl restart mosquitto.service` — interrupts MQTT clients briefly.
 - **Safe shutdown:** `sudo poweroff`
+
+## Zram: check and preserve startup
+
+- **Checks:** `zramctl`; `free -h`; `findmnt -T /var/log`. The configured swap should appear and the log directory should use an overlay. “active (exited)” alone does not verify device creation.
+- **Configuration:** existing ecdye/zram-config uses `/etc/ztab`. Its own log is `/usr/local/share/zram-config/log/zram-config.log`; nightly sync is controlled by `zsync.timer`.
+- **Confirmed recovery:** a persistent stale `/usr/local/lib/zram-config/zram-device-list` caused startup to skip absent devices. Archiving it before an orderly reboot restored swap and the log overlay. This does not identify the earlier shutdown failure or establish a Wi-Fi cause.
+- **Startup guard — source available; installation/reboot validation pending:** download [zram-start-guard.py](../node.js/tools/zram-start-guard.py), then run `sudo python3 zram-start-guard.py install`. This installs `/usr/local/sbin/ella-zram-start-guard` and `/etc/systemd/system/zram-config.service.d/60-stale-state.conf`, then reloads systemd without restarting services. It leaves the upstream zram script, ztab settings and sync timer unchanged.
+- **At each zram service start:** if all zram devices are absent/uninitialized, archive a nonempty tracking list to the single `.pre-start-stale` backup and let normal startup recreate devices. Initialized devices preserve the list; inspection failures refuse cleanup. No filesystem/log data is deleted. Partial initialization with any running zram device is deliberately not auto-repaired.
+- **Verify:** reboot normally, repeat the three checks above, and inspect `sudo journalctl -b -u zram-config.service --no-pager`. Verify again after a second orderly reboot. Reboots briefly interrupt acquisition; do not stop/restart live log mounts merely to test this guard.
+- **Remove guard:** `sudo rm -f /etc/systemd/system/zram-config.service.d/60-stale-state.conf /usr/local/sbin/ella-zram-start-guard`, then `sudo systemctl daemon-reload`. This removes only the added guard; zram and its data/configuration remain intact.
+
 

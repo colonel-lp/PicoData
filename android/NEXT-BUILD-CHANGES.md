@@ -1,3 +1,10 @@
+## Immediate operational fix — stale zram startup state — 2026-11-03
+
+- [x] Owner confirmed stale persistent device bookkeeping made zram-config skip absent devices; archiving it followed by an orderly reboot restored swap and the log overlay. Original shutdown failure is unproven, and this is not proof of a Wi-Fi cause.
+- [x] Add a standalone, opt-in pre-start guard for the existing ecdye/zram-config service. Archive bookkeeping only when no zram device is initialized; preserve active-device state and fail closed on inspection errors. Leave ztab, compression, sync policy, collector/history, Wi-Fi and application versions unchanged.
+- [x] Focused offline safety checks and concise install/remove/reboot-validation documentation. Monitor 1.2 installation is now owner-confirmed.
+- [ ] Owner installs guard and verifies device/swap/log mounts over two orderly reboots. Guard preparation/publishing does not itself modify the live Pi. Continue controlled Wi-Fi testing separately after this baseline is verified.
+
 ## Implemented source — Wi-Fi/collector fault recording — 2026-11-02
 
 Owner explicitly authorized immediate diagnostic implementation for both radios and retrievable incident evidence. Standalone Pi helper **1.2** and an Android **same-version 0.32/build 14** source correction are prepared; collector **0.7.5** is unchanged. Owner Pi installation and Android rebuild remain pending. No APK, live Pi changes, new recovery policy, channel change or rollback is performed here.
@@ -957,6 +964,7 @@ See [README.md](README.md), [CHANGELOG.md](CHANGELOG.md) and [BUILD-VALIDATION.m
 ## Owner-reported initial history check — 2026-10-09
 
 - [x] Owner inspected an actual saved minute electrical record and could identify voltage/SOC. Keep the posted values/timestamps private. This verifies initial live history visibility, not all channels, energy accuracy, retention or long-run recovery.
+
 
 
 
