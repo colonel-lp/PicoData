@@ -1013,3 +1013,11 @@ See [README.md](README.md), [CHANGELOG.md](CHANGELOG.md) and [BUILD-VALIDATION.m
 
 
 
+
+
+## Operational Wi-Fi monitor 1.3 — STA rollback (2026-11-03)
+
+- [x] Owner-authorized standalone helper source: explicit STA-only diagnostics without AP checks/recovery; preserve AP topology for a future USB adapter. No Android/collector version change.
+- [x] Preserve bounded 60-second pre/post fault archives; correlate kernel, STA/gateway, collector/SBMS staleness and MQTT disconnect/timeout/duplicate-client events. Optional sensor probes use current routed addresses, never former hotspot IPs.
+- [x] Update quick reference for confirmed built-in STA rollback and disabled hotspot/switching services.
+- [ ] Install helper 1.3 on the Pi and verify STA-only status, peer discovery, incident export and unattended stability. Source checks do not establish hardware stability.

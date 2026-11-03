@@ -1,6 +1,7 @@
 # Pi setup and recovery — quick reference
 
-- **Wi-Fi:** built-in `wlan0` runs the independent monitoring hotspot through hostapd; USB `wlan1` connects upstream through NetworkManager. `wlan0` showing **unmanaged** in `nmcli` is expected.
+- **Current Wi-Fi — confirmed rollback:** built-in `wlan0` is a NetworkManager STA connected to the mobile router; both sensors are on that router. The USB STA adapter has been removed. The collector remained running and both sources were fresh after migration. Private addresses/credentials stay outside this document.
+- **Disabled:** standalone hotspot and AP recovery, old NetworkManager hotspot autoconnect, USB uplink profile autoconnect and automatic network-switch timer. Keep these disabled during the stability test. Do not use `pi-wifi auto/home/m1` until its interface/profile bindings are deliberately adapted to the new topology.
 - **Logging:** `pico-mqtt.service` collects Pico/SBMS data, writes SQLite history and serves the app API. Mosquitto remains required; Node-RED is no longer needed for this collector.
 - **Preserve:** private `~/PicoData/{mqtt,logging.json,api.json,history/}`. Source updates must not replace these. Google Drive authentication alone does **not** create a scheduled backup; USB logging was not implemented.
 
@@ -9,23 +10,17 @@
 - **Update collector:** `~/update-pico.sh` — installs the latest `node.js` source/dependencies and restarts the collector; no `git pull` in the installed folder.
 - **Fresh-install essentials:** privately back up the updater, `/usr/local/sbin/pi-wifi`, its mode/timer/service configuration, `/etc/ella-ap-watch.json`, hotspot service units and their hostapd/DHCP/firewall configuration, NetworkManager profiles and the private PicoData files above. The collector updater does not recreate the hotspot or `pi-wifi` installation. [Collector setup](../node.js/README.md).
 - **Rclone/Google Drive:** [installation and authentication](RCLONE-SETUP.md). Use the normal login account, without `sudo`, for `rclone config` and `rclone lsd gdrive:`. Preserve its private configuration.
-- **AP diagnostics/recovery** — monitor **1.2 installation confirmed**; active in `recover` mode. Actual fault diagnosis/recovery remains under hardware verification: [monitor-only update](../node.js/AP-WATCH.md#update-an-existing-monitor-to-12). For reinstalling, with both sensors connected, use their reserved hotspot IPs:
-  `sudo python3 ~/PicoData/node.js/tools/ap-watch.py install --target SENSOR_ONE_IP --target SENSOR_TWO_IP`
-  [Details/removal](../node.js/AP-WATCH.md).
+- **Wi-Fi diagnostics 1.3 — source ready, installation pending:** [STA-only install and future USB AP migration](../node.js/AP-WATCH.md#current-sta-only-setup). Install only the helper with `install --topology sta-only --uplink STA_INTERFACE`; this starts diagnostic recording without AP checks or network recovery. Existing 1.2 was disabled during rollback. Monitor updates do not require restarting the collector.
 - **Optional app Pi-mode controls** — collector 0.7.5 needs the [one-time setup](../node.js/PI-STATUS.md#optional-pi-autohomem1-buttons). API resource readouts need no SSH; Open terminal uses separately installed ConnectBot.
 
 ## Wi-Fi: check and recover
 
-- **Upstream status:** `sudo pi-wifi status`
-- **Automatic home preference/fallback:** `sudo pi-wifi auto`
-- **Force home / mobile router:** `sudo pi-wifi home` / `sudo pi-wifi m1` — return to `auto` afterwards.
-- **Interfaces/routes:** `nmcli device status`; `ip -4 -brief address`; `ip -4 route`
-- **Hotspot services:** `systemctl is-active ella-hotspot.service ella-hotspot-network.service ella-hotspot-dns.service`
-- **Connected clients:** `sudo iw dev wlan0 station dump`
-- **Restart stalled hotspot:** `sudo systemctl restart ella-hotspot.service` — disconnects hotspot clients briefly; leaves the collector running.
-- **Recent evidence:** `sudo journalctl -u ella-hotspot.service -u ella-hotspot-dns.service -n 40 --no-pager`; `sudo journalctl -k -b -n 40 --no-pager`
-- **AP power saving:** `iw dev wlan0 get power_save`; temporarily disable with `sudo iw dev wlan0 set power_save off`. The AP watch startup hook maintains this.
-- **AP watch:** `sudo ella-ap-watch status`; `sudo ella-ap-watch errors`; `observe` disables automatic recovery, `recover` re-enables it. Version 1.2 records both radios/local API and saves bounded 60-second pre/post incident windows. Retrieve with `sudo ella-ap-watch faults`, `sudo ella-ap-watch report`, or `sudo ella-ap-watch export --output "$HOME/ella-wifi-fault.json"` (new filename required). `capture` requests a manual window. Private incidents: `/var/lib/ella-ap-watch/`; latest five, with explicit partial/crash limits. Routine samples remain in RAM. [Evidence, optional probe/verbosity settings and limits](../node.js/AP-WATCH.md).
+- **Interfaces/routes:** `nmcli device status`; `ip -4 -brief address`; `ip -4 route`; `iw dev wlan0 link`
+- **Recent system evidence:** `sudo journalctl -k -b -n 40 --no-pager`; `sudo journalctl -u NetworkManager -u wpa_supplicant -n 40 --no-pager`
+- **Reconnect STA if necessary:** `sudo nmcli --wait 45 connection up "PROFILE_NAME" ifname wlan0` using the existing private STA profile. This may interrupt SSH. Check routing and source freshness afterwards.
+- **After installing monitor 1.3:** `sudo ella-ap-watch status`; `sudo ella-ap-watch errors`; `sudo ella-ap-watch faults`. `capture` requests a manual fault window; `export --output "$HOME/wifi-fault.json"` exports the latest incident to a new private file.
+- **Evidence retention:** monitor health stays in bounded RAM; faults save available 60-second pre/post windows under `/var/lib/ella-ap-watch/`, keeping five compressed archives. Normal journal persistence follows existing zram configuration. Exports contain private network details; do not commit them.
+- **Future AP:** retain configuration/backups, but leave AP services disabled until a new supported adapter is deliberately configured. [AP setup and monitoring](../node.js/AP-WATCH.md#future-usb-ap-adapter).
 
 ## Logging: check and restart
 
@@ -47,5 +42,6 @@
 - **At each zram service start:** if all zram devices are absent/uninitialized, archive a nonempty tracking list to the single `.pre-start-stale` backup and let normal startup recreate devices. Initialized devices preserve the list; inspection failures refuse cleanup. No filesystem/log data is deleted. Partial initialization with any running zram device is deliberately not auto-repaired.
 - **Verify:** reboot normally, repeat the three checks above, and inspect `sudo journalctl -b -u zram-config.service --no-pager`. Verify again after a second orderly reboot. Reboots briefly interrupt acquisition; do not stop/restart live log mounts merely to test this guard.
 - **Remove guard:** `sudo rm -f /etc/systemd/system/zram-config.service.d/60-stale-state.conf /usr/local/sbin/ella-zram-start-guard`, then `sudo systemctl daemon-reload`. This removes only the added guard; zram and its data/configuration remain intact.
+
 
 

@@ -415,8 +415,8 @@ class PrivateFiles(unittest.TestCase):
             installed["mode"] = "observe"
             w.write_json(w.CONFIG, installed)
             (w.RUNTIME / "state.json").write_text("fixture retained state")
-            w.install(argparse.Namespace(target=None, leases=str(leases), interface="wlan0",
-                                        unit="ella-hotspot.service", control="/run/hostapd-ella"))
+            w.install(argparse.Namespace(target=None, leases=str(leases), interface=None,
+                                        unit=None, control=None))
             self.assertEqual(w.config(), installed)
             self.assertEqual((w.RUNTIME / "state.json").read_text(), "fixture retained state")
             self.assertNotIn(["systemctl", "restart", "fixture-ap.service"], commands)
@@ -481,4 +481,5 @@ def subprocess_verify(path):
 
 if __name__ == "__main__":
     unittest.main()
+
 

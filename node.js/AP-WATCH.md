@@ -1,11 +1,101 @@
-# AP and upstream Wi-Fi diagnostics
+# Wi-Fi fault diagnostics
 
-Standalone helper **1.2**, for the existing stock-hostapd installation. Collector
-0.7.5 and Android version 0.32 are separate. The normal collector updater does
-not install or activate this helper. Source checks do not mean it is installed:
-the last owner-confirmed installation is 1.1.
+Standalone helper **1.3** supports `sta-only` and `ap-sta` topologies. Collector
+and Android versions are independent. Source prepared and offline-tested; the
+1.3 installation and hardware checks remain pending. The last confirmed monitor
+was 1.2; it was disabled when returning to built-in STA operation.
 
-## Update an existing monitor to 1.2
+## Current STA-only setup
+
+The owner has returned the built-in radio to NetworkManager client mode, removed
+the USB client radio, and moved both sensors back to the upstream router. AP
+services/recovery and automatic uplink switching are disabled. Sensor logging
+continues independently. Do not re-enable the former AP profile or run the
+hotspot migration helper's `rollback`: it restores a NetworkManager AP, not STA.
+
+Download only the monitor source; the collector updater is unnecessary here:
+
+```bash
+curl -fL https://raw.githubusercontent.com/colonel-lp/PicoData/main/node.js/tools/ap-watch.py -o ~/ap-watch.py
+sudo python3 ~/ap-watch.py install --topology sta-only --uplink STA_INTERFACE
+sudo ella-ap-watch status
+```
+
+Substitute the actual wireless client interface. This preserves existing private
+AP configuration/target MACs and all incident archives, removes the monitor's AP
+startup hook, installs/starts only the monitor and forces `observe` mode. It does
+not change NetworkManager, routes, power saving, sensor settings, broker settings,
+collector service or history. Existing verbose Broadcom console logging is
+restored to its saved pre-monitor value when available; normal kernel errors
+remain recorded. System journal/broker log configuration is not changed.
+
+STA-only never queries hostapd, checks AP clients/firewall, constructs an AP
+recovery policy or restarts a network service. The `recover` command is rejected.
+`observe` alone on an old installation is **not** a substitute for STA-only.
+
+For sensor reachability, known target MACs from the old AP installation are
+matched against the current STA neighbour cache; only current, directly routed
+IPv4 addresses are probed. Old AP IPs are never reused. Discovery is passive and
+may be incomplete, especially with router client isolation. Explicit optional
+addresses can be configured during install:
+
+```bash
+sudo python3 ~/ap-watch.py install --peer-target SENSOR_ONE_IP --peer-target SENSOR_TWO_IP
+```
+
+This replaces the explicit peer list (maximum four). Peer pings are supplementary:
+a never-responsive client is not declared faulty simply because it blocks ICMP.
+Collector `stale`/`retrying` events and broker disconnects still trigger capture.
+No MQTT payload subscription, credentials, authenticated API read or sensor
+firmware access is added. A refused/timed-out connection is evidence, not proof
+of an internal SBMS firmware fault. Connection/disconnection/timeout/duplicate
+client events can locate a transport problem; they cannot diagnose battery
+protection flags or cell faults.
+
+Routine health is in RAM (target 1 second); bounded radio/gateway/peer checks run
+about every 10 seconds. Relevant journal/broker events are read continuously.
+Faults retain available **60 seconds before and after**, with immediate prefix
+save and bounded checkpoints; the latest **five compressed archives** survive
+reboots. The first minute after startup cannot have a full pre-event window.
+Normal `/var/log` persistence remains subject to the existing zram sync policy;
+incident archives are stored separately under `/var/lib/ella-ap-watch/`.
+
+```bash
+sudo ella-ap-watch status
+sudo ella-ap-watch faults
+sudo ella-ap-watch capture
+sudo ella-ap-watch export --output "$HOME/wifi-fault.json"
+sudo journalctl -u ella-ap-watch.service -n 20 --no-pager
+```
+
+The export is private and contains the latest incident only; use a new filename.
+No automatic STA recovery, internet polling or speed tests are performed.
+A local unauthenticated HTTP 401 proves the API listener responds, not that
+sensor data is fresh. Check freshness separately using `api-check.js`.
+
+## Future USB AP adapter
+
+Keep this helper rather than install another monitor. After the new hardware is
+configured and the AP/sensors are working, explicitly select AP topology and
+its actual interfaces/paths:
+
+```bash
+sudo python3 ~/ap-watch.py install --topology ap-sta \
+  --interface AP_INTERFACE --uplink STA_INTERFACE \
+  --unit HOTSPOT_SERVICE.service --control /run/HOSTAPD_CONTROL \
+  --target SENSOR_ONE_AP_IP --target SENSOR_TWO_AP_IP
+sudo ella-ap-watch observe
+```
+
+The installer verifies a responsive AP before switching topology. Existing
+observe mode is preserved; automatic recovery requires the separate deliberate
+`recover` command once the new installation is verified. Reinstallation without
+topology/interface arguments preserves the current setup, so a source update
+cannot silently turn a STA-only installation back into an AP monitor. AP/STA
+policy learning is separated by topology/interface/target configuration.
+This does not configure the adapter or migrate the network itself.
+
+## AP topology: update an existing monitor
 
 Use working SSH through the independent upstream connection, with the AP and both
 sensors working:
@@ -19,7 +109,7 @@ sudo journalctl -u ella-ap-watch.service -n 15 --no-pager
 
 No-target install preserves private targets, AP paths, mode, recovery state and
 original diagnostic settings. It restarts **only the monitor**, retaining the
-hotspot and collector. Check version **1.2**, recent Wi-Fi diagnostic samples,
+hotspot and collector. Check version **1.3**, recent Wi-Fi diagnostic samples,
 the correct AP/STA interfaces, local API probe configuration and independent
 round-trip results. The existing two-minute recovery startup grace still applies.
 Same-boot/config learned recovery and diagnostic baselines survive monitor-only
@@ -41,7 +131,7 @@ wireless interface is discovered from local interfaces/default routes; optional
 `install --uplink INTERFACE` pins it when automatic identification is ambiguous.
 No scan or internet speed test is performed.
 
-## What is recorded and why
+## Evidence reference (AP entries are skipped in STA-only)
 
 | Evidence | Target cadence | Diagnostic purpose |
 | --- | --- | --- |
@@ -128,7 +218,7 @@ reports privately rather than posting them to the repository. Firmware may still
 fail silently: this evidence narrows the fault boundary but cannot guarantee a
 root cause.
 
-## Recovery policy remains conservative
+## AP-only recovery policy remains conservative
 
 After two minutes of startup grace, each always-on sensor must have been observed
 alive on this boot/configuration. A validated same-boot baseline survives a
@@ -188,19 +278,24 @@ The hotspot installation/rollback helper is separate.
 
 ## Validation and limits
 
-From `node.js`, run `python3 test/ap-watch.test.py` and
-`python3 test/wifi-flight.test.py`. Version 1.2 has **40 existing recovery/I/O/
-installer tests plus 36 new focused diagnostic tests**. These use synthetic
-interfaces/addresses, isolated files, mocked radio/service actions and a real
-systemd unit parser. They cover independent pings, current-phy mapping, loopback
-401/TCP-only probes, learned faults, slow-worker isolation, frozen prefixes,
-complete/partial tails, restart recovery, bounds, redaction, firmware debug-bit
-restoration, bounded broker-file following/rotation and private non-overwriting export. No live Pi/network action runs.
+From `node.js`, run:
 
-Android's separate same-version 0.32 source correction adds call IDs/address
-families and private automatic app incident files. Rebuild it in Android Studio;
-installing this Pi helper does not update the app.
+```bash
+python3 test/ap-watch.test.py
+python3 test/wifi-flight.test.py
+python3 test/sta-watch.test.py
+```
+
+Version 1.3 passes **84 offline tests**: 40 AP recovery/I/O/installer regressions,
+36 recorder/window tests and 8 STA topology tests. They use synthetic addresses,
+isolated files, mocked radio/service actions and a real systemd unit parser.
+STA tests cover migration without radio changes, fresh install, retained archives,
+no AP event/policy construction, firmware verbosity restoration, current neighbour
+IP discovery, gateway/peer fault captures, broker disconnect/SBMS stale triggers,
+forbidden recovery and switching back to a differently named USB AP interface.
+No APK, collector release or live hardware test is part of this helper update.
 
 Actual RAM/CPU cost, firmware output, device/service integration and behavior
 during a real stall remain owner verification. Do not disconnect live sensors or
 force a stall merely to demonstrate these tests.
+

@@ -2,7 +2,8 @@
 """Bounded hostapd diagnostics and conservative AP recovery; Python 3.9+.
 
 Install on the Pi with sudo and two --target IPv4 addresses of always-on
-hotspot clients. All installation-specific values stay in /etc, not source.
+hotspot clients, or install --topology sta-only --uplink WIFI_INTERFACE.
+STA-only records faults without AP checks or network recovery. All installation-specific values stay in /etc, not source.
 No API/MQTT credentials, application data, interface resets or uplink changes.
 """
 import argparse
@@ -29,7 +30,7 @@ import threading
 import time
 import traceback
 
-VERSION = "1.2"
+VERSION = "1.3"
 CONFIG = Path("/etc/ella-ap-watch.json")
 RUNTIME = Path("/run/ella-ap-watch")
 ARCHIVE = Path("/var/lib/ella-ap-watch")
@@ -259,6 +260,10 @@ def config():
     return validate_config(read_json(CONFIG))
 
 
+def sta_only(c):
+    return c.get("topology", "ap-sta") == "sta-only"
+
+
 def validate_config(c):
     if c.get("version") != 1 or c.get("mode") not in ("recover", "observe"):
         raise ValueError("Invalid watch configuration")
@@ -268,8 +273,19 @@ def validate_config(c):
         raise ValueError("Invalid hostapd service")
     if not str(c.get("control", "")).startswith("/run/"):
         raise ValueError("Control directory must be under /run")
+    if c.get('topology', 'ap-sta') not in ('ap-sta', 'sta-only'):
+        raise ValueError('Invalid topology')
+    if sta_only(c) and (c.get('mode') != 'observe' or not c.get('uplink')):
+        raise ValueError('STA-only requires observe mode and an explicit uplink')
+    peers = c.get('peers', [])
+    if not isinstance(peers, list) or len(peers) > 4 or len(set(peers)) != len(peers):
+        raise ValueError('Configure at most four distinct peer IPv4 addresses')
+    for peer in peers:
+        address = ipaddress.IPv4Address(peer)
+        if address.is_multicast or address.is_unspecified or address.is_loopback:
+            raise ValueError('Invalid peer address')
     targets = c.get("targets", [])
-    if not 2 <= len(targets) <= 4:
+    if not isinstance(targets, list) or len(targets) > 4 or (not sta_only(c) and len(targets) < 2):
         raise ValueError("Configure two to four always-on clients")
     for target in targets:
         ipaddress.IPv4Address(target["ip"])
@@ -856,7 +872,8 @@ class FlightRecorder:
         self.c, self.now = c, now
         self.boot = boot_id()
         self.signature = hashlib.sha256(json.dumps({'ap': binding(c), 'uplink': c.get('uplink'),
-                                                    'api': c.get('local_api')}, sort_keys=True).encode()).hexdigest()
+                                                    'api': c.get('local_api'), 'topology': c.get('topology', 'ap-sta'),
+                                                    'peers': c.get('peers', [])}, sort_keys=True).encode()).hexdigest()
         self.lock = threading.RLock()
         self.health = deque(maxlen=241)
         self.events = deque(maxlen=512)
@@ -992,6 +1009,11 @@ class FlightRecorder:
                     'addresses': ['ip', '-4', '-brief', 'address'],
                     'firewall': ['nft', 'list', 'table', 'ip', 'ella_hotspot'],
                 }
+                if sta_only(self.c):
+                    commands.pop('firewall')
+                    commands['services'] = ['journalctl', '-b', '-u', 'NetworkManager', '-u', 'wpa_supplicant',
+                                            '-u', 'pico-mqtt.service', '-u', 'mosquitto.service',
+                                            '--since', '-3min', '-n', '300', '--no-pager', '-o', 'short-iso']
                 details = {name: run(command, timeout=2, limit=32768) for name, command in commands.items()}
                 for result in details.values():
                     result['text'] = '\n'.join(clean_message(line) for line in result['text'].splitlines())
@@ -1017,7 +1039,8 @@ class FlightRecorder:
 
     def _slow_sample(self, uplink):
         ap = self.c['interface']
-        info = run(['iw', 'dev', ap, 'station', 'dump'], timeout=1.5, limit=32768)
+        info = ({'code': None, 'text': ''} if sta_only(self.c) else
+                run(['iw', 'dev', ap, 'station', 'dump'], timeout=1.5, limit=32768))
         all_stations = stations(info['text']) if info['code'] == 0 else {}
         selected = {t['mac']: all_stations[t['mac']] for t in self.c['targets'] if t['mac'] in all_stations}
         for mac, value in all_stations.items():
@@ -1025,7 +1048,7 @@ class FlightRecorder:
                 break
             selected.setdefault(mac, value)
         probes = {}
-        for t in self.c['targets']:
+        for t in ([] if sta_only(self.c) else self.c['targets']):
             try:
                 route = ip_json(['route', 'get', t['ip']])
                 routed = bool(route and route[0].get('dev') == ap and not route[0].get('gateway'))
@@ -1033,6 +1056,28 @@ class FlightRecorder:
                 routed = False
             probe = self._ping(ap, t['ip']) if routed else None
             probes[t['mac']] = {'route_ok': routed, **(probe or {'ok': None, 'rtt_ms': None})}
+        peer_probes = {}
+        addresses = list(self.c.get('peers', []))
+        # Former AP target MACs identify the same sensors after moving to a router.
+        # Read the local neighbour cache only: never scan the network or reuse old AP IPs.
+        if sta_only(self.c) and uplink:
+            wanted = {t['mac'] for t in self.c['targets']}
+            for row in ip_json(['neigh', 'show', 'dev', uplink]):
+                if str(row.get('lladdr', '')).lower() in wanted:
+                    try:
+                        address = str(ipaddress.IPv4Address(row['dst']))
+                    except (ValueError, KeyError):
+                        continue
+                    if address not in addresses and len(addresses) < 4:
+                        addresses.append(address)
+        for address in addresses:
+            try:
+                route = ip_json(['route', 'get', address])
+                routed = bool(route and route[0].get('dev') == uplink and not route[0].get('gateway'))
+            except (ValueError, KeyError, TypeError):
+                routed = False
+            probe = self._ping(uplink, address) if routed else None
+            peer_probes[address] = {'route_ok': routed, **(probe or {'ok': None, 'rtt_ms': None})}
         link = run(['iw', 'dev', uplink, 'link'], timeout=1.5, limit=8192) if uplink else None
         peer = run(['iw', 'dev', uplink, 'station', 'dump'], timeout=1.5, limit=8192) if uplink else None
         gateway = gateway_for(uplink) if uplink else None
@@ -1046,7 +1091,7 @@ class FlightRecorder:
             match = re.search(r'^\s*' + re.escape(key) + r':\s*(.+)$', text, re.M)
             properties[key] = match[1][:128] if match else None
         self.slow = {'sampled_at': self.now(), 'ap_stations': selected,
-                     'station_query_ok': info['code'] == 0, 'ap_probes': probes,
+                     'station_query_ok': info['code'] == 0, 'ap_probes': probes, 'peer_probes': peer_probes,
                      'uplink': uplink, 'associated': (text.startswith('Connected to ') if text else None),
                      'link': properties, 'peer': stations(peer['text']) if peer and peer['code'] == 0 else None,
                      'gateway': gateway, 'gateway_ok': gateway_probe['ok'] if gateway_probe else None,
@@ -1081,7 +1126,7 @@ class FlightRecorder:
                 message = clean_message(line.decode('utf-8', 'replace'))
                 now = self.now()
                 self.add({'type': 'broker-file', 'utc': stamp(), 'uptime': now, 'message': message})
-                if re.search(r'(?i)malformed packet|exceeded timeout|bad socket', message):
+                if re.search(r'(?i)malformed packet|exceeded timeout|bad socket|already connected, closing old connection|client .+ disconnected|socket error on client', message):
                     self.trigger('mqtt-broker-client-error', now)
             if len(lines) > 32:
                 self.limited_events += len(lines) - 32
@@ -1115,7 +1160,8 @@ class FlightRecorder:
             self.slow_seen = slow_stamp
         now = self.now()
         row = {'type': 'wifi-health', 'utc': stamp(), 'uptime': now,
-               'ap': interface_sample(self.c['interface']), 'sta': interface_sample(uplink),
+               'ap': ({'interface': None, 'present': None, 'disabled': True} if sta_only(self.c)
+                      else interface_sample(self.c['interface'])), 'sta': interface_sample(uplink),
                'local_api': local_api_sample(self.c), 'slow': slow,
                'broker_log': self.broker_events(),
                'slow_in_progress': self.slow_busy,
@@ -1124,10 +1170,13 @@ class FlightRecorder:
         conditions = [('local-api', row['local_api'].get('ok'), 2)]
         if 'expected_status' in row['local_api']:
             conditions.append(('local-api-http-status', row['local_api']['expected_status'], 2))
-        conditions += [('ap-interface', row['ap'].get('present'), 2)]
+        if not sta_only(self.c):
+            conditions += [('ap-interface', row['ap'].get('present'), 2)]
         if uplink:
             conditions.append(('sta-interface:' + uplink, row['sta'].get('present'), 2))
         if slow_new:
+            for address, probe in slow.get('peer_probes', {}).items():
+                conditions.append(('peer-roundtrip:' + address, probe['ok'] if probe['route_ok'] else None, 2))
             for mac, probe in slow.get('ap_probes', {}).items():
                 conditions.append(('ap-roundtrip:' + mac, probe['ok'] if probe['route_ok'] else None, 2))
                 if probe.get('rtt_ms') is not None:
@@ -1190,10 +1239,13 @@ class FlightRecorder:
                   'unit': unit, 'priority': str(event.get('PRIORITY', ''))[:8],
                   'journal_monotonic_us': str(event.get('__MONOTONIC_TIMESTAMP', ''))[:24],
                   'journal_utc_us': str(event.get('__REALTIME_TIMESTAMP', ''))[:24], 'message': message})
-        critical = (kernel and re.search(r'(?i)(firmware.*(?:crash|halt)|brcmf.*(?:bus is down|timeout|failed|error)|'
+        critical = (kernel and re.search(r'(?i)(firmware.*(?:crash|halt)|brcmf.*(?:bus is down|timeout|failed|error|out of mem|pktget)|'
                     r'rtl8xxxu.*(?:failed|error)|usb.*(?:disconnect|reset|error)|mmc1.*(?:timeout|inhibit|error))', message))
         if critical:
             self.trigger('kernel-radio-usb-event', now)
+        elif unit == 'mosquitto.service' and re.search(
+                r'(?i)malformed packet|exceeded timeout|bad socket|already connected, closing old connection|client .+ disconnected|socket error on client', message):
+            self.trigger('mqtt-broker-client-error', now)
         elif unit == 'pico-mqtt.service' and re.search(r'"state"\s*:\s*"(?:stale|retrying|failed)"', message):
             self.trigger('collector-source-or-logging-fault', now)
 
@@ -1278,16 +1330,17 @@ class FlightRecorder:
 
 
 def on_start(c):
-    power = run(["iw", "dev", c["interface"], "set", "power_save", "off"])
-    deadline = time.monotonic() + 10
-    answer = control(c, "LOG_LEVEL DEBUG")
-    while answer != "OK" and time.monotonic() < deadline and not STOP:
-        time.sleep(0.25)
+    if not sta_only(c):
+        power = run(["iw", "dev", c["interface"], "set", "power_save", "off"])
+        deadline = time.monotonic() + 10
         answer = control(c, "LOG_LEVEL DEBUG")
-    safe_ring({"type": "diagnostic-setup", "power_save_off": power["code"] == 0,
-          "hostapd_debug": answer == "OK"})
-    if power["code"] or answer != "OK":
-        notice("AP watch: diagnostic setup incomplete; see events/status.")
+        while answer != "OK" and time.monotonic() < deadline and not STOP:
+            time.sleep(0.25)
+            answer = control(c, "LOG_LEVEL DEBUG")
+        safe_ring({"type": "diagnostic-setup", "power_save_off": power["code"] == 0,
+              "hostapd_debug": answer == "OK"})
+        if power["code"] or answer != "OK":
+            notice("AP watch: diagnostic setup incomplete; see events/status.")
     firmware = 'disabled'
     if c.get('firmware_console', True):
         try:
@@ -1309,6 +1362,8 @@ def on_start(c):
 
 def check_once(c, identity, policy, counters, old_reason):
     global PHASE
+    if sta_only(c):
+        raise ValueError('AP policy is unavailable in STA-only topology')
     PHASE = "observe"
     observation, counters = observe(c, counters)
     PHASE = "decide"
@@ -1359,14 +1414,20 @@ def daemon():
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     c = config()
     identity = boot_id()
-    policy = load_policy(c, identity, time.monotonic())
+    policy = None if sta_only(c) else load_policy(c, identity, time.monotonic())
     RECORDER = FlightRecorder(c)
     RECORDER.start()
-    tap = Events(c)
-    safe_ring({"type": "monitor-start", "version": VERSION, "baseline_restored": policy.baseline_restored,
-               "seen_clients": len(policy.seen), "recovery_inhibited": policy.inhibited,
-               "last_good": policy.last_good, "policy": policy.saved()})
-    notice("AP watch " + VERSION + ": starting; baseline " + ("restored" if policy.baseline_restored else "requires client observations") + ".")
+    tap = None if sta_only(c) else Events(c)
+    if sta_only(c):
+        # Discard old AP status only; keep private incident archives intact.
+        (RUNTIME / "state.json").unlink(missing_ok=True)
+        safe_ring({"type": "monitor-start", "version": VERSION, "topology": "sta-only", "recovery": False})
+        notice("Wi-Fi watch " + VERSION + ": STA-only diagnostics; no network recovery.")
+    else:
+        safe_ring({"type": "monitor-start", "version": VERSION, "baseline_restored": policy.baseline_restored,
+                   "seen_clients": len(policy.seen), "recovery_inhibited": policy.inhibited,
+                   "last_good": policy.last_good, "policy": policy.saved()})
+        notice("AP watch " + VERSION + ": starting; baseline " + ("restored" if policy.baseline_restored else "requires client observations") + ".")
     on_start(c)
     counters = {}
     old_reason = None
@@ -1374,9 +1435,13 @@ def daemon():
         started = time.monotonic()
         PHASE = "configuration"
         current_config = config()
-        if any(current_config.get(k) != c.get(k) for k in ("interface", "unit", "control", "targets", "uplink", "local_api")):
+        if any(current_config.get(k) != c.get(k) for k in ("interface", "unit", "control", "targets", "uplink", "local_api", "topology", "peers")):
             raise ValueError("Target/interface configuration changed; restart watch service")
         c = current_config
+        if sta_only(c):
+            PHASE = "sta-observe"
+            time.sleep(0.5)
+            continue
         # Reattach after a hostapd restart without dropping the monitor process.
         PHASE = "event-connect"
         if not tap.alive():
@@ -1391,7 +1456,8 @@ def daemon():
             tap.poll(min(1, end - time.monotonic()))
     PHASE = "shutdown"
     safe_ring({"type": "monitor-stop", "reason": "termination requested"})
-    tap.close()
+    if tap is not None:
+        tap.close()
     RECORDER.close()
     RECORDER = None
     lock.close()
@@ -1435,6 +1501,9 @@ def install(args):
         if not shutil.which(binary):
             raise ValueError("Required command missing: " + binary)
     existing = config() if CONFIG.exists() else None
+    interface = args.interface or (existing or {}).get('interface', 'wlan0')
+    unit = args.unit or (existing or {}).get('unit', 'ella-hotspot.service')
+    control_path = args.control or (existing or {}).get('control', '/run/hostapd-ella')
     targets = []
     if args.target:
         leases = {}
@@ -1445,11 +1514,11 @@ def install(args):
                     leases[fields[2]] = fields[1].lower()
         except OSError:
             pass
-        neighbours = ip_json(["neigh", "show", "dev", args.interface])
+        neighbours = ip_json(["neigh", "show", "dev", interface])
         for row in neighbours:
             if row.get("lladdr"):
                 leases.setdefault(row.get("dst"), row["lladdr"].lower())
-        local = ip_json(["address", "show", "dev", args.interface])
+        local = ip_json(["address", "show", "dev", interface])
         networks = [ipaddress.IPv4Interface(str(a["local"]) + "/" + str(a["prefixlen"])).network
                     for row in local for a in row.get("addr_info", []) if a.get("family") == "inet"]
         for value in args.target:
@@ -1461,16 +1530,21 @@ def install(args):
             targets.append({"ip": value, "mac": leases[value]})
     elif existing:
         targets = existing["targets"]
-    c = {"version": 1, "interface": args.interface, "unit": args.unit,
-         "control": args.control, "targets": targets,
+    c = {"version": 1, "interface": interface, "unit": unit,
+         "control": control_path, "targets": targets,
          "mode": existing["mode"] if existing else "recover"}
     if existing and not args.target:
         # An operational-helper update keeps the installation's exact AP/targets/mode.
         c = dict(existing)
-    if not existing:
+    for field in ('interface', 'unit', 'control'):
+        if getattr(args, field, None):
+            c[field] = getattr(args, field)
+    if getattr(args, 'topology', None):
+        c['topology'] = args.topology
+    if not existing and not sta_only(c):
         c["original_power"] = run(["iw", "dev", c["interface"], "get", "power_save"])["text"].strip()
         c["original_log_level"] = control(c, "LOG_LEVEL")
-    else:
+    elif existing:
         c["original_power"] = existing.get("original_power", "")
         c["original_log_level"] = existing.get("original_log_level", "")
     if getattr(args, 'uplink', None):
@@ -1487,15 +1561,25 @@ def install(args):
         c['original_firmware_debug'] = bounded_text(FW_DEBUG, 64).strip()
     if getattr(args, 'no_firmware_console', False):
         c['firmware_console'] = False
+    requested_topology = getattr(args, 'topology', None)
+    if requested_topology:
+        c['topology'] = requested_topology
+    if sta_only(c):
+        c['mode'] = 'observe'
+        if not getattr(args, 'uplink', None) and not (existing and sta_only(existing)):
+            raise ValueError('Specify --uplink for STA-only migration')
+        c['firmware_console'] = False
+    if getattr(args, 'peer_target', None) is not None:
+        c['peers'] = args.peer_target
     # Validate before any service/config mutation, using the same rules as runtime.
-    if not 2 <= len(targets) <= 4 or len({t["mac"] for t in targets}) != len(targets):
+    if not sta_only(c) and (not 2 <= len(targets) <= 4 or len({t["mac"] for t in targets}) != len(targets)):
         raise ValueError("Supply two to four distinct always-on client addresses")
     if not re.fullmatch(r"[a-zA-Z0-9_-]{1,15}", c["interface"]) or not re.fullmatch(r"[a-zA-Z0-9_.@-]+\.service", c["unit"]):
         raise ValueError("Invalid interface/service name")
     if not c["control"].startswith("/run/") or "\n" in c["control"]:
         raise ValueError("Invalid control directory")
     validate_config(c)
-    if run(["systemctl", "is-active", c["unit"]])["text"].strip() != "active" or pairs(control(c, "STATUS")).get("state") != "ENABLED":
+    if not sta_only(c) and (run(["systemctl", "is-active", c["unit"]])["text"].strip() != "active" or pairs(control(c, "STATUS")).get("state") != "ENABLED"):
         raise ValueError("Install while the intended hostapd hotspot is active and responsive")
     dropin = SYSTEMD / (c["unit"] + ".d") / "70-ap-watch.conf"
     for path in (SERVICE, dropin):
@@ -1511,7 +1595,10 @@ def install(args):
         with os.fdopen(fd, "w") as output:
             output.write(Path(__file__).read_text())
         PROGRAM.chmod(0o700)
-    managed_write(dropin, "[Service]\nExecStartPost=-/usr/bin/python3 -u /usr/local/sbin/ella-ap-watch _on-start\n")
+    if sta_only(c):
+        dropin.unlink(missing_ok=True)
+    else:
+        managed_write(dropin, "[Service]\nExecStartPost=-/usr/bin/python3 -u /usr/local/sbin/ella-ap-watch _on-start\n")
     managed_write(SERVICE, """[Unit]
 Description=Bounded AP/STA fault recording and hotspot recovery
 After=HOTSPOT_UNIT
@@ -1540,7 +1627,10 @@ TimeoutStopSec=10
 
 [Install]
 WantedBy=multi-user.target
-""".replace("HOTSPOT_UNIT", c["unit"]))
+""".replace("HOTSPOT_UNIT", "NetworkManager.service" if sta_only(c) else c["unit"])
+       .replace("Bounded AP/STA fault recording and hotspot recovery",
+                "Bounded STA fault recording; no network recovery" if sta_only(c)
+                else "Bounded AP/STA fault recording and hotspot recovery"))
     result = run(["systemd-analyze", "verify", str(SERVICE)], timeout=15)
     if result["code"]:
         raise ValueError("Unit verification failed: " + result["text"][:1000])
@@ -1550,7 +1640,8 @@ WantedBy=multi-user.target
             raise ValueError("Watch service installation failed; inspect its journal")
     print("Installed AP watch " + VERSION + ". Hotspot and collector were not restarted.")
     print("AP/STA fault recording enabled: 60 seconds before/after, 5 persistent archives.")
-    print("Existing 30-second recovery checks and limits preserved; diagnostic samples aim for 1 second, radio/probes 10 seconds.")
+    print("STA-only: no recovery or AP checks." if sta_only(c) else "Existing 30-second AP recovery checks and limits preserved.")
+    print("Diagnostic samples aim for 1 second, radio/probes 10 seconds.")
     print("Local API probe: " + (c.get('local_api', {}).get('scheme', 'not configured')))
     print("sudo ella-ap-watch status")
 
@@ -1565,9 +1656,9 @@ def uninstall():
             path.unlink()
     run(["systemctl", "daemon-reload"])
     match = re.search(r"Current level:\s*([A-Z]+)", c.get("original_log_level", ""))
-    if match and match[1] in ("EXCESSIVE", "MSGDUMP", "DEBUG", "INFO", "WARNING", "ERROR"):
+    if not sta_only(c) and match and match[1] in ("EXCESSIVE", "MSGDUMP", "DEBUG", "INFO", "WARNING", "ERROR"):
         control(c, "LOG_LEVEL " + match[1])
-    if c.get("original_power") == "Power save: on":
+    if not sta_only(c) and c.get("original_power") == "Power save: on":
         run(["iw", "dev", c["interface"], "set", "power_save", "on"])
     previous_debug = c.get('original_firmware_debug', '')
     if re.fullmatch(r'(?:0x[0-9a-fA-F]+|[0-9]+)', previous_debug):
@@ -1587,9 +1678,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--version", action="version", version="Ella AP watch " + VERSION)
     parser.add_argument("action", choices=("install", "daemon", "status", "observe", "recover", "capture", "report", "faults", "export", "errors", "reset", "uninstall", "_on-start"))
-    parser.add_argument("--interface", default="wlan0")
-    parser.add_argument("--unit", default="ella-hotspot.service")
-    parser.add_argument("--control", default="/run/hostapd-ella")
+    parser.add_argument("--topology", choices=('ap-sta', 'sta-only'), help="Explicit radio topology; existing installations preserved unless supplied")
+    parser.add_argument("--peer-target", action="append", help="Optional directly reachable sensor IPv4; max four; diagnostic ping only")
+    parser.add_argument("--interface", help="AP interface (default wlan0 for a fresh installation)")
+    parser.add_argument("--unit", help="AP service (default ella-hotspot.service)")
+    parser.add_argument("--control", help="AP control directory (default /run/hostapd-ella)")
     parser.add_argument("--leases", default="/run/ella-hotspot-dns/leases")
     parser.add_argument("--target", action="append")
     parser.add_argument("--uplink", help="Optional explicit wireless client interface; normally discovered")
@@ -1613,6 +1706,8 @@ def main():
         on_start(config())
     elif args.action in ("observe", "recover"):
         c = config()
+        if sta_only(c) and args.action == 'recover':
+            raise ValueError('STA-only never performs recovery; install AP topology explicitly when ready')
         c["mode"] = args.action
         write_json(CONFIG, c)
         print("Mode: " + args.action + "; takes effect within one check cycle.")
@@ -1620,8 +1715,11 @@ def main():
         c = config()
         print("Monitor version: " + VERSION)
         print("Mode: " + c["mode"])
+        print("Topology: " + c.get("topology", "ap-sta"))
         print(run(["systemctl", "is-active", "ella-ap-watch.service"])["text"].strip())
         try:
+            if sta_only(c):
+                raise ValueError("AP checks disabled")
             s = read_json(RUNTIME / "state.json")
             print("Last check: " + s["observation"]["utc"])
             print("State: " + s["reason"])
@@ -1632,18 +1730,21 @@ def main():
             for v in s["observation"]["targets"].values():
                 print(v["ip"] + ": " + ("traffic/probe OK" if v["alive"] else "no confirmed traffic"))
         except (OSError, ValueError, KeyError, TypeError, AttributeError):
-            print("No readable runtime status yet; inspect service journal.")
+            print("AP checks and recovery disabled." if sta_only(c) else "No readable runtime status yet; inspect service journal.")
         try:
             flight = read_json(RUNTIME / 'flight-status.json')
             row = flight['sample']
             print('Wi-Fi diagnostics last sample: ' + flight['utc'])
-            print('AP: ' + str(row['ap'].get('interface')) + ' / phy: ' + str(row['ap'].get('phy')))
+            print('AP: disabled (STA-only)' if sta_only(c) else
+                  'AP: ' + str(row['ap'].get('interface')) + ' / phy: ' + str(row['ap'].get('phy')))
             print('STA: ' + str(row['sta'].get('interface')) + ' / phy: ' + str(row['sta'].get('phy')))
             print('Local API availability: ' + str(row['local_api']))
             debug = bounded_text(FW_DEBUG, 64).strip()
             console = bool(int(debug, 0) & 0x100000) if re.fullmatch(r'(?:0x[0-9a-fA-F]+|[0-9]+)', debug) else None
             print('Firmware console diagnostic flag: ' + ('unavailable' if console is None else 'enabled' if console else 'disabled'))
-            print('Independent AP round trips: ' + str(row['slow'].get('ap_probes', {})))
+            print('Sensor peer round trips: ' + str(row['slow'].get('peer_probes', {})))
+            if not sta_only(c):
+                print('Independent AP round trips: ' + str(row['slow'].get('ap_probes', {})))
             print('Active fault capture: ' + str(flight.get('fault') or 'none'))
         except (OSError, ValueError, KeyError, TypeError):
             print('No readable Wi-Fi diagnostic sample yet.')
@@ -1670,6 +1771,8 @@ def main():
         if run(['systemctl', 'is-active', 'ella-ap-watch.service'])['text'].strip() == 'active':
             write_json(RUNTIME / 'incident-request.json', {'utc': stamp()})
             print('Fault window requested. Available prefix is saved on the next diagnostic cycle; tail completes after 60 seconds.')
+        elif sta_only(c):
+            raise ValueError('Monitor is inactive: start ella-ap-watch.service before requesting a STA fault window')
         else:
             o, _ = observe(c, {})
             print(snapshot(c, "manual-monitor-inactive-instant-only", o))
@@ -1717,4 +1820,5 @@ if __name__ == "__main__":
         report_error(error, PHASE, True)
         journal("AP watch error [" + PHASE + "]: " + type(error).__name__ + ": " + str(error)[:1024], sys.stderr)
         sys.exit(1)
+
 
