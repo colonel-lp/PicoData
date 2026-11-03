@@ -7,7 +7,7 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
-/** Native popup plot: recorded amounts/ranges, full calendar axes and honest gaps. */
+/** Native popup plot: recorded amounts/ranges, full calendar axes and recorded coverage. */
 final class PopupChartView extends View {
     static final float LABEL_INSET=6;
     private final ThemeConfig theme;
@@ -34,6 +34,7 @@ final class PopupChartView extends View {
         }
         paint.setColor(theme.graphAxes);canvas.drawLine(left,top,left,bottom,paint);canvas.drawLine(left,bottom,right,bottom,paint);if(min<0&&max>0)canvas.drawLine(left,y(0,min,max,top,bottom),right,y(0,min,max,top,bottom),paint);
         paint.setTextAlign(Paint.Align.LEFT);canvas.drawText(data==null?"":data.unit,left,10*scale,paint);
+        if(data!=null&&data.batterySplit){paint.setTextAlign(Paint.Align.RIGHT);paint.setColor(theme.frontEq);canvas.drawText("PV1 + PV2",right-90*scale,10*scale,paint);paint.setColor(theme.rearEq);canvas.drawText("Draw",right,10*scale,paint);}
         List<Instant> ticks=new ArrayList<>();ZonedDateTime start=plan.query.from.atZone(plan.zone);
         if(plan.period==0)for(int i=0;i<=60;i+=10)ticks.add(plan.query.from.plusSeconds(i*60));
         else if(plan.period==1){for(int i=0;i<24;i+=2)ticks.add(start.toLocalDate().atTime(i,0).atZone(plan.zone).toInstant());ticks.add(plan.end);}
@@ -45,16 +46,17 @@ final class PopupChartView extends View {
             if(major){paint.setTextAlign(i==0?Paint.Align.LEFT:i==ticks.size()-1?Paint.Align.RIGHT:Paint.Align.CENTER);
                 String label=plan.period==1?PopupHistory.dayTick(ticks.get(i),plan):DateTimeFormatter.ofPattern(plan.period==0?"HH:mm":plan.period==2?"EEE":"d MMM",Locale.UK).withZone(plan.zone).format(ticks.get(i));canvas.drawText(label,at,bottom+18*scale,paint);}
         }
-        if(data==null||data.points.isEmpty()){paint.setTextAlign(Paint.Align.CENTER);paint.setColor(theme.text);canvas.drawText("—",(left+right)/2,(top+bottom)/2,paint);return;}
-        PopupHistory.Point previous=null;
-        for(PopupHistory.Point point:data.points){
+        if(data==null||PopupHistory.traces(data).stream().allMatch(trace->trace.points.isEmpty())){paint.setTextAlign(Paint.Align.CENTER);paint.setColor(theme.text);canvas.drawText(data==null?"—":data.emptyMessage,(left+right)/2,(top+bottom)/2,paint);return;}
+        for(PopupHistory.Series traceData:PopupHistory.traces(data)){
+        PopupHistory.Point previous=null,previousLow=null,previousHigh=null;
+        for(PopupHistory.Point point:traceData.points){
             float a=x(point.start,left,right),b=x(point.fullEnd,left,right),at=data.cumulative?x(point.end,left,right):(x(point.start,left,right)+x(point.end,left,right))/2;
             boolean partial=!point.complete||point.end.isBefore(point.fullEnd);
             if(bars){
                 double low=data.temperature?(point.low==null?Double.NaN:point.low):pressure?900:0,high=data.temperature?(point.high==null?Double.NaN:point.high):point.value;
                 if(Double.isFinite(low)&&Double.isFinite(high)){
                     float lowY=y(low,min,max,top,bottom),highY=y(high,min,max,top,bottom);
-                    canvas.save();canvas.clipRect(left,top,right,bottom);paint.setStyle(Paint.Style.FILL);paint.setAlpha(partial?120:210);paint.setColor(data.temperature?theme.frontEq:point.value<0||data.usage?theme.rearEq:theme.frontEq);
+                    canvas.save();canvas.clipRect(left,top,right,bottom);paint.setStyle(Paint.Style.FILL);paint.setAlpha(partial?120:210);paint.setColor(data.temperature?theme.frontEq:data.batterySplit?(traceData==data?theme.frontEq:theme.rearEq):point.value<0||data.usage?theme.rearEq:theme.frontEq);
                     canvas.drawRect(a+scale,Math.min(lowY,highY),Math.max(a+2*scale,b-scale),Math.max(lowY,highY),paint);paint.setAlpha(255);
                     if(data.temperature){paint.setColor(theme.rearEq);paint.setStrokeWidth(2*scale);canvas.drawLine(a+scale,lowY,b-scale,lowY,paint);paint.setColor(theme.frontEq);canvas.drawLine(a+scale,highY,b-scale,highY,paint);}
                     canvas.restore();
@@ -64,17 +66,18 @@ final class PopupChartView extends View {
                     }
                 }
             }else if(data.temperature){
-                trace(canvas,previous,point,point.low,previous==null?null:previous.low,theme.rearEq,left,right,top,bottom,min,max,at);
-                trace(canvas,previous,point,point.high,previous==null?null:previous.high,theme.frontEq,left,right,top,bottom,min,max,at);
-            }else trace(canvas,previous,point,point.value,previous==null?null:previous.value,point.value<0||data.usage?theme.rearEq:theme.frontEq,left,right,top,bottom,min,max,at);
-            previous=point;
+                trace(canvas,previousLow,point,point.low,previousLow==null?null:previousLow.low,theme.rearEq,left,right,top,bottom,min,max,at);
+                trace(canvas,previousHigh,point,point.high,previousHigh==null?null:previousHigh.high,theme.frontEq,left,right,top,bottom,min,max,at);
+            }else trace(canvas,previous,point,point.value,previous==null?null:previous.value,data.batterySplit?(traceData==data?theme.frontEq:theme.rearEq):point.value<0||data.usage?theme.rearEq:theme.frontEq,left,right,top,bottom,min,max,at);
+            previous=point;if(point.low!=null)previousLow=point;if(point.high!=null)previousHigh=point;
+        }
         }
         paint.setAlpha(255);paint.setStyle(Paint.Style.FILL);
     }
     private void trace(Canvas canvas,PopupHistory.Point previous,PopupHistory.Point point,Double value,Double previousValue,int colour,float left,float right,float top,float bottom,double min,double max,float at){
         if(value==null)return;float atY=y(value,min,max,top,bottom);canvas.save();canvas.clipRect(left,top,right,bottom);paint.setStyle(Paint.Style.FILL);paint.setAlpha(255);paint.setColor(colour);paint.setStrokeWidth(1.6f*scale);
-        if(previous!=null&&previousValue!=null&&previous.end.equals(point.start)&&previous.complete&&point.complete){float prevAt=data.cumulative?x(previous.end,left,right):(x(previous.start,left,right)+x(previous.end,left,right))/2;canvas.drawLine(prevAt,y(previousValue,min,max,top,bottom),at,atY,paint);}
+        if(previous!=null&&previousValue!=null){float prevAt=data.cumulative?x(previous.end,left,right):(x(previous.start,left,right)+x(previous.end,left,right))/2;canvas.drawLine(prevAt,y(previousValue,min,max,top,bottom),at,atY,paint);}
         if(previous==null&&data.cumulative&&point.complete&&point.start.equals(plan.query.from))canvas.drawLine(x(point.start,left,right),y(0,min,max,top,bottom),at,atY,paint);
-        paint.setColor(theme.graphAxes);canvas.drawCircle(at,atY,1.8f*scale,paint);canvas.restore();
+        paint.setColor(colour);canvas.drawCircle(at,atY,1.8f*scale,paint);canvas.restore();
     }
 }

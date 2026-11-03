@@ -48,7 +48,7 @@ final class ConnectionDiagnostics {
     }
     synchronized void request(String operation,String stage,long duration,int status,Throwable error,long id){
         add("request "+word(operation)+" call="+id+" stage="+word(stage)+" elapsed="+Math.max(0,duration)+"ms status="+status+" error="+(error==null?"none":word(error.getClass().getSimpleName()))+" errno="+errno(error));
-        if(operation.equals("live")){
+        if(operation.equals("live")&&!stage.equals("cancelled")){
             if(error==null&&stage.equals("complete"))liveFailures=0;
             else if(error!=null){if(liveFailures++==0)firstFailure=monotonic.getAsLong();if(liveFailures>=2)fault("repeated_live_request_failure",firstFailure);}
         }
@@ -61,6 +61,15 @@ final class ConnectionDiagnostics {
             Object value=error.getClass().getField("errno").get(error);if(value instanceof Integer)return Integer.toString((Integer)value);
         }catch(ReflectiveOperationException|SecurityException ignored){}
         return "unknown";
+    }
+    void crash(Throwable error){
+        synchronized(this){
+            add("crash error="+word(error.getClass().getSimpleName()));
+            int count=0;for(StackTraceElement frame:error.getStackTrace())if(frame.getClassName().startsWith("com.colonellp.ellamonitor.")&&count++<12)
+                add("frame "+frame.getClassName()+"."+frame.getMethodName()+":"+frame.getLineNumber());
+            if(faults!=null)faults.captureCrash(monotonic.getAsLong(),new ArrayList<>(history));
+        }
+        ConnectionFaultStore store;synchronized(this){store=faults;}if(store!=null)store.awaitCrashWrite();
     }
     void transport(String operation,String stage,Throwable error){request(operation,stage,0,0,error);}
     void network(String reason,int generation,long handle,boolean ssidKnown){

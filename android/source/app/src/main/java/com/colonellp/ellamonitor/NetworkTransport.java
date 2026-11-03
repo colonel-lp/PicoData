@@ -11,6 +11,7 @@ import okhttp3.*;
 final class NetworkTransport implements ApiClient.Connections {
     private final OkHttpClient http,readHttp;
     private final ConnectionDiagnostics diagnostics;
+    private final java.util.concurrent.atomic.AtomicBoolean closed=new java.util.concurrent.atomic.AtomicBoolean();
     private static final class Label {final long id;Label(long value){id=value;}}
     NetworkTransport(Network route,LocalNameResolver resolver){
         this(route,resolver,null);
@@ -35,9 +36,11 @@ final class NetworkTransport implements ApiClient.Connections {
         // Shared pool/dispatcher/network/TLS policy; GET recovery only, within one call deadline.
         readHttp=http.newBuilder().retryOnConnectionFailure(true).build();
     }
-    public HttpURLConnection open(URL url){return new Connection(url,http,readHttp,diagnostics==null?0:diagnostics.nextCallId());}
+    public HttpURLConnection open(URL url)throws IOException{if(closed.get())throw new IOException("Transport closed.");return new Connection(url,http,readHttp,diagnostics==null?0:diagnostics.nextCallId());}
     public long requestId(HttpURLConnection c){return c instanceof Connection?((Connection)c).id:0;}
-    public void close(){http.dispatcher().cancelAll();http.connectionPool().evictAll();http.dispatcher().executorService().shutdown();}
+    public long headersNanos(HttpURLConnection c){return c instanceof Connection?((Connection)c).headersAt:System.nanoTime();}
+    public void release(HttpURLConnection c){if(c instanceof Connection)((Connection)c).release();else c.disconnect();}
+    public void close(){if(!closed.compareAndSet(false,true))return;http.dispatcher().cancelAll();http.connectionPool().evictAll();http.dispatcher().executorService().shutdown();}
     private static RequestBody commandBody(byte[] bytes){return new RequestBody(){
         @Override public MediaType contentType(){return MediaType.get("application/json");}
         @Override public long contentLength(){return bytes.length;}
@@ -46,7 +49,7 @@ final class NetworkTransport implements ApiClient.Connections {
     };}
     private static final class Connection extends HttpURLConnection {
         final OkHttpClient http,readHttp;final Map<String,String> headers=new LinkedHashMap<>();final ByteArrayOutputStream output=new ByteArrayOutputStream();
-        volatile Call call;volatile boolean cancelled;Response response;final long id;
+        volatile Call call;volatile boolean cancelled;Response response;long headersAt;final long id;
         Connection(URL url,OkHttpClient client,OkHttpClient reader,long id){super(url);http=client;readHttp=reader;this.id=id;}
         @Override public void setRequestProperty(String key,String value){if(connected)throw new IllegalStateException("Already connected");headers.put(key,value);}
         @Override public OutputStream getOutputStream(){return output;}
@@ -56,14 +59,16 @@ final class NetworkTransport implements ApiClient.Connections {
             if(method.equals("POST")){if(output.size()>64)throw new IOException("Request too large.");request.post(commandBody(output.toByteArray()));}
             else if(!method.equals("GET"))throw new IOException("Unsupported operation.");
             Call prepared=(method.equals("GET")?readHttp:http).newCall(request.build());call=prepared;if(cancelled){prepared.cancel();throw new IOException("Cancelled.");}
-            response=prepared.execute();connected=true;if(cancelled){response.close();throw new IOException("Cancelled.");}
+            response=prepared.execute();headersAt=System.nanoTime();connected=true;if(cancelled)throw new IOException("Cancelled.");
         }
         @Override public int getResponseCode()throws IOException{connect();return response.code();}
         @Override public long getContentLengthLong(){return response==null||response.body()==null?-1:response.body().contentLength();}
         @Override public InputStream getInputStream()throws IOException{connect();if(response.body()==null)throw new IOException("Missing response.");return response.body().byteStream();}
         @Override public InputStream getErrorStream(){try{return getInputStream();}catch(IOException e){return null;}}
         @Override public boolean usingProxy(){return false;}
-        @Override public void disconnect(){cancelled=true;Call c=call;if(c!=null)c.cancel();if(response!=null)response.close();}
+        // Cancellation may run on the UI thread. Only the reading worker owns the body.
+        void release(){Response owned=response;response=null;if(owned!=null)owned.close();}
+        @Override public void disconnect(){cancelled=true;Call c=call;if(c!=null)c.cancel();}
     }
 }
 

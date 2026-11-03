@@ -55,6 +55,7 @@ public final class MainActivity extends Activity {
     private PopupSettingsStore popupSettings;
     private volatile ApiClient popupMonthClient;
     private final Runnable savePopupSettings=()->withDownloadsStorage(()->viewSettingsWorker.execute(()->{try{popupSettings.save();}catch(Exception e){handler.post(()->{if(MainActivity.this.active)toast(e.getMessage());});}}));
+    private CrashRecorder crashHandler;
     private final ExecutorService liveWorker = Executors.newSingleThreadExecutor(), historyWorker = Executors.newSingleThreadExecutor(), metadataWorker=Executors.newSingleThreadExecutor();
     private PrivateSettings settings;
     private PiControls piControls;
@@ -107,7 +108,7 @@ public final class MainActivity extends Activity {
     };
 
     @Override public void onCreate(Bundle state) {
-        super.onCreate(state); diagnostics.attach(new java.io.File(getFilesDir(),"connection-faults"),BuildConfig.VERSION_NAME);settings = new PrivateSettings(this); screen = new ScreenControl(this, settings.prefs); piControls=new PiControls(this,settings);
+        super.onCreate(state); diagnostics.attach(new java.io.File(getFilesDir(),"connection-faults"),BuildConfig.VERSION_NAME);crashHandler=CrashRecorder.install(diagnostics);settings = new PrivateSettings(this); screen = new ScreenControl(this, settings.prefs); piControls=new PiControls(this,settings);
         setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         appearance = new AppearanceStore(this,settings.prefs); theme = appearance.active();migrateViewerSettings();
         presets=new PresetStore(this,settings.prefs);popupSettings=new PopupSettingsStore(this);
@@ -136,7 +137,7 @@ public final class MainActivity extends Activity {
         if (liveClient != null) liveClient.cancel(); if (metadataClient!=null)metadataClient.cancel();metadataLoading=false; if (historyClient != null) historyClient.cancel(); if (summaryClient != null) summaryClient.cancel();if(popupMonthClient!=null)popupMonthClient.cancel();
         live = null; history = null; historyLoading = false; screen.stop(); persistence(false); super.onStop();
     }
-    @Override protected void onDestroy() { diagnostics.close();if(piControls!=null)piControls.destroy();if(elementPopup!=null)elementPopup.dialog.dismiss();if(colourDialog!=null)colourDialog.dismiss();if(appearanceDialog!=null){appearanceDialog.setOnDismissListener(null);appearanceDialog.dismiss();} if(updates!=null)updates.destroy();handler.removeCallbacks(savePopupSettings);popupWorker.shutdownNow();viewSettingsWorker.shutdown();liveWorker.shutdownNow(); historyWorker.shutdownNow();metadataWorker.shutdownNow(); super.onDestroy(); }
+    @Override protected void onDestroy() { if(crashHandler!=null)crashHandler.restore();diagnostics.close();if(piControls!=null)piControls.destroy();if(elementPopup!=null)elementPopup.dialog.dismiss();if(colourDialog!=null)colourDialog.dismiss();if(appearanceDialog!=null){appearanceDialog.setOnDismissListener(null);appearanceDialog.dismiss();} if(updates!=null)updates.destroy();handler.removeCallbacks(savePopupSettings);popupWorker.shutdownNow();viewSettingsWorker.shutdown();liveWorker.shutdownNow(); historyWorker.shutdownNow();metadataWorker.shutdownNow(); super.onDestroy(); }
 
     private int dp(float value) { return Math.round(value * getResources().getDisplayMetrics().density); }
     LinearLayout column() { LinearLayout v = new LinearLayout(this); v.setOrientation(LinearLayout.VERTICAL); return v; }
@@ -299,7 +300,7 @@ public final class MainActivity extends Activity {
     }
     private boolean allowed() { return Build.VERSION.SDK_INT < 37 || checkSelfPermission(LAN_PERMISSION) == PackageManager.PERMISSION_GRANTED; }
     private void restartConnection() {
-        if(elementPopup!=null)elementPopup.pause();epoch++; historyEpoch++; summaryEpoch++;if(summaryClient!=null)summaryClient.cancel();if(popupMonthClient!=null)popupMonthClient.cancel();polls = 0; live = null; collectorStatus = null; history = null; historyLoading = false; piNowAt = 0; metrics = new ArrayList<>(); readings = new LinkedHashMap<>();
+        if(elementPopup!=null)elementPopup.pause();epoch++; monthAvailability.clear();historyEpoch++; summaryEpoch++;if(summaryClient!=null)summaryClient.cancel();if(popupMonthClient!=null)popupMonthClient.cancel();polls = 0; live = null; collectorStatus = null; history = null; historyLoading = false; piNowAt = 0; metrics = new ArrayList<>(); readings = new LinkedHashMap<>();
         handler.removeCallbacks(poll); if (liveClient != null) liveClient.cancel(); if (metadataClient!=null)metadataClient.cancel();metadataLoading=false; if (historyClient != null) historyClient.cancel();
         if (!active) return;
         if (!allowed()) { connectionState = "Local network permission is needed. Open Settings to connect."; updateLive(); return; }
@@ -318,11 +319,11 @@ public final class MainActivity extends Activity {
         final int generation = epoch; final ApiClient client = liveClient;
         liveWorker.execute(() -> {
             try {
-                long requestAt=SystemClock.elapsedRealtime();JSONObject body = client.get("/api/v1/live");
-                long responseAt=SystemClock.elapsedRealtime(),clockAt=Instant.parse(body.getString("now")).toEpochMilli();
+                JSONObject body = client.get("/api/v1/live");
+                long responseAt=SystemClock.elapsedRealtime(),headersAt=responseAt-client.responseAgeMillis(),clockAt=Instant.parse(body.getString("now")).toEpochMilli();
                 handler.post(() -> {
                     if (!active || generation != epoch) return;
-                    live=body;receivedMono=requestAt;piNowAt=clockAt;piNowMono=responseAt;connectionState="Pi connected";
+                    live=body;receivedMono=headersAt;piNowAt=clockAt;piNowMono=headersAt;connectionState="Pi connected";
                     if(polls++ % 30 == 0||metrics.isEmpty())refreshMetadata(generation);
                     updateLive();handler.postDelayed(poll,1000);
                 });
@@ -341,11 +342,11 @@ public final class MainActivity extends Activity {
         if(metadataLoading||!active)return;metadataLoading=true;
         metadataWorker.execute(()->{
             if(!active||generation!=epoch)return;
-            List<MonitorData.Metric> catalogue=null;JSONObject health=null;
-            try{ApiClient client=prepared==null?client():prepared;metadataClient=client;
+            List<MonitorData.Metric> catalogue=null;JSONObject health=null;ApiClient client=null;
+            try{client=prepared==null?client():prepared;metadataClient=client;
                 try{catalogue=MonitorData.catalogue(client.get("/api/v1/metrics"));}catch(Exception ignored){}
                 if(active&&generation==epoch)try{health=client.get("/api/v1/status");}catch(Exception ignored){}
-            }catch(Exception ignored){}
+            }catch(Exception ignored){}finally{if(client!=null)client.cancel();}
             final List<MonitorData.Metric> result=catalogue;final JSONObject statusResult=health;
             handler.post(()->{if(!active||generation!=epoch)return;metadataLoading=false;metadataClient=null;
                 if(result!=null)metrics=result;if(statusResult!=null)collectorStatus=statusResult;updateLive();
@@ -402,11 +403,11 @@ public final class MainActivity extends Activity {
         if (historyNote != null) historyNote.setText("Loading retained history…");
         final HistoryData.Window window = HistoryData.window(now(), range, defined, offset, metric.kind);
         historyWorker.execute(() -> {
-            try {
+            ApiClient client=null;try {
                 if (generation != historyEpoch || connectionGeneration != epoch) return;
-                ApiClient client = client(); historyClient = client; HistoryData.Result result = HistoryData.fetch(client, metric, window);
+                client = client(); historyClient = client; HistoryData.Result result = HistoryData.fetch(client, metric, window);
                 handler.post(() -> { if (!active || generation != historyEpoch || connectionGeneration != epoch) return; historyLoading = false; history = result; showHistory(); });
-            } catch (Exception e) { handler.post(() -> { if (active && generation == historyEpoch && connectionGeneration == epoch) { historyLoading = false; if (historyNote != null) historyNote.setText("History unavailable. Check connection and retained range; tap Refresh."); } }); }
+            } catch (Exception e) { handler.post(() -> { if (active && generation == historyEpoch && connectionGeneration == epoch) { historyLoading = false; if (historyNote != null) historyNote.setText("History unavailable. Check connection and retained range; tap Refresh."); } }); }finally{if(client!=null)client.cancel();}
         });
     }
     private void showHistory() {
@@ -430,12 +431,14 @@ public final class MainActivity extends Activity {
     private void showDetail(MonitorData.Datum d, String fallback,boolean gauge) {showElementDetail(d==null?"pending:"+fallback:d.id,d,fallback,gauge);}
     private void showElementDetail(String id,MonitorData.Datum d,String fallback,boolean gauge){new ElementPopup(id,d,fallback,gauge).show();}
     private volatile ElementPopup elementPopup;
+    private static final class MonthAvailability {final long at;final java.time.YearMonth month;final List<java.time.YearMonth> values;MonthAvailability(long a,java.time.YearMonth m,List<java.time.YearMonth> v){at=a;month=m;values=new ArrayList<>(v);}}
+    private final LinkedHashMap<String,MonthAvailability> monthAvailability=new LinkedHashMap<>();
     private final class ElementPopup {
         final String id,field;final MonitorData.Metric metric;final boolean current,positive,temperature,historyAvailable;
         final android.app.Dialog dialog=new android.app.Dialog(MainActivity.this);
         final LinearLayout panel=styledDialogRoot();final PopupSelection selection;
         final TextView[][] periods=new TextView[2][4];TextView firstValue,secondValue,samples,caption,line,sum,quantityButton,valuesButton;
-        PopupChartView graph;android.widget.FrameLayout graphFrame;HistoryData.Result data;PopupHistory.Plan plan;
+        PopupChartView graph;android.widget.FrameLayout graphFrame;HistoryData.Result data;BatteryHistory batteryData;PopupHistory.Plan plan;
         java.util.List<java.time.YearMonth> months;java.time.YearMonth monthsAt;boolean loadingMonths,monthsError,busy;int finalRetries;java.time.Instant finalWindow;
         volatile boolean open;volatile int requestVersion,monthVersion;volatile ApiClient dataClient,monthClient;
         final Runnable refreshMonths=()->{if(isCurrent()){loadMonths(true);scheduleMonths();}};
@@ -443,6 +446,7 @@ public final class MainActivity extends Activity {
         ElementPopup(String key,MonitorData.Datum datum,String fallback,boolean gauge){
             id=key;metric=PopupHistory.binding(id,datum,metrics);field=datum==null?"current":datum.quantity.equals("starterVoltage")?"voltage":datum.quantity;
             GaugeScale.Kind kind=GaugeScale.kind("gauges",fallback);current=datum!=null?datum.quantity.equals("current"):gauge&&(kind==GaugeScale.Kind.LOAD||kind==GaugeScale.Kind.PV||kind==GaugeScale.Kind.BATTERY);
+            MonthAvailability cached=metric==null?null:monthAvailability.get(metric.id+":"+field);if(cached!=null&&SystemClock.elapsedRealtime()-cached.at<60000&&cached.month.equals(java.time.YearMonth.from(now().atZone(ZoneId.systemDefault())))){months=new ArrayList<>(cached.values);monthsAt=cached.month;}
             positive=current&&(metric==null||!metric.role.equals("battery"));temperature=metric!=null&&metric.kind.equals("temperature");selection=popupSettings.get(id);
             String saved=settings.label(id,fallback),title=saved.equals(fallback)?PopupHistory.title(id,datum,fallback):saved;
             if(datum!=null&&datum.unit.equals("°C")&&!title.toLowerCase(Locale.UK).endsWith("temperature"))title+=" temperature";
@@ -463,8 +467,8 @@ public final class MainActivity extends Activity {
                 LinearLayout periodArea=row();periodArea.setBaselineAligned(false);LinearLayout periodBox=popupBox();LinearLayout.LayoutParams timeSize=new LinearLayout.LayoutParams(0,-2,4);periodArea.addView(periodBox,timeSize);
                 for(int r=0;r<2;r++){final boolean fixed=r==1;LinearLayout buttons=row();buttons.setBaselineAligned(false);for(int i=0;i<4;i++){final int period=i;TextView button=popupButton("",false,()->{if(fixed&&period==3){chooseMonth();return;}selection.fixed=fixed;selection.period=period;remember();reload(false);});periods[r][i]=button;popupControl(buttons,button,i);}if(r==0)periodBox.addView(buttons,new LinearLayout.LayoutParams(-1,-2));else popupRow(periodBox,buttons);}
                 LinearLayout modeBox=popupBox();line=popupButton(selection.bars?"Bar":"Line",selection.bars,()->{selection.bars=!selection.bars;remember();draw();});modeBox.addView(line,new LinearLayout.LayoutParams(-1,dialogDp(28)));
-                sum=popupButton("Sum",current&&selection.sum,()->{if(current){selection.sum=!selection.sum;remember();draw();}});sum.setEnabled(current);sum.setAlpha(current?1:.4f);LinearLayout.LayoutParams sumSize=new LinearLayout.LayoutParams(-1,dialogDp(28));sumSize.topMargin=dialogDp(6);modeBox.addView(sum,sumSize);LinearLayout.LayoutParams modeSize=new LinearLayout.LayoutParams(0,-2,1);modeSize.leftMargin=dialogDp(6);periodArea.addView(modeBox,modeSize);popupRow(panel,periodArea);
-                dialog.setOnShowListener(v->{if(elementPopup!=this||!dialog.isShowing())return;open=true;reload(false);loadMonths(true);scheduleMonths();});
+                sum=popupButton("Sum",current&&selection.sum,()->{if(current){selection.sum=!selection.sum;remember();draw();if(!selection.sum&&BatteryHistory.applies(metric)&&batteryData==null)reload(true);}});sum.setEnabled(current);sum.setAlpha(current?1:.4f);LinearLayout.LayoutParams sumSize=new LinearLayout.LayoutParams(-1,dialogDp(28));sumSize.topMargin=dialogDp(6);modeBox.addView(sum,sumSize);LinearLayout.LayoutParams modeSize=new LinearLayout.LayoutParams(0,-2,1);modeSize.leftMargin=dialogDp(6);periodArea.addView(modeBox,modeSize);popupRow(panel,periodArea);
+                dialog.setOnShowListener(v->{if(elementPopup!=this||!dialog.isShowing())return;open=true;reload(false);loadMonths(false);scheduleMonths();});
             }
             LinearLayout footerBox=popupBox(),footer=row();footer.setBaselineAligned(false);footerBox.addView(footer,new LinearLayout.LayoutParams(-1,-2));popupRow(panel,footerBox);addElementOptions(footer,id,()->dialog.dismiss(),metric,field);
             dialog.setOnDismissListener(v->{open=false;pause();if(elementPopup==this)elementPopup=null;dismissAnchoredMenu();removeTrackedChildren(panel);flushPopupSettings();});
@@ -475,8 +479,8 @@ public final class MainActivity extends Activity {
         boolean valid(int version,int connection){return isCurrent()&&version==requestVersion&&connection==epoch;}
         void show(){
             if(elementPopup!=null)elementPopup.dialog.dismiss();elementPopup=this;
-            if(graphFrame!=null){int width=Math.max(1,Math.min(dialogDp(560),viewport.getWidth()-dialogDp(30))),height=Math.max(1,viewport.getHeight()-dialogDp(24));panel.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));graphFrame.getLayoutParams().height=Math.max(dialogDp(140),dialogDp(280)-Math.max(0,panel.getMeasuredHeight()-height));}
-            showStyledDialog(dialog,panel,560);if(!historyAvailable)open=true;refreshChangedIndicators();
+            if(graphFrame!=null){int width=Math.max(1,Math.min(dialogDp(1008),viewport.getWidth()-viewport.getPaddingLeft()-viewport.getPaddingRight()-dialogDp(16))),height=Math.max(1,viewport.getHeight()-viewport.getPaddingTop()-viewport.getPaddingBottom()-dialogDp(24));panel.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));graphFrame.getLayoutParams().height=Math.max(dialogDp(140),dialogDp(280)-Math.max(0,panel.getMeasuredHeight()-height));}
+            showStyledDialog(dialog,panel,1008,16);if(!historyAvailable)open=true;refreshChangedIndicators();
         }
         void remember(){try{popupSettings.put(id,selection);handler.removeCallbacks(savePopupSettings);handler.postDelayed(savePopupSettings,250);}catch(Exception e){toast(e.getMessage());}}
         void pause(){handler.removeCallbacks(refresh);handler.removeCallbacks(refreshMonths);requestVersion++;monthVersion++;busy=false;loadingMonths=false;if(dataClient!=null)dataClient.cancel();if(monthClient!=null)monthClient.cancel();}
@@ -491,16 +495,17 @@ public final class MainActivity extends Activity {
         }
         void reload(boolean automatic){
             if(!historyAvailable||!isCurrent())return;if(automatic&&busy){schedule(true);return;}handler.removeCallbacks(refresh);busy=true;
-            final PopupHistory.Plan requested=PopupHistory.plan(now(),selection,ZoneId.systemDefault());final int version=++requestVersion,connection=epoch;if(dataClient!=null)dataClient.cancel();
-            if(!automatic||data==null){plan=requested;data=null;updateButtons();caption.setText(PopupHistory.caption(plan,selection.fixed));draw();}
+            final PopupHistory.Plan requested=PopupHistory.plan(now(),selection,ZoneId.systemDefault());final boolean wantsSplit=current&&BatteryHistory.applies(metric)&&!selection.sum;final List<MonitorData.Metric> requestedCatalogue=new ArrayList<>(metrics);final int version=++requestVersion,connection=epoch;if(dataClient!=null)dataClient.cancel();
+            if(!automatic||data==null){plan=requested;data=null;batteryData=null;updateButtons();caption.setText(PopupHistory.caption(plan,selection.fixed));draw();}
             if(!PopupHistory.supports(metric,requested.query.resolution)||!requested.query.to.isAfter(requested.query.from)){busy=false;schedule(false);return;}
-            popupWorker.execute(()->{try{if(!valid(version,connection))return;ApiClient client=client();dataClient=client;summaryClient=client;if(!valid(version,connection)){client.cancel();return;}HistoryData.Result result=HistoryData.fetch(client,metric,requested.query);
-                handler.post(()->{if(valid(version,connection)){busy=false;data=result;plan=requested;caption.setText(PopupHistory.caption(plan,selection.fixed));updateButtons();draw();if(!requested.query.to.equals(finalWindow)){finalWindow=requested.query.to;finalRetries=0;}boolean finishing=PopupHistory.awaitingFinalCheckpoint(result,selection);schedule(finishing&&finalRetries++<3);}});
-            }catch(Exception ignored){handler.post(()->{if(valid(version,connection)){busy=false;if(!automatic)toast("Popup history could not be loaded. Retrying.");schedule(true);}});}});
+            popupWorker.execute(()->{ApiClient client=null;try{if(!valid(version,connection))return;client=client();dataClient=client;summaryClient=client;if(!valid(version,connection)){client.cancel();return;}HistoryData.Result result=HistoryData.fetch(client,metric,requested.query);
+                BatteryHistory fetched=null;boolean pvFailed=false;try{if(wantsSplit)fetched=BatteryHistory.fetch(client,result,requestedCatalogue);}catch(Exception error){if(!valid(version,connection))return;diagnostics.transport("history","solar",error);pvFailed=true;}final BatteryHistory split=fetched;final boolean retrySolar=pvFailed;
+                handler.post(()->{if(valid(version,connection)){busy=false;data=result;batteryData=split;plan=requested;caption.setText(PopupHistory.caption(plan,selection.fixed));updateButtons();draw();if(!requested.query.to.equals(finalWindow)){finalWindow=requested.query.to;finalRetries=0;}boolean finishing=PopupHistory.awaitingFinalCheckpoint(result,selection);schedule(retrySolar||finishing&&finalRetries++<3);}});
+            }catch(Exception error){if(valid(version,connection))diagnostics.transport("history","popup",error);handler.post(()->{if(valid(version,connection)){busy=false;if(!automatic)toast("Popup history could not be loaded. Retrying.");schedule(true);}});}finally{if(client!=null)client.cancel();}});
         }
         void draw(){
-            if(graph==null)return;String q=current?(selection.power?"watts":"current"):field;PopupHistory.Series series=data==null?null:PopupHistory.series(data,plan,q,current&&selection.sum,positive,selection.bars);graph.show(plan,series,selection.bars,selection.values,metric!=null&&metric.kind.equals("barometer"));
-            samples.setText(data==null?"Samples: —/"+SummaryPeriods.expected(plan.query,plan.zone):"Samples: "+series.captured+"/"+series.expected);
+            if(graph==null)return;String q=current?(selection.power?"watts":"current"):field;PopupHistory.Series series=data==null?null:PopupHistory.series(data,plan,q,current&&selection.sum,positive,selection.bars);if(data!=null&&current&&BatteryHistory.applies(metric)&&!selection.sum)series=batteryData==null?new PopupHistory.Series():batteryData.series(plan,q,selection.bars);if(series!=null&&series.unit==null){series.unit=selection.power?"Wh":"Ah";series.emptyMessage="PV history unavailable";}graph.show(plan,series,selection.bars,selection.values,metric!=null&&metric.kind.equals("barometer"));
+            samples.setText(data==null?"Samples: —/"+SummaryPeriods.expected(plan.query,plan.zone):"Samples: "+PopupHistory.series(data,plan,q,false,positive,selection.bars).captured+"/"+SummaryPeriods.expected(plan.query,plan.zone));
             if(current){SummaryPeriods.Totals t=data==null?new SummaryPeriods.Totals():SummaryPeriods.totals(data,positive);firstValue.setText(amount(t.charge,"Ah"));secondValue.setText(amount(t.energy,"Wh"));quantityButton.setText(selection.power?"Wh":"Ah");popupButtonState(quantityButton,selection.power);}
             else if(temperature){firstValue.setText(reading(series==null?null:series.minimum,"°C"));secondValue.setText(reading(series==null?null:series.maximum,"°C"));}
             else firstValue.setText(reading(series==null?null:series.latest,series==null?"":series.unit));
@@ -511,9 +516,9 @@ public final class MainActivity extends Activity {
         void loadMonths(boolean force){
             if(metric==null||loadingMonths||!PopupHistory.supports(metric,"day")||!isCurrent()||!force&&months!=null)return;loadingMonths=true;monthsError=false;updateButtons();final int connection=epoch,version=++monthVersion;
             java.time.Instant at=now();java.time.ZoneId zone=ZoneId.systemDefault();
-            popupWorker.execute(()->{try{if(!isCurrent()||connection!=epoch||version!=monthVersion)return;ApiClient client=client();monthClient=client;popupMonthClient=client;if(!isCurrent()||connection!=epoch||version!=monthVersion){client.cancel();return;}java.util.List<java.time.YearMonth> recorded=PopupHistory.months(client,metric,at,zone,field);java.time.YearMonth current=java.time.YearMonth.from(at.atZone(zone));recorded.removeIf(m->!m.isBefore(current));
-                handler.post(()->{if(isCurrent()&&connection==epoch&&version==monthVersion){months=recorded;monthsAt=current;loadingMonths=false;monthsError=false;updateButtons();}});
-            }catch(Exception e){handler.post(()->{if(isCurrent()&&connection==epoch&&version==monthVersion){loadingMonths=false;monthsError=true;updateButtons();}});}});
+            popupWorker.execute(()->{ApiClient client=null;try{if(!isCurrent()||connection!=epoch||version!=monthVersion)return;client=client();monthClient=client;popupMonthClient=client;if(!isCurrent()||connection!=epoch||version!=monthVersion){client.cancel();return;}java.util.List<java.time.YearMonth> recorded=PopupHistory.months(client,metric,at,zone,field);java.time.YearMonth current=java.time.YearMonth.from(at.atZone(zone));recorded.removeIf(m->!m.isBefore(current));
+                handler.post(()->{if(isCurrent()&&connection==epoch&&version==monthVersion){months=recorded;monthsAt=current;monthAvailability.put(metric.id+":"+field,new MonthAvailability(SystemClock.elapsedRealtime(),current,recorded));while(monthAvailability.size()>32)monthAvailability.remove(monthAvailability.keySet().iterator().next());loadingMonths=false;monthsError=false;updateButtons();}});
+            }catch(Exception e){if(isCurrent()&&connection==epoch&&version==monthVersion)diagnostics.transport("history","months",e);handler.post(()->{if(isCurrent()&&connection==epoch&&version==monthVersion){loadingMonths=false;monthsError=true;updateButtons();}});}finally{if(client!=null)client.cancel();}});
         }
         void chooseMonth(){
             if(monthsError){toast("Could not load recorded months. Retrying.");loadMonths(true);return;}if(months==null||loadingMonths){toast("Recorded months are loading.");return;}if(months.isEmpty()){toast("No earlier daily readings are available.");return;}
@@ -849,11 +854,13 @@ public final class MainActivity extends Activity {
     LinearLayout styledDialogRoot(){LinearLayout panel=column();panel.setGravity(Gravity.CENTER_HORIZONTAL);panel.setPadding(dialogDp(14),dialogDp(12),dialogDp(14),dialogDp(12));panel.setBackground(roundedBackground(theme.panel,theme.border,1.4f,9));return panel;}
     TextView styledTitle(String title){TextView t=uiText(title,dialogTextSize(14),theme.text);t.setGravity(Gravity.CENTER);t.setPadding(dialogDp(8),dialogDp(5),dialogDp(8),dialogDp(8));return t;}
     TextView dialogButton(String label,int accent){TextView t=styledTitle(label);t.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX,dialogTextSize(11.5f));t.setBackground(roundedBackground(theme.buttonBackground,accent,1.25f,6));t.setPadding(dialogDp(6),0,dialogDp(6),0);return t;}
-    void showStyledDialog(android.app.Dialog dialog,View panel,int width){
-        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);int maxW=Math.max(1,Math.min(dialogDp(width),viewport.getWidth()-dialogDp(30)));int maxH=Math.max(1,viewport.getHeight()-dialogDp(24));
+    void showStyledDialog(android.app.Dialog dialog,View panel,int width){showStyledDialog(dialog,panel,width,30);}
+    private void showStyledDialog(android.app.Dialog dialog,View panel,int width,int margin){
+        dialog.requestWindowFeature(android.view.Window.FEATURE_NO_TITLE);int maxW=Math.max(1,Math.min(dialogDp(width),viewport.getWidth()-dialogDp(margin)-(margin==16?viewport.getPaddingLeft()+viewport.getPaddingRight():0)));int maxH=Math.max(1,viewport.getHeight()-dialogDp(24)-(margin==16?viewport.getPaddingTop()+viewport.getPaddingBottom():0));
         panel.measure(View.MeasureSpec.makeMeasureSpec(maxW,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));
         if(panel.getMeasuredHeight()>maxH&&!(panel instanceof ScrollView)){ScrollView scroll=new ScrollView(this);scroll.addView(panel);panel=scroll;}
         dialog.setContentView(panel);dialog.setCanceledOnTouchOutside(true);dialog.show();dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);dialog.getWindow().setLayout(maxW,Math.min(maxH,panel.getMeasuredHeight()>0?panel.getMeasuredHeight():maxH));dialog.getWindow().getDecorView().setSystemUiVisibility(getWindow().getDecorView().getSystemUiVisibility());
+        if(margin==16){android.view.WindowManager.LayoutParams bounds=dialog.getWindow().getAttributes();bounds.gravity=Gravity.CENTER;bounds.x=(viewport.getPaddingLeft()-viewport.getPaddingRight())/2;bounds.y=(viewport.getPaddingTop()-viewport.getPaddingBottom())/2;dialog.getWindow().setAttributes(bounds);}
     }
     private void anchoredMenu(View anchor,boolean above,List<String> items,List<Runnable> actions,int selected){anchoredMenu(anchor,null,above,items,actions,selected);}
     private void anchoredMenu(View anchor,android.graphics.RectF position,boolean above,List<String> items,List<Runnable> actions,int selected){

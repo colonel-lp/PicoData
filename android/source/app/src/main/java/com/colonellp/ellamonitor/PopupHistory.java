@@ -93,6 +93,7 @@ final class PopupHistory {
         Point(Instant s,Instant e,Instant f,double v,boolean c,Double l,Double h){start=s;end=e;fullEnd=f;value=v;complete=c;low=l;high=h;}
     }
     static final class Series {
+        Series companion;boolean batterySplit;String emptyMessage="—";
         final List<Point> points=new ArrayList<>();long captured,expected;String unit;boolean cumulative,temperature,usage;Double minimum,maximum,latest;
     }
     private static final class Bin {Instant start,end,fullEnd;double sum,coverage;long rows;Double last,low,high;boolean complete=true;}
@@ -130,8 +131,9 @@ final class PopupHistory {
     }
     static double[] axisRange(Series data,boolean pressure){
         if(pressure)return new double[]{900,1100,50};double min=0,max=0;
-        if(data!=null)for(Point p:data.points){min=Math.min(min,p.value);max=Math.max(max,p.value);if(p.low!=null)min=Math.min(min,p.low);if(p.high!=null)max=Math.max(max,p.high);}
+        for(Series trace:traces(data))for(Point p:trace.points){min=Math.min(min,p.value);max=Math.max(max,p.value);if(p.low!=null)min=Math.min(min,p.low);if(p.high!=null)max=Math.max(max,p.high);}
         double step=tickStep(min,max);return new double[]{Math.floor(min/step)*step,Math.max(step,Math.ceil(max/step)*step),step};
     }
+    static List<Series> traces(Series data){return data==null?Collections.emptyList():data.companion==null?Collections.singletonList(data):Arrays.asList(data,data.companion);}
     static double tickStep(double min,double max){double target=Math.max(1,(max-min)/4),unit=Math.pow(10,Math.floor(Math.log10(target)));double factor=target/unit;return Math.max(1,(factor<=1?1:factor<=2?2:factor<=5?5:10)*unit);}
 }

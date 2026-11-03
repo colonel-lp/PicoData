@@ -69,6 +69,16 @@ final class ConnectionFaultStore {
         if(active==null)return;Window w=active;active=null;String data=render(w,state);
         worker.execute(()->{try{write(new File(folder,w.name),data);Files.deleteIfExists(new File(folder,w.name+".pending").toPath());prune();}catch(Exception e){failed(e);}});
     }
+    synchronized void captureCrash(long onset,List<Entry> history){
+        if(closed)return;
+        if(active!=null)finish("interrupted (application crash)");
+        boolean wasForeground=foreground;foreground=true;latched=false;
+        capture("application_crash",onset,history);
+        finish("interrupted (application crash; post-crash tail unavailable)");foreground=wasForeground;
+    }
+    void awaitCrashWrite(){
+        try{worker.submit(()->{}).get(500,TimeUnit.MILLISECONDS);}catch(InterruptedException e){Thread.currentThread().interrupt();}catch(ExecutionException|TimeoutException|RejectedExecutionException ignored){}
+    }
     private void prepare()throws IOException{
         Files.createDirectories(folder.toPath());
         folder.setReadable(false,false);folder.setWritable(false,false);folder.setExecutable(false,false);

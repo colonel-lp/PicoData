@@ -1,5 +1,15 @@
 # Android changelog
 
+## 0.33 — 2026-11-03
+
+- Fix the confirmed Retry/backgrounding crash: cancellation interrupts the HTTP call without closing or draining a response on the UI thread. The reading worker owns response cleanup, including rejected status, malformed JSON and cancelled reads. Release completed history/month/catalogue clients; keep live polling separate and mode POSTs non-replayed.
+- Start the three-second live snapshot bound at response headers rather than request start. Connection/retry wait no longer consumes a newly received snapshot's lifetime; body transfer, parsing and UI delay still count. Collector source freshness and the cutoff remain unchanged. This fixes an app timing fault; it does not establish a radio or routing fix.
+- Widen chart popups to the dashboard's outer Currents/Temperatures edges, with screen/inset limits. Connect successive valid line points across missing samples and use each line's colour for its point markers; coverage counts and stored data remain unchanged.
+- Both battery current popups show PV1 + PV2 charge and battery net minus those solar inputs together, using recorded interval Ah/Wh. Sum uses cumulative actual recorded battery net. Require matching coverage/checkpoints, never replace missing solar with zero, and retain signed residuals without clamping unexplained other charging. Header totals/Samples refer to recorded battery data.
+- Keep recorded-month availability briefly in bounded RAM to avoid repeating the full daily scan on immediate reopen. History/month/solar processing failures have separate redacted stages. Preserve retries, independent display selections, coherent automatic refresh and current themes.
+- Save uncaught app crashes with bounded private context and application stack locations, then pass them to Android's original crash handler. Mark the missing post-crash tail explicitly; preserve the existing five-file/256 KiB limits and FAULT LOGS retrieval. Intentional cancellation does not trigger a live outage fault.
+- Source version 0.33 / build 15; owner builds Ella-monitoring-v0.33.apk with the existing package/signing key. Collector 0.7.5, Pi monitor 1.2, Wi-Fi experiment and sensor logging remain unchanged. Phone/Joying installation and sustained network verification are still required.
+
 ## 0.32 — diagnostic source correction — 2026-11-02
 
 - Save connection outages automatically in private, bounded fault files with available 60-second pre/post context, immediate prefix and honest foreground/process-interruption/truncation flags. Keep five completed files of at most 256 KiB each plus a pending capture; routine traffic remains in RAM. Long-press Settings → NETWORK & PI → Refresh → FAULT LOGS to select/copy later.

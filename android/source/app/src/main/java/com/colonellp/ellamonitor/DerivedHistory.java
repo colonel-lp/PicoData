@@ -43,6 +43,7 @@ final class DerivedHistory {
     }
     static HistoryData.Result combine(MonitorData.Metric metric,HistoryData.Window window,List<HistoryData.Result> inputs,double[] factors)throws Exception{
         if(inputs.isEmpty()||inputs.size()!=factors.length)throw new Exception("Missing derived inputs.");
+        boolean sbmsCohort=metric.id.equals("derived:sbms-load")||metric.id.startsWith("derived:popup-battery-")&&inputs.stream().allMatch(input->input.metric.source.equals("sbms"));
         List<Map<Instant,HistoryData.Record>> maps=new ArrayList<>();String saved=inputs.get(0).savedAt;
         for(HistoryData.Result input:inputs){Map<Instant,HistoryData.Record> rows=new LinkedHashMap<>();for(HistoryData.Record row:input.rows)rows.put(row.start,row);maps.add(rows);try{if(Instant.parse(input.savedAt).isBefore(Instant.parse(saved)))saved=input.savedAt;}catch(Exception ignored){saved="";}}
         List<HistoryData.Record> result=new ArrayList<>();
@@ -59,7 +60,7 @@ final class DerivedHistory {
                 // Battery/PV1 share one validated SBMS snapshot and freshness
                 // lifetime. Matched coverage/timestamps also retain real gaps.
                 Double firstCoverage=first.coverage("current","electrical"),lastAt=MonitorData.number(row.raw,"currentLastAt"),firstAt=MonitorData.number(first.raw,"currentLastAt");
-                boolean cohort=metric.id.equals("derived:sbms-load")&&lastAt!=null&&lastAt.equals(firstAt)&&firstCoverage!=null&&ac!=null&&Math.abs(ac-firstCoverage)<.05&&row.raw.optLong("samples",-1)==first.raw.optLong("samples",-2);
+                boolean cohort=sbmsCohort&&lastAt!=null&&lastAt.equals(firstAt)&&firstCoverage!=null&&ac!=null&&Math.abs(ac-firstCoverage)<.05&&row.raw.optLong("samples",-1)==first.raw.optLong("samples",-2);
                 if(av==null||ac==null||ac<=0||ac>seconds+.05||Math.abs(ac-seconds)>.05&&!cohort){current=false;break;}
                 a+=av*factors[i];Double charge=row.value("Ah","electrical");ah+=(charge==null?av*ac/3600:charge)*factors[i];
                 Double firstPower=first.coverage("watts","electrical"),voltAt=MonitorData.number(row.raw,"voltageLastAt"),firstVoltAt=MonitorData.number(first.raw,"voltageLastAt");

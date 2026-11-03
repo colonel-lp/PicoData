@@ -1,10 +1,10 @@
 # Live connection and rendering
 
-Updated in **0.32 / build 14**; earlier live-rendering behavior below is retained.
+Updated in **0.33 / build 15**; earlier live-rendering behavior below is retained.
 
 The app polls /api/v1/live in the foreground, scheduling the next request one second after completion. Source freshness is determined independently by the collector's fresh/state fields. The app validates source age but no longer adds HTTP elapsed time to it or imposes its own Pico/SBMS 2/3-second source limits. This removes a duplicate cutoff that could blank SBMS despite a fresh API response. It does not establish an MQTT fault or change collector stale/repeat handling.
 
-An additional three-second HTTP snapshot bound starts before the live request, including request latency. Genuine collector-stale/disconnected sources and expired HTTP snapshots show dashes. A failed live request retries after one second and keeps the preceding snapshot only until this bound. The app does not invent zeroes or retain readings indefinitely.
+An additional three-second HTTP snapshot bound starts when response headers arrive. Body transfer, parsing and queued UI delivery consume this bound; pre-header connection/recovery wait does not. Header receipt is a local timing boundary, not proof of exact server-to-client network transit time. The app does not require synchronized phone/Pi wall clocks. Genuine collector-stale/disconnected sources and expired HTTP snapshots show dashes. A failed live request retries after one second and keeps the preceding snapshot only until this bound. The app does not invent zeroes or retain readings indefinitely.
 
 Catalogue/status fetches use a separate cancellable worker and client, initially and roughly every 30 successful live polls (or when catalogue is missing). Their latency/errors do not block live HTTP requests or clear live values. Lifecycle/connection generations reject obsolete callbacks and cancel both clients.
 
@@ -49,3 +49,13 @@ Long-press Settings → NETWORK & PI → Refresh, then **FAULT LOGS**, select a 
 
 Pure JVM checks cover identity, diagnostics and the ApiClient wrapper; Android Studio tests additionally exercise actual OkHttp recovery of a primed pooled socket and non-replay of a dropped POST. Those transport tests and real Android networking remain unrun here. The owner-reported Joying flicker and separate full AP stall have not been reproduced or assigned a proven cause by these source changes.
 
+
+## Cancellation and snapshot correction — 0.33 / build 15
+
+This supersedes the request-start timestamp and response-disconnect behavior in the historical 0.32 description. NetworkTransport.disconnect only marks cancellation and calls OkHttp Call.cancel. ApiClient's request worker releases its response in finally on every success/failure path; UI cancellation never drains or closes the body concurrently with a read. Short-lived popup, month, catalogue/status and full-history clients close their own transport after their work. The persistent live client remains separate. Pool/dispatcher close is idempotent, network/TLS/authentication remain scoped, safe GET recovery remains bounded, and POST command bodies remain one-shot/non-retrying.
+
+ApiClient exposes elapsed time since headers using monotonic time. The live callback carries that boundary through body parsing and UI scheduling; a transfer already over three seconds expires on arrival. A failed request never refreshes the preceding snapshot. Collector-stale/disconnected data stays unavailable independently. This corrects a demonstrated display-expiry amplifier without lengthening the cutoff or claiming the underlying transport delays are solved.
+
+History HTTP/JSON failures retain request stage/call identity; subsequent popup, solar-combination and month-list processing failures record separate redacted stage names. Cancelled operations are labelled cancelled and do not count toward repeated live-request failure captures. A successful month-availability scan may be reused in RAM for 60 seconds, at most 32 metric/field lists, within the same connection/calendar month; readings/failures are not cached there.
+
+An uncaught crash records its exception class and up to twelve application stack locations, excluding messages, bodies, endpoints and credentials. It saves available context in the existing private fault store, labels the unavailable post-crash tail, waits at most 500 ms for the queued write, and delegates to the original Android handler. Recreation does not chain old activity handlers. A sudden kill, storage failure or exhausted wait still cannot guarantee a crash file; routine traffic remains in RAM with the existing count/size limits. Retrieval is unchanged: long-press Settings Refresh → FAULT LOGS → record → COPY.

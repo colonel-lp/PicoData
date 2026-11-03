@@ -11,13 +11,15 @@ import java.nio.charset.StandardCharsets;
 
 /** Bounded client; the only write is the allowlisted Pi Wi-Fi mode action. */
 final class ApiClient {
-    interface Connections { HttpURLConnection open(URL url) throws IOException; default long requestId(HttpURLConnection c){return 0;} default void close(){} }
+    interface Connections { HttpURLConnection open(URL url) throws IOException; default long requestId(HttpURLConnection c){return 0;} default long headersNanos(HttpURLConnection c){return System.nanoTime();} default void release(HttpURLConnection c){c.disconnect();} default void close(){} }
     static final class Failure extends IOException {final int status;Failure(int s,String m){super(m);status=s;}}
     private final String base, token;
     private final Connections connections;
     private final ConnectionDiagnostics diagnostics;
     private volatile HttpURLConnection active;
     private volatile boolean cancelled;
+    private volatile long responseHeadersNanos;
+    long responseAgeMillis(){return responseHeadersNanos==0?Long.MAX_VALUE:Math.max(0,(System.nanoTime()-responseHeadersNanos)/1_000_000);}
     ApiClient(String base, String token, Connections connections) {
         this(base,token,connections,null);
     }
@@ -56,6 +58,7 @@ final class ApiClient {
             c.setRequestProperty("Accept", "application/json");
             if(payload!=null){byte[] data=payload.getBytes(StandardCharsets.UTF_8);c.setDoOutput(true);c.setRequestProperty("Content-Type","application/json");c.setRequestProperty("Content-Length",Integer.toString(data.length));try(java.io.OutputStream out=c.getOutputStream()){out.write(data);}}
             stage="headers";status = c.getResponseCode();
+            long headersAt=connections.headersNanos(c);
             if (status != 200 && !(payload!=null&&status==202)) throw new Failure(status,status == 401 ? "API token rejected." : status == 403 ? "Pi Wi-Fi control needs the one-time API control setup." : status == 404 ? "Update the Pi collector to enable Pi status/API controls." : status == 429 ? "API busy; retry later." : "API request failed (" + status + ").");
             if (c.getContentLengthLong() > 4 * 1024 * 1024) throw new IOException("API response too large.");
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -73,10 +76,11 @@ final class ApiClient {
             try { body = new JSONObject(new String(bytes.toByteArray(), StandardCharsets.UTF_8)); }
             catch (Exception e) { throw new IOException("Invalid API response."); }
             if (!(body.opt("apiVersion") instanceof Number) || body.optInt("apiVersion") != 1) throw new IOException("Unsupported API version.");
+            responseHeadersNanos=headersAt;
             if(diagnostics!=null)diagnostics.request(ConnectionDiagnostics.operation(path),"complete",(System.nanoTime()-started)/1_000_000,status,null,callId);
             return body;
-        } catch(Exception e){if(diagnostics!=null)diagnostics.request(ConnectionDiagnostics.operation(path),stage,(System.nanoTime()-started)/1_000_000,status,e,callId);throw e;
-        } finally { active = null; if(c!=null)c.disconnect(); }
+        } catch(Exception e){if(diagnostics!=null)diagnostics.request(ConnectionDiagnostics.operation(path),cancelled?"cancelled":stage,(System.nanoTime()-started)/1_000_000,status,e,callId);throw e;
+        } finally { active = null; if(c!=null)connections.release(c); }
     }
     void cancel() { cancelled = true; HttpURLConnection c = active; if (c != null) c.disconnect(); connections.close(); }
 }
