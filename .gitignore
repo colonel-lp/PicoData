@@ -40,3 +40,5 @@ android/source/.idea/gradle.xml
 simarine/.DS_Store
 android/source/.idea/markdown.xml
 /android/source/.idea
+.DS_Store
+/android/source/.idea
