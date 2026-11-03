@@ -1,9 +1,11 @@
 # Wi-Fi fault diagnostics
 
 Standalone helper **1.3** supports `sta-only` and `ap-sta` topologies. Collector
-and Android versions are independent. Source prepared and offline-tested; the
-1.3 installation and hardware checks remain pending. The last confirmed monitor
-was 1.2; it was disabled when returning to built-in STA operation.
+and Android versions are independent. Source prepared and offline-tested. The owner confirmed 1.3 installed and active
+in STA-only observe mode after returning to built-in STA operation: AP checks and
+recovery disabled, firmware-console diagnostic flag disabled, local API listener
+responding. Sensor peer discovery, incident capture and unattended stability
+remain to verify; an empty initial peer list does not establish sensor failure.
 
 ## Current STA-only setup
 
