@@ -1,3 +1,10 @@
+## Pending — popup history failures and snapshot timing — 2026-11-03
+
+- [ ] Owner reports intermittent failure on the first popup chart load, followed by success after closing/reopening. Source currently catches all popup-load exceptions behind one message and schedules a 15-second retry. Distinguish request cancellation, transport/HTTP/JSON/history-processing failures with bounded private diagnostics and verify retry without reopening; preserve valid history, selections and stale-data rules. No runtime fix is included in this investigation.
+- [ ] Source-confirmed timing issue: MainActivity.poll assigns receivedMono from request start, while MonitorData/diagnostics expire cached snapshots after three seconds. Connection/retry delay can consume that lifetime before a newly generated successful reply arrives, causing visible expiry/recovery. Correct cache-age accounting while preserving independent collector source freshness and the agreed bounded outage behavior. Distinguish pre-response connection delay from actual age since server generation, stalled response-body transit and UI delivery; do not merely lengthen the timeout or display stale readings as live.
+- [ ] Validate slow connects/recovered attempts, responses delayed after server generation, UI scheduling, genuine source staleness and complete outages. The visible response-delay/expiry correlation explains an app-side flicker mechanism, not the underlying AP latency or earlier firmware fault. Keep the current Wi-Fi experiment separate.
+- [ ] Latest supplied diagnostics use the older RAM-only format; the same-version diagnostic-source correction being published does not confirm it has been rebuilt/installed. Do not assume private app incident files exist on that binary. No app source/version or Pi configuration changes made here.
+
 ## Immediate operational fix — stale zram startup state — 2026-11-03
 
 - [x] Owner confirmed stale persistent device bookkeeping made zram-config skip absent devices; archiving it followed by an orderly reboot restored swap and the log overlay. Original shutdown failure is unproven, and this is not proof of a Wi-Fi cause.
