@@ -1,3 +1,9 @@
+## Next build — keep and share saved Android fault logs — 2026-11-11
+
+- [ ] Stop automatically deleting completed Android fault logs on startup or when saving a new fault. Remove the five-file rollover and keep older records accessible from **Fault Logs**. Preserve app-private storage, redaction, the 256 KiB per-file bound, existing capture triggers and time windows, and pending-file recovery. Previously pruned files cannot be restored by this change.
+- [ ] Add a themed **Share** button alongside **Copy** in both the live Connection diagnostics popup and the selected Saved connection fault popup. Open Android's share sheet with the same redacted text shown in the popup. Keep **Fault Logs**, **Copy** and **Close** available where they already appear.
+- [ ] Verify that more than five records survive app restart and a new completed capture, and that both Share buttons send the displayed text to the user-selected share target. Android scope only; the separate Pi monitor is unchanged.
+
 ## Authorized source build 0.33 — 2026-11-03
 
 Owner explicitly requested the next build and confirmed both battery formulas. Source version **0.33 / build 15**, output **Ella-monitoring-v0.33.apk**, is prepared for the owner's Android Studio build. No APK, live Pi change, collector/monitor release, logging migration or deferred Pi-mode-button repair is included.
