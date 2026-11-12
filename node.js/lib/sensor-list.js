@@ -3,7 +3,10 @@
 function createSensorList(config) {
   if (!config || typeof config !== 'object' || !Object.keys(config).length) throw new Error('Empty Pico configuration');
   const sensorList = {};
-  const supported = new Set([0, 1, 2, 3, 5, 6, 8, 9, 13, 14]);
+  // Type 10 was accepted by the working Python/Node collectors as an opaque
+  // single-slot entry. Preserve that layout without inventing a measurement
+  // decoder; rejecting it prevents all Pico readings on existing installations.
+  const supported = new Set([0, 1, 2, 3, 5, 6, 8, 9, 10, 13, 14]);
   const pair = value => Array.isArray(value) && value.length === 2 &&
     value.every(n => Number.isInteger(n) && n >= 0 && n <= 65535);
   const fluid = ['Unknown', 'freshWater', 'fuel', 'wasteWater'];

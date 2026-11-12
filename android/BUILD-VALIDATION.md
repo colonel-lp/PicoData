@@ -1,3 +1,10 @@
+## Pico type-10 compatibility correction — collector 0.7.7, 2026-11-12
+
+- Reproduced the owner-reported `Unsupported Pico sensor type 10` with a new synthetic regression on 0.7.6 before changing the implementation. The previous fixture omitted this type; its earlier passing tests did not establish full installed-configuration compatibility.
+- Restored type 10's preceding Python/Node single-slot opaque behavior without adding a measurement decoder or relaxing other validation. Inserted the entry before decoded tank/battery/voltage entries in the shared fixture.
+- PASS: **98 Node tests**, zero failures/skips, on host Node 24. Includes original-Python sensor/readings/MQTT parity, explicit later-sensor alignment, real CLI TCP/UDP configuration and live acquisition, combined history/API/MQTT behavior, malformed-packet/config rejection and the 30-second API bind recovery case. Source manifest and whitespace checks pass.
+- Python monitor scripts and Android source are unchanged, so their suites were not rerun for this patch. No Pi connection or physical sensor test was performed here. Owner installation evidence establishes 0.7.6's failure and monitor 1.4 operation; fresh Pico data after updating to 0.7.7 remains to verify.
+
 ## Pi review implementation — collector 0.7.6 / monitor 1.4, 2026-11-12
 
 - PASS: **97 Node tests**, zero failures/skips, on the host Node 24 runtime. Includes existing Python-output parity, acquisition/MQTT/reconnect, SQLite/history/retention, API/control tests and new frame CRC/length/config validation, discarded pre-configuration sample, backward-wall-clock output, live/status during history read failure, logger error category, loopback health/request IDs/LAN metadata, explicit IPv6 and API port-conflict recovery.

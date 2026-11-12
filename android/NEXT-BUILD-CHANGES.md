@@ -1,3 +1,9 @@
+## Immediate Pico compatibility correction — 0.7.7, 2026-11-12
+
+- [x] Owner logs identify the introduced 0.7.6 failure: `Unsupported Pico sensor type 10`, causing configuration retries and no Pico readings while SBMS/API work. Correct the overly restrictive type list by restoring the preceding one-slot opaque type-10 handling. Preserve other validation and all existing calculations/history.
+- [x] Reproduce the rejection before fixing it; include type 10 in shared synthetic configuration/packets before later decoded sensors and compare positions, values and MQTT JSON with the original Python implementation. Publish collector 0.7.7; no Android/monitor version change.
+- [ ] Owner runs the existing updater and confirms fresh Pico/SBMS readings and advancing savedAt. Source tests do not establish live recovery or explain the earlier unrelated monitoring incident.
+
 ## Pi review improvements — implemented source 2026-11-12
 
 Owner authorized immediate Pi changes. Collector **0.7.6**, standalone monitor

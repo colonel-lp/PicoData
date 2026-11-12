@@ -2,6 +2,17 @@
 
 Reviewed repository `colonel-lp/PicoData`, branch `main`, commit `6731317a7fad2d5b6edd8660e2f081cc8d733a66`. Collector 0.7.5 and diagnostic helper 1.3.
 
+## Compatibility correction — collector 0.7.7
+
+Owner deployment evidence revealed a regression introduced by R6's implementation:
+the 0.7.6 supported-type list omitted type 10, previously accepted by the working
+collector. Rejecting the whole configuration stopped Pico acquisition. Version
+0.7.7 restores that type's previous single-slot opaque handling and adds it to the
+shared regression fixture, including Python parity and later-sensor alignment.
+The original test fixture did not cover this installed type. This preserves known
+installation compatibility; it does not claim to decode type 10 or establish its
+meaning on every firmware. Other unknown types remain rejected.
+
 ## Implementation follow-up — collector 0.7.6 / monitor 1.4
 
 The owner subsequently authorized the fixes. R1–R8 are addressed in source,

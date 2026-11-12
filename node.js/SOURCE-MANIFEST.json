@@ -1,5 +1,5 @@
 {
-  "version": "0.7.6",
+  "version": "0.7.7",
   "algorithm": "sha256",
   "files": {
     "bin/api-check.js": "3187689d7ba1f3ef03a374498c2e467509f20a7d8b865b73dab9c6ea4ecc37fe",
@@ -24,9 +24,9 @@
     "lib/pico-protocol.js": "6feb396d6b27fd5724c7e94c402077f00fce2146df776587d107232b92ae875b",
     "lib/readings.js": "0903d85ef48c51fbf67cbbcd9608d00d2edd20871c921dd6b6570512cf9e94f2",
     "lib/sbms.js": "2b935f90595675871341213a9f2e31553bdbb547028ec0d75b76debc2ecfed69",
-    "lib/sensor-list.js": "308a60100b969fa3e2e51219b2d623fe8ce19ddf89be6d0605b697d0b5131e2d",
-    "package-lock.json": "0c97a2c0b351cb130873b365a1e2014fc5df8529cd120b7204bcea9e31fcca1a",
-    "package.json": "806e8dff815c50c7a8843e03fc4c3ab3849402ed5bb539d3d06d3124ae1cd399",
+    "lib/sensor-list.js": "d8b8317aac36494939a7c1dd4dcc734a3792f13264ed84c127ca27ab4bcd1eed",
+    "package-lock.json": "c46a964c5032ecb337373be757e7c034cbb392039476221febaa501845b50571",
+    "package.json": "e339caa96c7e2ae28d7e17cd7b4e068bcbc91465e5e4930a75653479d1b32cd3",
     "service/pico-mqtt.service": "b110bdff36b827791b292a1d874e288828b2b2e780b27197a8872dd4e28c52a5",
     "tools/ap-watch.py": "a847ca9258620b585ee1b001c21a9ad3451f25f951754008b0622cbdddebc56f",
     "tools/pi-api-controls.py": "481dd696edd48b14ba472b003c3b1c0a34be543739a7bdf9f03c4e16d58843f7",

@@ -515,3 +515,15 @@ test('API bind conflict preserves acquisition and retries after the port is rele
   assert.equal(response.status,200);assert.equal((await response.json()).pico.fresh,true);
   child.kill('SIGTERM');assert.equal(await exited,0);
 });
+
+
+test('legacy type 10 retains one opaque slot without shifting later sensors', () => {
+  const data=fixture(), sensors=createSensorList(data.config);
+  assert.deepEqual(sensors[23],{type:10,pos:sensors[14].pos-1});
+  const readings=decodeReadings(sensors,parseResponse(data.packet));
+  assert.deepEqual(readings[23],sensors[23]);
+  assert.equal(readings[14].remainingCapacity,44.5);
+  assert.equal(readings[15].voltage,13.24);
+  assert.equal(readings[15].current,-8.76);
+  assert.equal(readings[21].voltage,12.222);
+});

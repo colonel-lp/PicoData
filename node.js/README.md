@@ -1,10 +1,12 @@
-## Current source: collector 0.7.6
+## Current source: collector 0.7.7
 
 Normal Pi RAM/CPU/temperature/upstream readouts now use the existing authenticated API. Read [PI-STATUS.md](PI-STATUS.md) for updating with the existing ~/update-pico.sh, checking GET /api/v1/pi and optional one-time setup of the three fixed Pi Wi-Fi mode actions. The update does not reset private configuration/history, install sudo rules, change networks or add resource logging. Interactive SSH is handled by a separately installed terminal app. Earlier release/setup sections follow.
 
-# Ella Pico base — 0.7.4
+# Ella Pico base — 0.7.7
 
 Standalone Node.js starting point for the Android Pico reader. It uses the updated acquisition code preserved in [`../_old/pico2signalk/`](../_old/pico2signalk/), with the owner's [`../python/pico-mqtt.py`](../python/pico-mqtt.py) sensor mappings, calculations and Ella JSON format carried over. MQTT publishing is enabled by default using `PicoData/mqtt` and the existing Ella JSON contract; `--no-mqtt` selects reader-only operation. SignalK remains excluded.
+
+**0.7.7 compatibility fix:** restores the preceding one-slot opaque handling of Pico sensor type 10, rejected by 0.7.6. Update with the existing `~/update-pico.sh`; monitor 1.4 requires no reinstall. Confirm Pico becomes fresh with `api-check.js --path /api/v1/status`.
 
 **0.7.6:** validates received frames/configuration, waits for a new packet after configuration, uses monotonic output timing, keeps live/status reads independent of history queries, and retries an occupied API port while collection continues. Adds bounded private LAN request diagnostics and source hashes. [Release notes](CHANGELOG.md), [deployment helpers](DEPLOYMENT.md). Monitor 1.4 is a separate helper update; neither update changes Wi-Fi topology.
 

@@ -1,5 +1,11 @@
 # Pico base changelog
 
+## 0.7.7 — 2026-11-12
+
+- Fix the 0.7.6 configuration-validation regression that rejected sensor type 10 and prevented all Pico acquisition. Restore its preceding Python/Node behavior: one opaque live-field slot, with numeric type retained and no invented measurement decoder. Keep CRC/length, duplicate-ID, required-field and other unsupported-type checks.
+- Include type 10 before decoded tank/battery/voltage entries in the shared synthetic fixture. Verify unchanged sensor positions, values and MQTT output against the original Python implementation, and exercise configuration/live/history/API paths with that entry present. The failing pre-fix regression was reproduced locally.
+- Owner evidence confirms monitor 1.4 and collector 0.7.6 installation; Pico was retrying while SBMS/API remained available. This fix's real-Pi recovery remains to verify. No monitor/Android update or configuration/history migration is required.
+
 ## 0.7.6 — 2026-11-12
 
 - Reject incorrect length/CRC and ambiguous sensor configurations. Discard packets received before configuration completes; timestamp only newly received live samples. Use monotonic time for MQTT/stdout throttling across clock adjustments.
