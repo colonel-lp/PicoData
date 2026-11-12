@@ -5,7 +5,8 @@ Owner explicitly requests restoring the pre-0.7.6 collection/decoding behavior a
 - [x] Restore client, protocol, sensor mapping, decoding and capture verification exactly from pre-0.7.6 commit ddfa437, plus original collector acquisition/capture wiring. Remove new acceptance gates; restore original buffering/throttling/copying behavior. No further one-type-at-a-time allowlist patch.
 - [x] Retain independent API, health-monitor, logging-diagnostic, installer and deployment improvements. Publish collector 0.7.8 with source equality/manifest checks and compatibility regressions for multiple legacy opaque types and subsequent decoded values. Monitor remains 1.4; Android unchanged.
 - [ ] R1/R2/R3/R6 collection-path changes are deferred, not completed. Future stricter validation must first run diagnostically without rejecting data, using representative configuration/captures from the installation. Reintroducing acquisition changes needs separate authorization after compatibility evidence.
-- [ ] Owner updates with the existing updater and verifies fresh Pico/SBMS plus advancing savedAt. No real Pi recovery claim from host tests. The original monitoring event and the unsupplied 0.7.7 retry reason remain unproven.
+- [x] Owner confirms 0.7.8 installed and both Pico/SBMS connected and fresh, with monitor 1.4 active in STA-only/observe mode and its journal reader running. This is owner-supplied live recovery evidence, not a host-test inference.
+- [ ] Confirm a subsequent advancing savedAt and sustained stability. The first supplied post-update sample reports no logging failure but still carries the earlier checkpoint. The original monitoring event and the unsupplied 0.7.7 retry reason remain unproven.
 
 ## Immediate Pico compatibility correction — 0.7.7, 2026-11-12
 

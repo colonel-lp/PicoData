@@ -4,6 +4,8 @@ Reviewed repository `colonel-lp/PicoData`, branch `main`, commit `6731317a7fad2d
 
 ## Current disposition — collector 0.7.8 restoration
 
+Owner follow-up confirms both Pico and SBMS connected/fresh on installed 0.7.8. Monitor 1.4 and its journal follower are running in STA-only/observe mode. Subsequent checkpoint advancement and sustained stability remain unverified.
+
 The owner reported that 0.7.7 still acquired no Pico data and explicitly authorized
 restoring the working pre-0.7.6 collection/decoding implementation. Version 0.7.8
 restores the five collection/decoding/verifier files exactly from ddfa437 and the
