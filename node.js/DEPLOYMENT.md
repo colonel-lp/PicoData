@@ -1,5 +1,10 @@
 # Pi source updates and deployment evidence
 
+Collector 0.7.8 restores the pre-0.7.6 collection/decoding files while retaining
+independent API/diagnostic improvements. An already installed monitor 1.4 requires
+no reinstallation for this collector recovery. Check `/api/v1/status` after updating;
+the current source version alone does not prove fresh sensor data.
+
 ## Existing updater
 
 The owner supplied `~/update-pico.sh` in the earlier monitoring chat. Its recovered

@@ -1,3 +1,10 @@
+## Collection-path restoration — collector 0.7.8, 2026-11-12
+
+- Owner requested restoration after 0.7.7 still showed no Pico readings. Compared current source with pre-0.7.6 commit ddfa43739bd8b76600026f39bf246e43fbb28f9a: client, protocol, sensor-list, readings and capture verifier are restored byte for byte; unchanged SBMS/MQTT modules also match. The CLI prefix including acquisition/capture/logger/API event wiring matches exactly. Later CLI API-bind retry/lifecycle handling remains intentionally retained.
+- PASS: **97 Node tests**, zero failures/skips, on host Node 24. Shared fixture retains type 10; additional compatibility cases cover opaque numeric types 4/7/10/11/12/99, original-Python sensor positions and MQTT values, buffered live acceptance and original nonblocking UDP CRC/length behavior. Existing structural parsing, independent history/API/diagnostics, reconnect and real-CLI tests pass. Offline capture verification still reports bad CRCs rather than certifying them.
+- Removed tests that required the reverted strict acceptance/buffer/throttle behavior; replaced them with explicit restoration regressions. R1/R2/R3/R6 improvements are deferred, not claimed fixed. Passing tests establish baseline compatibility under these fixtures, not the validity of every device/firmware layout.
+- PASS: source manifest, changed-file scope and whitespace checks. Monitor/Python tools and Android source are unchanged; their suites were not rerun. No private runtime logs, source addresses or hardware resource measurements were committed. No live Pi recovery/installation claim; owner must confirm fresh Pico/SBMS after running the existing updater. No monitor reinstall or private configuration/history migration is required.
+
 ## Pico type-10 compatibility correction — collector 0.7.7, 2026-11-12
 
 - Reproduced the owner-reported `Unsupported Pico sensor type 10` with a new synthetic regression on 0.7.6 before changing the implementation. The previous fixture omitted this type; its earlier passing tests did not establish full installed-configuration compatibility.

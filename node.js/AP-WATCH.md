@@ -1,7 +1,7 @@
 # Wi-Fi fault diagnostics
 
 Standalone helper **1.4** supports `sta-only` and `ap-sta` topologies. Collector
-and Android versions are independent. The owner confirmed 1.4 installed and active in STA-only observe mode on November 12, with its journal follower running and the new local health endpoint responding. Collector 0.7.6 exposed a separate type-10 configuration regression, corrected in 0.7.7; source freshness must still be checked after that collector update. The owner confirmed 1.3 installed and active
+and Android versions are independent. The owner confirmed 1.4 installed and active in STA-only observe mode on November 12, with its journal follower running and the new local health endpoint responding. Collector 0.7.6 introduced a separate configuration regression and 0.7.7 still acquired no Pico data. Collector 0.7.8 restores the earlier collection path; source freshness must be checked after that update. Monitor 1.4 needs no reinstall. The owner confirmed 1.3 installed and active
 in STA-only observe mode after returning to built-in STA operation: AP checks and
 recovery disabled, firmware-console diagnostic flag disabled, local API listener
 responding. Sensor peer discovery, incident capture and unattended stability

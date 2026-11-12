@@ -1,29 +1,13 @@
 'use strict';
 
 function createSensorList(config) {
-  if (!config || typeof config !== 'object' || !Object.keys(config).length) throw new Error('Empty Pico configuration');
   const sensorList = {};
-  // Type 10 was accepted by the working Python/Node collectors as an opaque
-  // single-slot entry. Preserve that layout without inventing a measurement
-  // decoder; rejecting it prevents all Pico readings on existing installations.
-  const supported = new Set([0, 1, 2, 3, 5, 6, 8, 9, 10, 13, 14]);
-  const pair = value => Array.isArray(value) && value.length === 2 &&
-    value.every(n => Number.isInteger(n) && n >= 0 && n <= 65535);
   const fluid = ['Unknown', 'freshWater', 'fuel', 'wasteWater'];
   const fluidType = ['Unknown', 'fresh water', 'diesel', 'blackwater'];
   let elementPos = 0;
 
   for (const entry of Object.keys(config)) {
-    const data = config[entry];
-    if (!data || !pair(data[0]) || !pair(data[1])) throw new Error('Invalid Pico configuration identity');
-    const id = data[0][1];
-    const code = data[1][1];
-    if (Object.hasOwn(sensorList, id)) throw new Error('Duplicate Pico sensor ID');
-    if (!supported.has(code)) throw new Error('Unsupported Pico sensor type ' + code);
-    if ([1, 2, 3, 5, 6, 8, 9].includes(code) && typeof data[3] !== 'string') throw new Error('Invalid Pico sensor name');
-    if (code === 8 && (!pair(data[6]) || !pair(data[7]))) throw new Error('Invalid Pico tank configuration');
-    if (code === 9 && !pair(data[5])) throw new Error('Invalid Pico battery configuration');
-    if (code === 13 && !pair(data[3])) throw new Error('Invalid Pico inclinometer configuration');
+    const id = config[entry][0][1];
     let type = config[entry][1][1];
     let elementSize = 1;
 

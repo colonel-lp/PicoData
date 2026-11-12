@@ -105,11 +105,8 @@ sbms?.on('readings', reading => {
 });
 if (process.env.DEBUG === 'pico') sbms?.on('diagnostic', text => console.error('SBMS:', text));
 writeRecord('session', { version: require('../package.json').version, startedAt: new Date().toISOString(), nodeVersion: process.version });
-if (recording) {
-  client.on('tcp', data => writeRecord('tcp', data));
-  client.on('config', data => writeRecord('config', data));
-  client.on('packet', data => writeRecord('packet', data));
-}
+client.on('tcp', data => writeRecord('tcp', data));
+client.on('config', data => writeRecord('config', data));
 if (logger) {
   client.on('config', data => logger.configurePico(data));
   client.on('snapshot', data => logger.acceptPico(data));
@@ -118,6 +115,7 @@ if (api) {
   client.on('config', data => api.configurePico(data.sensorList));
   client.on('snapshot', data => api.accept('pico',data));
 }
+client.on('packet', data => writeRecord('packet', data));
 client.on('readings', data => {
   if (printReadings) process.stdout.write(JSON.stringify(data) + '\n');
   publisher?.publish(data);

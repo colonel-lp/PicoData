@@ -82,26 +82,27 @@ class PicoClient extends EventEmitter {
     const onParentAbort = () => controller.abort();
     parentSignal.addEventListener('abort', onParentAbort, { once: true });
     if (parentSignal.aborted) controller.abort();
-    let socket;
+    let socket, latest;
     try {
       this.status('discovering');
       socket = await createDiscoverySocket({ ...this.options, signal });
       socket.on('error', err => controller.abort(err));
+      socket.on('message', (msg, info) => { if (isLivePacket(msg)) latest = { msg, info }; });
       const ip = this.options.picoIp || await waitForBroadcast(socket, { ...this.options, signal });
       this.status('configuring', { ip });
       const config = await getPicoConfigTcp(ip, { ...this.options, signal,
-        debug: text => this.emit('diagnostic', text), onTcp: this.listenerCount('tcp') ? data => this.emit('tcp', data) : undefined });
+        debug: text => this.emit('diagnostic', text), onTcp: data => this.emit('tcp', data) });
       const sensorList = createSensorList(config);
       this.sensorList = sensorList;
       this.emit('config', { picoIp: ip, config, sensorList });
       this.status('waiting-data', { ip });
-      await this.live(socket, ip, sensorList, signal);
+      await this.live(socket, ip, sensorList, signal, latest);
     } finally {
       controller.abort(); parentSignal.removeEventListener('abort', onParentAbort);
       if (socket) { socket.removeAllListeners(); try { socket.close(); } catch {} }
     }
   }
-  live(socket, ip, sensorList, signal) {
+  live(socket, ip, sensorList, signal, latest) {
     return new Promise((resolve, reject) => {
       if (signal.aborted) return reject(signal.reason || abortError());
       let timer, lastOutput = -Infinity, active = false, settled = false;
@@ -129,24 +130,24 @@ class PicoClient extends EventEmitter {
         if (!Object.values(sensorList).some(s => Array.isArray(element[s.pos]))) return;
         resetTimer();
         const receivedAt = new Date().toISOString(), receivedMonotonicMs = performance.now();
-        if (this.listenerCount('packet')) this.emit('packet', { picoIp: ip, receivedAt, hex: msg.toString('hex') });
+        this.emit('packet', { picoIp: ip, receivedAt, hex: msg.toString('hex') });
         // History sees every validated packet, including ID-based sensors hidden
         // by the legacy display-name filter. Public MQTT decoding stays unchanged.
         if (this.listenerCount('snapshot')) this.emit('snapshot', {
           receivedAt, receivedMonotonicMs, readings: decodeReadings(sensorList, element),
         });
         if (!active) { active = true; this.status('connected', { ip }); }
-        if (receivedMonotonicMs - lastOutput < this.options.updateIntervalMs) return;
+        if (Date.now() - lastOutput < this.options.updateIntervalMs) return;
         let readings;
         try { readings = decodeReadings(sensorList, element, { legacyPython: this.options.legacyPythonOutput }); }
         catch (err) { this.emit('diagnostic', 'Skipped output: ' + err.message); return; }
         this.emit('readings', formatEllaJson(readings));
-        lastOutput = receivedMonotonicMs;
+        lastOutput = Date.now();
       };
       socket.on('message', onMessage); socket.once('error', onError);
       signal.addEventListener('abort', onAbort, { once: true });
       resetTimer();
-      // Only packets received after configuration establish live freshness.
+      if (latest) onMessage(latest.msg, latest.info);
     });
   }
 }

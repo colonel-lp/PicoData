@@ -2,6 +2,22 @@
 
 Reviewed repository `colonel-lp/PicoData`, branch `main`, commit `6731317a7fad2d5b6edd8660e2f081cc8d733a66`. Collector 0.7.5 and diagnostic helper 1.3.
 
+## Current disposition — collector 0.7.8 restoration
+
+The owner reported that 0.7.7 still acquired no Pico data and explicitly authorized
+restoring the working pre-0.7.6 collection/decoding implementation. Version 0.7.8
+restores the five collection/decoding/verifier files exactly from ddfa437 and the
+original collector acquisition/capture event wiring. Original parser bounds and
+TCP framing remain. The newer strict acceptance gates, buffer/throttle changes
+and metadata-copy optimization are reverted.
+
+**R1/R2/R3/R6 are therefore deferred, not completed.** Independent API/status,
+monitoring, logging diagnostics, control-installer and deployment improvements
+remain. The entries below describe earlier revisions and are superseded on
+collection behavior. Future acceptance checks must first be diagnostic-only and
+validated against representative installation data. Host tests and source equality
+do not establish live recovery; the later 0.7.7 retry reason was not supplied.
+
 ## Compatibility correction — collector 0.7.7
 
 Owner deployment evidence revealed a regression introduced by R6's implementation:

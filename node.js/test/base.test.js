@@ -443,43 +443,38 @@ for (const logging of [false, true, 'api']) test(`simultaneous SBMS/Pico preserv
   assert.equal(stderr.includes('test-pass'), false);
 });
 
-test('configuration rejects unknown widths, duplicate IDs and malformed fields', () => {
-  const {config}=fixture();
-  const unknown=structuredClone(config);unknown[0][1]=[0,99];
-  assert.throws(()=>createSensorList(unknown),/Unsupported/);
-  const duplicate=structuredClone(config);duplicate[1][0]=duplicate[0][0];
-  assert.throws(()=>createSensorList(duplicate),/Duplicate/);
-  const malformed=structuredClone(config);delete malformed[1][3];
-  assert.throws(()=>createSensorList(malformed),/name/);
+test('legacy opaque sensor types keep Python configuration and output compatibility', () => {
+  for (const type of [4,7,10,11,12,99]) {
+    const data=fixture();
+    const entry=Object.values(data.config).find(value=>value[0][1]===23);
+    entry[1]=[0,type];
+    const oracle=spawnSync('python3',[path.join(__dirname,'python-oracle.py'),baseline],{
+      input:JSON.stringify(data),encoding:'utf8'});
+    assert.equal(oracle.status,0,oracle.stderr);
+    const original=JSON.parse(oracle.stdout), sensors=createSensorList(data.config);
+    const oldSensors=normalized(sensors);oldSensors[19].type=14;
+    assert.deepEqual(oldSensors,original.sensorList);
+    const readings=decodeReadings(sensors,parseResponse(data.packet));
+    assert.deepEqual(normalized(formatEllaJson(readings,new Date(2026,9,7,12,34,56))),original.output);
+  }
 });
 
-test('live rejects bad CRC/length and waits for a post-configuration packet', async () => {
-  const client=new PicoClient({staleAfterMs:100,updateIntervalMs:0});
-  const socket=new EventEmitter(), controller=new AbortController(), data=fixture();
-  let snapshots=0;client.on('snapshot',()=>snapshots++);
-  const pending=client.live(socket,'127.0.0.1',createSensorList(data.config),controller.signal,
-    {msg:data.packet,info:{address:'127.0.0.1'}});
-  assert.equal(snapshots,0);
-  const crc=Buffer.from(data.packet);crc[crc.length-1]^=1;
-  socket.emit('message',crc,{address:'127.0.0.1'});
-  const length=Buffer.from(data.packet);length[12]^=1;
-  socket.emit('message',length,{address:'127.0.0.1'});
-  assert.equal(snapshots,0);
-  socket.emit('message',data.packet,{address:'127.0.0.1'});
-  assert.equal(snapshots,1);controller.abort();await assert.rejects(pending);
-});
-
-test('public output continues after a backward wall-clock step', async () => {
+test('restored live path retains buffered packets and nonblocking checksum/length behavior', async () => {
   const client=new PicoClient({staleAfterMs:100,updateIntervalMs:0});
   const socket=new EventEmitter(),controller=new AbortController(),data=fixture();
-  let output=0;client.on('readings',()=>output++);
-  const pending=client.live(socket,'127.0.0.1',createSensorList(data.config),controller.signal);
-  const original=Date.now;let wall=original();Date.now=()=>wall;
+  const snapshots=[];client.on('snapshot',value=>snapshots.push(value.readings));
+  const pending=client.live(socket,'127.0.0.1',createSensorList(data.config),controller.signal,
+    {msg:data.packet,info:{address:'127.0.0.1'}});
   try {
-    socket.emit('message',data.packet,{address:'127.0.0.1'});
-    wall-=3600000;socket.emit('message',data.packet,{address:'127.0.0.1'});
-    assert.equal(output,2);
-  } finally {Date.now=original;controller.abort();await assert.rejects(pending);}
+    assert.equal(snapshots.length,1);
+    const crc=Buffer.from(data.packet);crc[crc.length-1]^=1;
+    socket.emit('message',crc,{address:'127.0.0.1'});
+    const length=Buffer.from(data.packet);length[12]^=1;
+    socket.emit('message',length,{address:'127.0.0.1'});
+    assert.equal(snapshots.length,3);
+    assert.deepEqual(snapshots[1],snapshots[0]);
+    assert.deepEqual(snapshots[2],snapshots[0]);
+  } finally {controller.abort();await assert.rejects(pending);}
 });
 
 test('API bind conflict preserves acquisition and retries after the port is released', {timeout:45000}, async t => {

@@ -1,5 +1,12 @@
 # Pico base changelog
 
+## 0.7.8 — 2026-11-12
+
+- Owner-authorized recovery: restore the pre-0.7.6 Pico collection and decoding implementation from commit ddfa437. `lib/client.js`, `lib/pico-protocol.js`, `lib/sensor-list.js`, `lib/readings.js` and `bin/verify-capture.js` are byte-identical to that baseline; collector acquisition/capture event wiring is also restored.
+- Remove the new sensor-type/field validation and incoming CRC/UDP-length rejection. Restore original configuration buffering, output throttle and metadata copying. Keep the original parser bounds, sender filtering, TCP framing and offline capture-verification checks. This restores the previous compatibility behavior rather than claiming support for every unknown firmware layout.
+- Retain independent API/live-status caching, LAN request diagnostics, API bind retry, explicit IPv6 setup, logger status/error metadata, installer rollback and deployment receipts. Monitor 1.4 and Android are unchanged; no network setting, private configuration or history migration.
+- Defer the collection-path review changes (R1/R2/R3/R6). Any future stricter acceptance work must first use representative installation data and diagnostic-only validation; do not silently re-enable rejection. Tests now cover historical opaque types beyond type 10 and the restored buffered/nonblocking UDP behavior. The 0.7.7 deployment still failed; its subsequent retry reason was not supplied. Live recovery with 0.7.8 remains to verify.
+
 ## 0.7.7 — 2026-11-12
 
 - Fix the 0.7.6 configuration-validation regression that rejected sensor type 10 and prevented all Pico acquisition. Restore its preceding Python/Node behavior: one opaque live-field slot, with numeric type retained and no invented measurement decoder. Keep CRC/length, duplicate-ID, required-field and other unsupported-type checks.
