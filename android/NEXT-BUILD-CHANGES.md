@@ -1,3 +1,15 @@
+## Pending Pi review findings and LAN diagnostics — 2026-11-12
+
+Review of collector 0.7.5 / monitor 1.3 at commit `6731317`. See [Pi code review](../docs/PI-CODE-REVIEW-2026-11-12.md) for evidence, applicability and validation limits. Items below are queued for a future authorised implementation.
+
+- [ ] Android fault logs — include the configured LAN destination/hostname and actual attempted or connected LAN IP and port when available. Include old/new destinations on endpoint changes. Distinguish resolution failure, attempted connection and established peer. This updates the address-redaction requirement in the November 11 list below.
+- [ ] R1/R2 — preserve actual buffered Pico receipt times and reject stale buffered packets; use monotonic time for public-output throttling.
+- [ ] R3/R6 — validate live packet length/CRC against supported firmware evidence; validate sensor configuration structure, unique IDs and known field widths.
+- [ ] R4/R5 — detect required-component startup failures after a grace period and establish current source/logger health when monitoring starts, including faults predating the journal follower.
+- [ ] R7 — retain live monitoring and explicit logging status when history reads fail; assess catalogue caching and event-loop latency.
+- [ ] R8 — make Pi API-control installation/removal recover consistently from partial failure.
+- [ ] Assess the review's proposed bounded API request correlation, conditional capture listeners, reduced decode/monitor overhead, retained logger error categories, API startup retry, address-family handling and sanitised deployment source/version receipts. Measure performance before larger changes.
+
 ## Next build — keep and share saved Android fault logs — 2026-11-11
 
 - [ ] Stop automatically deleting completed Android fault logs on startup or when saving a new fault. Remove the five-file rollover and keep older records accessible from **Fault Logs**. Preserve app-private storage, redaction, the 256 KiB per-file bound, existing capture triggers and time windows, and pending-file recovery. Previously pruned files cannot be restored by this change.
