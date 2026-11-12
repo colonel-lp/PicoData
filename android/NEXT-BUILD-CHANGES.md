@@ -1,14 +1,20 @@
-## Pending Pi review findings and LAN diagnostics — 2026-11-12
+## Pi review improvements — implemented source 2026-11-12
 
-Review of collector 0.7.5 / monitor 1.3 at commit `6731317`. See [Pi code review](../docs/PI-CODE-REVIEW-2026-11-12.md) for evidence, applicability and validation limits. Items below are queued for a future authorised implementation.
+Owner authorized immediate Pi changes. Collector **0.7.6**, standalone monitor
+**1.4**; no Android build or network migration. Live Pi installation/verification
+remain pending. See [review](../docs/PI-CODE-REVIEW-2026-11-12.md) and
+[deployment](../node.js/DEPLOYMENT.md).
 
-- [ ] Android fault logs — include the configured LAN destination/hostname and actual attempted or connected LAN IP and port when available. Include old/new destinations on endpoint changes. Distinguish resolution failure, attempted connection and established peer. This updates the address-redaction requirement in the November 11 list below.
-- [ ] R1/R2 — preserve actual buffered Pico receipt times and reject stale buffered packets; use monotonic time for public-output throttling.
-- [ ] R3/R6 — validate live packet length/CRC against supported firmware evidence; validate sensor configuration structure, unique IDs and known field widths.
-- [ ] R4/R5 — detect required-component startup failures after a grace period and establish current source/logger health when monitoring starts, including faults predating the journal follower.
-- [ ] R7 — retain live monitoring and explicit logging status when history reads fail; assess catalogue caching and event-loop latency.
-- [ ] R8 — make Pi API-control installation/removal recover consistently from partial failure.
-- [ ] Assess the review's proposed bounded API request correlation, conditional capture listeners, reduced decode/monitor overhead, retained logger error categories, API startup retry, address-family handling and sanitised deployment source/version receipts. Measure performance before larger changes.
+- [ ] Android fault logs — include the configured LAN destination/hostname and actual attempted or connected LAN IP and port when available. Include old/new destinations on endpoint changes. Distinguish resolution failure, attempted connection and established peer. This updates the address-redaction requirement in the November 11 list below. Pi-side correlation is now implemented; Android logging remains pending.
+- [x] R1/R2 — discard pre-configuration packets rather than falsely refreshing their receipt times; use monotonic output throttling.
+- [x] R3/R6 — enforce supported frame length/CRC and validate required configuration fields, unique IDs and known sensor widths.
+- [x] R4/R5 — detect required-component startup failures after a grace; read current source/logger health and checkpoint progress, including faults predating monitor startup.
+- [x] R7 — cache live metadata and committed logger state; keep live/status responsive to current data when history queries fail.
+- [x] R8 — restore prior sudo policy when the private API config update fails during install/removal.
+- [x] Bounded LAN request correlation, conditional capture work, shallow scalar-metadata copies, reduced monitor parsing/config overhead, safe logger error categories, API bind retry and explicit IPv6 configuration/probing.
+- [x] Recover the existing Pi-local updater and historical pi-wifi source from earlier chat; preserve updater paths/behavior, keep private profiles out of Git and old USB switching disabled. Add source manifest/deployment check. Installed private helper equality remains unverified.
+- [ ] Future pi-wifi adaptation, only when separately requested: private explicit interface/profile/SSID bindings, escaped-SSID parsing and confirmed manual-switch outcome. Historical USB switching remains disabled.
+- [ ] Owner updates collector/monitor, confirms fresh sources/checkpoint progress, and verifies installation hashes and next incident evidence. Measure Pi load/latency before any larger architectural optimization; host tests do not establish physical performance or the previous event's cause.
 
 ## Next build — keep and share saved Android fault logs — 2026-11-11
 

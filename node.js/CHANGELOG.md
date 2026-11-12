@@ -1,5 +1,15 @@
 # Pico base changelog
 
+## 0.7.6 — 2026-11-12
+
+- Reject incorrect length/CRC and ambiguous sensor configurations. Discard packets received before configuration completes; timestamp only newly received live samples. Use monotonic time for MQTT/stdout throttling across clock adjustments.
+- Cache live measurement metadata, avoid per-request live/status SQLite reads, and retain safe logger error categories and committed checkpoint state in memory. History failures remain explicit while current live data is available. Remove unnecessary metadata JSON round trips and capture hex work when recording is off.
+- Retry API bind failures every 30 seconds while acquisition/MQTT continue. Accept explicit IPv6 bind configuration without changing existing bindings.
+- Add a bounded RAM request ring (128 entries, last 32 returned), request IDs, LAN local/peer addresses, port, status, duration and disconnect indication. No credentials, query strings, bodies or raw exception messages are recorded. Authenticated diagnostics and restricted loopback health let the independent monitor correlate incidents.
+- Standalone monitor 1.4 reads current source/logger health, detects never-healthy required components after a 60-second grace and stalled checkpoints after 120 seconds, filters journal input before parsing and reduces configuration rereads. Existing STA-only/observe configuration and incident retention are preserved.
+- Restore the prior sudo rule if the Pi-control config update fails. Version the recovered copy-based updater, a sanitised historical pi-wifi reference, and a source manifest/check command. The updater's target and private parent files remain unchanged; installed standalone helpers are not silently replaced.
+- Automated validation and hardware limits are recorded in ../android/BUILD-VALIDATION.md. No Android source/version change, Pi installation, AP enabling, automatic switching, history migration or calculation/retention change.
+
 ## 0.7.5 — 2026-11-01
 
 - Add authenticated live Pi system/network readouts at GET /api/v1/pi, with one shared ten-second cache, coalesced refresh, bounded network-status commands, whole-system memory/CPU and missing/reset-aware values. Do not write resource snapshots to SQLite or change sensor collection, history, retention or MQTT.

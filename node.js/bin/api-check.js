@@ -9,8 +9,9 @@ async function check(args = process.argv.slice(2)) {
     options[args[i].slice(2)] = args[++i];
   }
   if (!options.path.startsWith('/api/v1/')) throw Error('Invalid API path');
-  const config = readApiConfig(options.config), host = config.host==='0.0.0.0' ? '127.0.0.1' : config.host;
-  const response = await fetch(`${config.tls ? 'https' : 'http'}://${host}:${config.port}${options.path}`,{
+  const config = readApiConfig(options.config), host = config.host==='0.0.0.0' ? '127.0.0.1' : config.host==='::' ? '::1' : config.host;
+  const urlHost = host.includes(':') ? '[' + host + ']' : host;
+  const response = await fetch(`${config.tls ? 'https' : 'http'}://${urlHost}:${config.port}${options.path}`,{
     headers:{Authorization:'Bearer '+config.token},signal:AbortSignal.timeout(10000),redirect:'error'});
   if (!response.ok) throw Error('API returned HTTP '+response.status);
   return response.json();

@@ -5,15 +5,10 @@ const fs = require('node:fs');
 const readline = require('node:readline');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
-const { frameLength, parseResponse } = require('../lib/pico-protocol');
-const { calcRevCrc16 } = require('../lib/crc16');
+const { frameLength, parseResponse, crcMatches } = require('../lib/pico-protocol');
 const { createSensorList } = require('../lib/sensor-list');
 const { decodeReadings, formatEllaJson } = require('../lib/readings');
 
-function crcMatches(buffer) {
-  return buffer.length >= 16 && buffer.readUInt16BE(buffer.length - 2) ===
-    calcRevCrc16(buffer.subarray(1, buffer.length - 3));
-}
 async function verifyCapture(filename, { comparePython = false, replay = false } = {}) {
   const summary = { configurations: 0, packets: 0, tcpResponses: 0, tcpLengthMatches: 0,
     tcpCrcMatches: 0, udpLengthMatches: 0, udpCrcMatches: 0, pythonMatches: 0, pythonDifferences: 0 };
@@ -32,7 +27,7 @@ async function verifyCapture(filename, { comparePython = false, replay = false }
     }
     if (record.kind !== 'packet') continue;
     if (!sensorList) throw new Error('Packet precedes sensor configuration');
-    const b = Buffer.from(record.hex, 'hex'), element = parseResponse(b);
+    const b = Buffer.from(record.hex, 'hex'), element = parseResponse(b, { validate: false });
     summary.packets++;
     if (frameLength(b) === b.length) summary.udpLengthMatches++;
     if (crcMatches(b)) summary.udpCrcMatches++;

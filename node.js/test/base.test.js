@@ -442,3 +442,76 @@ for (const logging of [false, true, 'api']) test(`simultaneous SBMS/Pico preserv
   assert.equal((await verifyCapture(capture, { comparePython: true })).ok, true);
   assert.equal(stderr.includes('test-pass'), false);
 });
+
+test('configuration rejects unknown widths, duplicate IDs and malformed fields', () => {
+  const {config}=fixture();
+  const unknown=structuredClone(config);unknown[0][1]=[0,99];
+  assert.throws(()=>createSensorList(unknown),/Unsupported/);
+  const duplicate=structuredClone(config);duplicate[1][0]=duplicate[0][0];
+  assert.throws(()=>createSensorList(duplicate),/Duplicate/);
+  const malformed=structuredClone(config);delete malformed[1][3];
+  assert.throws(()=>createSensorList(malformed),/name/);
+});
+
+test('live rejects bad CRC/length and waits for a post-configuration packet', async () => {
+  const client=new PicoClient({staleAfterMs:100,updateIntervalMs:0});
+  const socket=new EventEmitter(), controller=new AbortController(), data=fixture();
+  let snapshots=0;client.on('snapshot',()=>snapshots++);
+  const pending=client.live(socket,'127.0.0.1',createSensorList(data.config),controller.signal,
+    {msg:data.packet,info:{address:'127.0.0.1'}});
+  assert.equal(snapshots,0);
+  const crc=Buffer.from(data.packet);crc[crc.length-1]^=1;
+  socket.emit('message',crc,{address:'127.0.0.1'});
+  const length=Buffer.from(data.packet);length[12]^=1;
+  socket.emit('message',length,{address:'127.0.0.1'});
+  assert.equal(snapshots,0);
+  socket.emit('message',data.packet,{address:'127.0.0.1'});
+  assert.equal(snapshots,1);controller.abort();await assert.rejects(pending);
+});
+
+test('public output continues after a backward wall-clock step', async () => {
+  const client=new PicoClient({staleAfterMs:100,updateIntervalMs:0});
+  const socket=new EventEmitter(),controller=new AbortController(),data=fixture();
+  let output=0;client.on('readings',()=>output++);
+  const pending=client.live(socket,'127.0.0.1',createSensorList(data.config),controller.signal);
+  const original=Date.now;let wall=original();Date.now=()=>wall;
+  try {
+    socket.emit('message',data.packet,{address:'127.0.0.1'});
+    wall-=3600000;socket.emit('message',data.packet,{address:'127.0.0.1'});
+    assert.equal(output,2);
+  } finally {Date.now=original;controller.abort();await assert.rejects(pending);}
+});
+
+test('API bind conflict preserves acquisition and retries after the port is released', {timeout:45000}, async t => {
+  const sim=await simulator(t);
+  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'ella-bind-retry-'));
+  t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));
+  const occupied=net.createServer();
+  await new Promise(resolve=>occupied.listen(0,'127.0.0.1',resolve));
+  const port=occupied.address().port;
+  t.after(()=>occupied.close());
+  const logging=path.join(directory,'logging.json'), api=path.join(directory,'api.json');
+  fs.writeFileSync(logging,JSON.stringify({database:'history.sqlite',metrics:[
+    {id:'secondary',source:'pico',sensorId:20,sensorType:'volt',kind:'voltage'}]}));
+  fs.writeFileSync(api,JSON.stringify({host:'127.0.0.1',port,token:'c'.repeat(64)}));
+  const child=spawn(process.execPath,[path.join(__dirname,'../bin/pico.js'),'--no-mqtt','--stdout',
+    '--ip','127.0.0.1','--udp-port',String(sim.port),'--tcp-port',String(sim.port),
+    '--logging-config',logging,'--api-config',api]);
+  const exited=new Promise((resolve,reject)=>{child.on('error',reject);child.on('close',resolve);});
+  t.after(()=>{if(child.exitCode===null)child.kill('SIGKILL');});
+  let out='',err='';child.stdout.on('data',b=>out+=b);child.stderr.on('data',b=>err+=b);
+  async function until(predicate, milliseconds) {
+    const end=Date.now()+milliseconds;
+    while(!predicate()) {
+      if(child.exitCode!==null || Date.now()>end) throw Error('CLI condition not reached: '+err);
+      await new Promise(resolve=>setTimeout(resolve,50));
+    }
+  }
+  await until(()=>err.includes('EADDRINUSE') && out.includes('\n'),5000);
+  assert.equal(child.exitCode,null);
+  await new Promise(resolve=>occupied.close(resolve));
+  await until(()=>err.includes('"source":"api","state":"listening"'),35000);
+  const response=await fetch(`http://127.0.0.1:${port}/api/v1/live`,{headers:{Authorization:'Bearer '+'c'.repeat(64)}});
+  assert.equal(response.status,200);assert.equal((await response.json()).pico.fresh,true);
+  child.kill('SIGTERM');assert.equal(await exited,0);
+});

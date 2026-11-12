@@ -44,10 +44,20 @@ function isPicoPacket(buffer) {
 }
 function isLivePacket(buffer) { return isPicoPacket(buffer) && (buffer[6] & 0xf0) === 0xb0; }
 
-function parseResponse(message) {
+function crcMatches(buffer) {
+  return buffer.length >= 16 && buffer.readUInt16BE(buffer.length - 2) ===
+    calcRevCrc16(buffer.subarray(1, buffer.length - 3));
+}
+function validateFrame(buffer) {
+  if (!isPicoPacket(buffer)) throw new Error('Invalid Pico packet header');
+  if (frameLength(buffer) !== buffer.length) throw new Error('Invalid Pico frame length');
+  if (!crcMatches(buffer)) throw new Error('Invalid Pico checksum');
+}
+function parseResponse(message, { validate = true } = {}) {
   const b = toBuffer(message);
-  if (!isPicoPacket(b)) throw new Error('Invalid Pico packet header');
-  const end = b.length - 2; // checksum bytes; incoming CRC is not yet enforced
+  if (validate) validateFrame(b);
+  else if (!isPicoPacket(b)) throw new Error('Invalid Pico packet header');
+  const end = b.length - 2;
   const result = {};
   let pos = 14;
   const need = n => { if (pos + n > end) throw new Error('Truncated Pico field'); };
@@ -119,7 +129,7 @@ async function openTcp(picoIp, options = {}) {
 }
 
 function sendReceive(socket, message, options = {}) {
-  const { responseTimeoutMs = 30000, signal, debug = () => {}, label = 'request', onTcp = () => {} } = options;
+  const { responseTimeoutMs = 30000, signal, debug = () => {}, label = 'request', onTcp } = options;
   return new Promise((resolve, reject) => {
     if (signal?.aborted) return reject(abortError());
     if (socket.destroyed) return reject(new Error('TCP socket is closed'));
@@ -132,18 +142,18 @@ function sendReceive(socket, message, options = {}) {
     function finish(err) {
       if (settled) return;
       settled = true; cleanup();
-      onTcp({ direction: 'complete', label, hex: response.toString('hex'), error: err?.message });
+      onTcp?.({ direction: 'complete', label, hex: response.toString('hex'), error: err?.message });
       err ? reject(err) : resolve(response);
     }
     function onData(chunk) {
       try {
-        onTcp({ direction: 'receive', label, hex: chunk.toString('hex') });
+        onTcp?.({ direction: 'receive', label, hex: chunk.toString('hex') });
         response = Buffer.concat([response, chunk]);
         const size = frameLength(response);
         debug(`TCP ${label}: ${response.length} bytes collected`);
         if (response.length > 65548) throw new Error('Oversized TCP response');
         if (size !== null && response.length > size) throw new Error('TCP response exceeds declared length');
-        if (size !== null && response.length === size) finish();
+        if (size !== null && response.length === size) { validateFrame(response); finish(); }
       } catch (err) { finish(err); }
     }
     const onError = err => finish(err);
@@ -155,7 +165,7 @@ function sendReceive(socket, message, options = {}) {
     signal?.addEventListener('abort', onAbort, { once: true });
     try {
       const request = toBuffer(message);
-      onTcp({ direction: 'send', label, hex: request.toString('hex') });
+      onTcp?.({ direction: 'send', label, hex: request.toString('hex') });
       socket.write(request, err => { if (err) finish(err); });
     }
     catch (err) { finish(err); }
@@ -183,4 +193,4 @@ async function getPicoConfigTcp(picoIp, options = {}) {
 }
 
 module.exports = { abortError, delay, hexdump, addCrc, toBuffer, bufferToHex,
-  frameLength, isPicoPacket, isLivePacket, parseResponse, openTcp, sendReceive, getPicoConfigTcp };
+  crcMatches, validateFrame, frameLength, isPicoPacket, isLivePacket, parseResponse, openTcp, sendReceive, getPicoConfigTcp };

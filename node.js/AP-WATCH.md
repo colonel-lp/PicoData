@@ -1,7 +1,7 @@
 # Wi-Fi fault diagnostics
 
-Standalone helper **1.3** supports `sta-only` and `ap-sta` topologies. Collector
-and Android versions are independent. Source prepared and offline-tested. The owner confirmed 1.3 installed and active
+Standalone helper **1.4** supports `sta-only` and `ap-sta` topologies. Collector
+and Android versions are independent. 1.4 is prepared and offline-tested, with Pi installation pending. The owner confirmed 1.3 installed and active
 in STA-only observe mode after returning to built-in STA operation: AP checks and
 recovery disabled, firmware-console diagnostic flag disabled, local API listener
 responding. Sensor peer discovery, incident capture and unattended stability
@@ -72,8 +72,12 @@ sudo journalctl -u ella-ap-watch.service -n 20 --no-pager
 
 The export is private and contains the latest incident only; use a new filename.
 No automatic STA recovery, internet polling or speed tests are performed.
-A local unauthenticated HTTP 401 proves the API listener responds, not that
-sensor data is fresh. Check freshness separately using `api-check.js`.
+With collector 0.7.6, loopback HTTP health also reports current source freshness,
+logger state/checkpoint and recent LAN request diagnostics. Required API/service/
+source/logger failures can trigger after 60 seconds even without prior success;
+an unchanged checkpoint triggers after 120 seconds plus confirmation. Disabled
+sources are excluded. Old collectors returning 401 and TLS TCP-only probes still
+prove availability only; check their freshness separately with `api-check.js`.
 
 ## Future USB AP adapter
 
@@ -301,3 +305,23 @@ Actual RAM/CPU cost, firmware output, device/service integration and behavior
 during a real stall remain owner verification. Do not disconnect live sensors or
 force a stall merely to demonstrate these tests.
 
+
+
+## Updating an already configured monitor to 1.4
+
+After the normal collector source update:
+
+```bash
+sudo python3 ~/PicoData/node.js/tools/ap-watch.py install
+sudo ella-ap-watch status
+```
+
+Omitting topology/interface options preserves the existing validated STA-only
+configuration and observe policy. The collector updater itself does not install
+standalone helpers. New source/logger checks require collector 0.7.6 and a
+configured loopback HTTP probe; existing TLS probes remain TCP-only. This release
+records current health when the monitor starts, including an already-failed
+logger, rather than relying on a future journal transition. It does not recover
+an earlier event's missing pre-start history or identify the previous glitch's
+cause. Journal input is filtered to relevant units/kernel events; config rereads
+are limited to once every ten seconds.

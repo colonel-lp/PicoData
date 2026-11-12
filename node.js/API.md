@@ -19,7 +19,7 @@ node bin/api-check.js --path '/api/v1/history/battery?resolution=minute&limit=3'
 
 Logging must be configured. No API listener opens unless parent `api.json` exists or `--api-config FILE` is given. `--no-api` disables it; it conflicts with `--api-config`. The existing systemd `ExecStart` needs no change. Invalid API setup/bind/TLS configuration fails visibly at startup; normal sensor output stays silent. Correct the configuration or use `--no-api` to continue without the listener.
 
-The private configuration has `host` (an IPv4 bind address), `port`, `token` (64 lowercase hexadecimal characters), and optionally `tls`. To rotate credentials, replace the token with a newly generated 32-byte hexadecimal secret and restart the service. MQTT/API credentials are independent. Keep `api.json`, TLS keys, selections and measurements out of source control.
+The private configuration has `host` (an explicit IPv4 or IPv6 bind address), `port`, `token` (64 lowercase hexadecimal characters), and optionally `tls`. To rotate credentials, replace the token with a newly generated 32-byte hexadecimal secret and restart the service. MQTT/API credentials are independent. Keep `api.json`, TLS keys, selections and measurements out of source control.
 
 Every route requires this request header:
 
@@ -130,3 +130,37 @@ The existing status logging.state returns from clock-step to started only after 
 ## Pi resources and optional mode control — collector 0.7.5
 
 GET /api/v1/pi serves cached live whole-system/network values without SSH or resource history. POST /api/v1/pi/wifi is disabled by default; enable it only through the documented local setup for auto/home/m1. It uses the existing Bearer credential, strict bounded JSON and fixed helper commands. HTTP 202 acknowledges queueing with confirmed false; later status reports actual observations. Other API paths retain their method/schema behavior. [PI-STATUS.md](PI-STATUS.md) contains the full contract, optional private pi settings, setup/removal and limitations. No API config/history reset is needed for normal status reads.
+
+
+## Runtime resilience and local diagnosis — collector 0.7.6
+
+`/api/v1/live` uses a cached catalogue and `/api/v1/status` uses in-memory source,
+logger and committed-checkpoint state. Runtime history read failures therefore do
+not prevent those endpoints from serving fresh data. History routes still return
+an explicit error. `logging.failure` is null or a bounded category (`code`,
+`phase`, optional numeric `sqliteCode`, UTC `at`), without exception messages or
+paths. Initial invalid configuration/database setup still requires correction;
+this is not automatic repair of a damaged database.
+
+A failed API bind retries every 30 seconds while collection/MQTT continue.
+An explicit IPv6 host is supported (`::1` for local access, `::` for IPv6 wildcard);
+IPv4 acceptance on `::` depends on the OS. Existing bindings are unchanged.
+`api-check.js` brackets IPv6 addresses correctly. A `.local` name alone does not
+prove which address family a client used.
+
+Authenticated `GET /api/v1/diagnostics` returns the last 32 completed/aborted
+requests from a 128-entry RAM ring. Each has an ID, UTC completion timestamp,
+route category, LAN local/peer address, local port, HTTP status, elapsed milliseconds
+and aborted flag. A valid 1–64-character alphanumeric/underscore/hyphen
+`X-Request-ID` is echoed; otherwise the server assigns a sequence ID. IDs identify
+requests within a collector session. Public IPs are omitted. Query strings,
+credentials, arbitrary paths and bodies are never stored. A request which never
+reaches HTTP cannot appear here. Entries are lost at collector restart unless
+captured by the independent monitor.
+
+`GET /api/v1/health` is credential-free only from a loopback peer. It supplies the
+same limited source/logger health plus recent request diagnostics, bypasses the
+external request budget and does not record its own probe. Other clients cannot
+use this endpoint, even with a token. Monitor 1.4 uses it over local HTTP without
+reading API credentials; older collectors' 401 responses and TLS TCP probes
+still establish availability only. No TLS verification bypass is introduced.

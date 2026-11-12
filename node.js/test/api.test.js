@@ -232,3 +232,37 @@ test('opt-in Pi control accepts only one bounded mode field and returns unconfir
   for(const bad of ['{"mode":"reboot"}','{"mode":"auto","command":"other"}','{"mode":"auto","mode":"m1"}','not JSON','x'.repeat(65)])assert.equal((await post(bad)).status,400);
   assert.deepEqual(calls,['m1']);assert.equal((await get('/api/v1/status',{method:'POST',body:'x'})).status,405);
 });
+
+test('live and status survive history read failure and loopback health records bounded LAN requests', async t => {
+  const {api,get,logger}=await setup(t);
+  api.reader.view=()=>{throw Error('synthetic storage failure');};
+  logger.failed=true;logger.failure={code:'SQLITE_IOERR',phase:'logging'};
+  assert.equal((await get('/api/v1/live')).status,200);
+  const status=await get('/api/v1/status');assert.equal(status.body.logging.failure.code,'SQLITE_IOERR');
+  assert.equal((await get('/api/v1/history/battery')).status,503);
+  const reply=await get('/api/v1/live',{headers:{Authorization:'Bearer '+TOKEN,'X-Request-ID':'fixture-request'}});
+  assert.equal(reply.headers.get('x-request-id'),'fixture-request');
+  const health=await get('/api/v1/health',{headers:{}});
+  assert.equal(health.status,200);assert.equal(health.body.health.logging.state,'failed');
+  assert.ok(health.body.requests.some(x=>x.id==='fixture-request' && x.localAddress==='127.0.0.1'));
+  assert.ok(!JSON.stringify(health.body).includes(TOKEN));
+  assert.ok(!JSON.stringify(health.body).includes('synthetic storage failure'));
+  api.budget=0;
+  assert.equal((await get('/api/v1/health',{headers:{}})).status,200);
+});
+
+test('IPv6 explicit bind serves live data when available', async t => {
+  const {api}=await setup(t);
+  await new Promise(resolve=>{api.server.close(resolve);api.server.closeAllConnections();});
+  api.config.host='::1';
+  try {await api.start();} catch(e) {
+    if(['EAFNOSUPPORT','EADDRNOTAVAIL'].includes(e.code)){t.skip('IPv6 unavailable');return;}throw e;
+  }
+  const result=await new Promise((resolve,reject)=> {
+    const request=require('node:http').get({host:'::1',port:api.server.address().port,path:'/api/v1/live',
+      headers:{Authorization:'Bearer '+TOKEN}},response=> {
+      let body='';response.on('data',part=>body+=part);response.on('end',()=>resolve({status:response.statusCode,body}));
+    });request.on('error',reject);
+  });
+  assert.equal(result.status,200);assert.ok(JSON.parse(result.body).pico);
+});

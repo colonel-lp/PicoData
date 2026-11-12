@@ -16,6 +16,37 @@ spec.loader.exec_module(m)
 
 
 class Rules(unittest.TestCase):
+    @unittest.skipUnless(os.geteuid() == 0, 'isolated root-owned fixtures')
+    def test_config_failure_restores_previous_rule_for_install_and_remove(self):
+        for enabled in (True, False):
+            with tempfile.TemporaryDirectory() as directory, contextlib.ExitStack() as stack:
+                root = Path(directory)
+                helper = root / 'helper'
+                helper.write_text('#!/bin/sh\n')
+                helper.chmod(0o755)
+                api = root / 'api.json'
+                original = json.dumps({'token': 'a' * 64})
+                api.write_text(original)
+                rule = root / 'rule'
+                stack.enter_context(patch.object(m, 'RULE', rule))
+                stack.enter_context(patch.object(m, 'HELPER', helper))
+                stack.enter_context(patch.object(m.pwd, 'getpwnam', return_value=SimpleNamespace(pw_uid=0)))
+                stack.enter_context(patch.object(m.subprocess, 'run', return_value=SimpleNamespace(returncode=0)))
+                before = None if enabled else m.rule('service-user')
+                if before is not None:
+                    rule.write_text(before)
+                original_atomic = m.atomic
+                def fail_config(path, *args):
+                    if path == api:
+                        raise OSError('synthetic failure')
+                    return original_atomic(path, *args)
+                stack.enter_context(patch.object(m, 'atomic', side_effect=fail_config))
+                with self.assertRaises(OSError):
+                    m.install('service-user', api, enabled)
+                self.assertEqual(api.read_text(), original)
+                self.assertEqual(rule.read_text() if rule.exists() else None, before)
+
+
     def test_exact_three_actions_and_no_command_wildcards(self):
         text = m.rule('service-user')
         self.assertEqual(text.count('/usr/local/sbin/pi-wifi'), 3)

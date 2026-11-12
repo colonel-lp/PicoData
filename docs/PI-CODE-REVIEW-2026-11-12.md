@@ -2,6 +2,22 @@
 
 Reviewed repository `colonel-lp/PicoData`, branch `main`, commit `6731317a7fad2d5b6edd8660e2f081cc8d733a66`. Collector 0.7.5 and diagnostic helper 1.3.
 
+## Implementation follow-up — collector 0.7.6 / monitor 1.4
+
+The owner subsequently authorized the fixes. R1–R8 are addressed in source,
+with startup/buffer/clock/CRC/configuration, history failure isolation, health
+capture and installer rollback regression checks. Bounded LAN request correlation,
+API bind retry, reduced copying/capture/monitor work, logger error categories and
+explicit IPv6 support are included. Original findings below describe the reviewed
+0.7.5/1.3 baseline, not remaining known failures in 0.7.6/1.4.
+
+The previous chat supplied the copy-based updater and historical USB pi-wifi
+script. They are now versioned as documented in [deployment](../node.js/DEPLOYMENT.md);
+private profile/SSID values are removed from the historical reference. The installed
+Pi files/hashes are still unverified. Source changes do not identify the original
+monitoring glitch, establish Pi resource savings, enable the old network switcher
+or update Android. See [validation](../android/BUILD-VALIDATION.md).
+
 ## Scope and deployment evidence
 
 The repository quick reference confirms built-in Wi-Fi in STA-only mode, sensors on the mobile router, the USB adapter removed, and hotspot recovery and automatic network switching disabled. This review follows that configuration.

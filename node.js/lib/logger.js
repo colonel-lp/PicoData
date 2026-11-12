@@ -27,12 +27,14 @@ class HistoryLogger extends EventEmitter {
     if (automatic) this.timer = setInterval(() => this.tick(), 1000);
   }
   status(state, extra = {}) { this.state = state; this.emit('status', { source: 'logging', state, ...extra }); }
-  guard(fn) {
+  guard(fn, phase = 'logging') {
     if (this.failed || this.closed) return;
     try { fn(); }
-    catch {
+    catch (error) {
+      const code = typeof error.code === 'string' && /^[A-Z0-9_]{1,64}$/.test(error.code) ? error.code : 'HISTORY_ERROR';
+      this.failure = { code, phase: error.historyPhase || phase, sqliteCode: Number.isInteger(error.errcode) ? error.errcode : null, at: new Date().toISOString() };
       this.failed = true; clearInterval(this.timer); this.rows.clear(); this.latest.clear();
-      this.status('failed', { reason: 'History write failed; check storage and configuration, then restart the collector' });
+      this.status('failed', { failure: this.failure, reason: 'History write failed; check storage and configuration, then restart the collector' });
     }
   }
   resolutions(m) { return ['temperature', 'barometer'].includes(m.kind) ? ['hour', 'day'] : ['minute', 'hour', 'day', 'month']; }
@@ -137,6 +139,7 @@ class HistoryLogger extends EventEmitter {
       this.latest.clear(); this.sbmsVoltage = null; this.status('clock-step', { reason: 'Skipped interval after a system clock adjustment' });
       if (wallDt < 0) this.clockHoldUntil = Math.max(this.clockHoldUntil || 0, previousTime);
       this.store.db.prepare("INSERT INTO meta VALUES('clockSteps','1') ON CONFLICT(key) DO UPDATE SET value=CAST(value AS INTEGER)+1").run();
+      this.store.clockSteps++;
     } else if (this.clockHoldUntil && previousTime < this.clockHoldUntil) {
       this.clockRecoveryReady = false;
       this.latest.clear(); this.sbmsVoltage = null;
@@ -170,7 +173,8 @@ class HistoryLogger extends EventEmitter {
   }
   tick(time = Date.now(), mono = performance.now()) { this.guard(() => this.advance(time, mono)); }
   flush(time = this.cursor?.time ?? Date.now(), mono = this.cursor?.mono ?? performance.now()) {
-    this.store.save([...this.rows.values()].filter(r => r.dirty), time);
+    try { this.store.save([...this.rows.values()].filter(r => r.dirty), time); }
+    catch (error) { error.historyPhase = 'save'; throw error; }
     for (const [key, row] of this.rows) { row.dirty = false; if (row.end <= time) this.rows.delete(key); }
     this.lastCommitMono = mono;
     // A successful save alone is insufficient during a backward-time integration hold.

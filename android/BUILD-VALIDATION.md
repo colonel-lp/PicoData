@@ -1,3 +1,11 @@
+## Pi review implementation — collector 0.7.6 / monitor 1.4, 2026-11-12
+
+- PASS: **97 Node tests**, zero failures/skips, on the host Node 24 runtime. Includes existing Python-output parity, acquisition/MQTT/reconnect, SQLite/history/retention, API/control tests and new frame CRC/length/config validation, discarded pre-configuration sample, backward-wall-clock output, live/status during history read failure, logger error category, loopback health/request IDs/LAN metadata, explicit IPv6 and API port-conflict recovery.
+- PASS: the real CLI continued to emit live data while its API port was occupied, then bound the freed port on its 30-second retry and served fresh live data. No shortened production retry or stand-in client was used.
+- PASS: **100 Python tests** across monitor/AP (40), STA-only (8), incident recorder (40), Pi-control installer (3) and zram guard (9). Tests used isolated temporary files and an unprivileged user namespace for root-ownership semantics; no actual service/network/sudo configuration changed. New cases include never-healthy required components, source/logger faults predating monitor startup, stalled checkpoint progress, bounded loopback health, IPv6 discovery and install/remove rollback after injected config-write failure.
+- PASS: shell syntax for recovered updater and sanitised historical switcher, changed JavaScript syntax, source-manifest match, whitespace checks and unchanged Android source/version. Updater destination/private-parent separation was inspected against the recovered chat script.
+- No APK or Pi deployment. No real radio, sensor, router, systemd installation, physical throughput/latency/memory comparison or Node 22 runtime execution is claimed. CRC/layout enforcement follows the supported fixture and previously reported capture evidence; unrepresented firmware needs verification. The historical pi-wifi reference is deliberately not installed/enabled. The original monitoring event's cause remains unproven.
+
 # Android 0.33 / build 15 — source validation — 2026-11-03
 
 Owner authorized source preparation and publication; owner builds the APK in Android Studio. Base main: 7516d7eaf331349323e4be6a092fa60d4ef6d6a8. No APK assembly/signing, Gradle resource/package build, live Pi installation, radio change or owner-device verification is performed. Collector 0.7.5 and monitor 1.2 remain unchanged.

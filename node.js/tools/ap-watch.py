@@ -30,7 +30,7 @@ import threading
 import time
 import traceback
 
-VERSION = "1.3"
+VERSION = "1.4"
 CONFIG = Path("/etc/ella-ap-watch.json")
 RUNTIME = Path("/run/ella-ap-watch")
 ARCHIVE = Path("/var/lib/ella-ap-watch")
@@ -303,7 +303,7 @@ def validate_config(c):
                 type(api["port"]) is not int or not 1 <= api["port"] <= 65535 or
                 api["scheme"] not in ("http", "tcp")):
             raise ValueError("Invalid local API probe")
-        if not ipaddress.IPv4Address(api["host"]).is_loopback:
+        if not ipaddress.ip_address(api["host"]).is_loopback:
             raise ValueError("API diagnostic probe must use loopback")
     return c
 
@@ -757,7 +757,7 @@ def gateway_for(interface):
 
 
 def local_api_sample(c):
-    """A credential-free loopback HTTP response tests the listener, not sensor freshness."""
+    """Read limited loopback health when supported; older HTTP/TLS probes test availability only."""
     api = c.get('local_api')
     if not api:
         return {'configured': False, 'ok': None, 'reason': 'probe-not-configured'}
@@ -766,20 +766,33 @@ def local_api_sample(c):
         if api['scheme'] == 'http':
             connection = http.client.HTTPConnection(api['host'], api['port'], timeout=0.7)
             try:
-                connection.request('GET', '/api/v1/status', headers={'Connection': 'close'})
+                connection.request('GET', '/api/v1/health', headers={'Connection': 'close'})
                 response = connection.getresponse()
-                # The authenticated collector normally replies 401: this is a successful
-                # HTTP availability test, not an authenticated source-data/status read.
-                return {'configured': True, 'kind': 'http-without-credentials',
-                        'ok': True, 'expected_status': response.status in (200, 401), 'status': response.status,
-                        'elapsed_ms': round((time.monotonic() - started) * 1000)}
+                # New collectors expose limited loopback-only health. Older versions
+                # reply 401, which proves listener availability only.
+                sample = {'configured': True, 'kind': 'http-without-credentials',
+                          'ok': True, 'expected_status': response.status in (200, 401), 'status': response.status,
+                          'elapsed_ms': round((time.monotonic() - started) * 1000)}
+                if response.status == 200:
+                    raw = response.read(65537)
+                    if len(raw) > 65536:
+                        raise ValueError('Oversized collector health response')
+                    document = json.loads(raw)
+                    health = document.get('health')
+                    if not isinstance(health, dict) or not isinstance(health.get('sources'), dict) or not isinstance(health.get('logging'), dict):
+                        raise ValueError('Invalid collector health response')
+                    sample['health'] = health
+                    sample['requests'] = document.get('requests', [])[-32:]
+                else:
+                    sample['health_unavailable'] = True
+                return sample
             finally:
                 connection.close()
         with socket.create_connection((api['host'], api['port']), timeout=0.7):
             pass
         return {'configured': True, 'kind': 'tcp-only', 'ok': True,
                 'elapsed_ms': round((time.monotonic() - started) * 1000)}
-    except (OSError, http.client.HTTPException) as error:
+    except (OSError, http.client.HTTPException, ValueError, TypeError, AttributeError) as error:
         return {'configured': True, 'kind': api['scheme'], 'ok': False,
                 'error': type(error).__name__, 'errno': getattr(error, 'errno', None),
                 'elapsed_ms': round((time.monotonic() - started) * 1000)}
@@ -788,6 +801,7 @@ def local_api_sample(c):
 class LearnedChecks:
     """Diagnostic triggers only. Never authorizes a network/recovery operation."""
     def __init__(self, saved=None):
+        self.started = None
         self.values = saved if isinstance(saved, dict) else {}
         if len(self.values) > 32:
             self.values = {}
@@ -798,7 +812,9 @@ class LearnedChecks:
                        and type(v.get('first_bad')) in (int, float)
                        and math.isfinite(v['first_bad']) and v['first_bad'] >= 0}
 
-    def check(self, key, ok, now, minimum=2):
+    def check(self, key, ok, now, minimum=2, required=False):
+        if self.started is None:
+            self.started = now
         if ok is None:
             return None
         if key not in self.values and len(self.values) >= 32:
@@ -812,7 +828,8 @@ class LearnedChecks:
         if value['failures'] == 0:
             value['first_bad'] = now
         value['failures'] = min(10000, value['failures'] + 1)
-        if value['successes'] >= 2 and value['failures'] >= minimum:
+        armed = value['successes'] >= 2 or (required and now - self.started >= 60)
+        if armed and value['failures'] >= minimum:
             return value['first_bad']
         return None
 
@@ -888,6 +905,8 @@ class FlightRecorder:
         self.slow_busy = False
         self.background = False
         self.last_status = -math.inf
+        self.last_saved_at = None
+        self.last_saved_change = self.now()
         self.last_pid = None
         self.last_uplink = None
         self.broker_cursor = None
@@ -1198,9 +1217,22 @@ class FlightRecorder:
                 self.trigger('collector-process-replaced', now)
             if pid and pid != '0':
                 self.last_pid = pid
+        health = row['local_api'].get('health')
+        if health:
+            for source, state in health['sources'].items():
+                if source in ('pico', 'sbms') and isinstance(state, dict) and state.get('state') != 'disabled':
+                    conditions.append(('collector-source:' + source, state.get('fresh') is True, 2))
+            logging = health['logging']
+            conditions.append(('collector-logging', logging.get('state') not in ('failed', 'mapping-error'), 2))
+            saved_at = logging.get('savedAt')
+            if saved_at != self.last_saved_at:
+                self.last_saved_at = saved_at
+                self.last_saved_change = now
+            conditions.append(('collector-save-progress', now - self.last_saved_change <= 120, 2))
         bad = False
         for key, ok, minimum in conditions:
-            onset = self.checks.check(key, ok, now, minimum)
+            required = key in ('local-api', 'local-api-http-status', 'collector-service', 'collector-logging', 'collector-save-progress') or key.startswith('collector-source:')
+            onset = self.checks.check(key, ok, now, minimum, required=required)
             if onset is not None:
                 bad = True
                 self.trigger(key, onset)
@@ -1253,7 +1285,11 @@ class FlightRecorder:
         while not self.stop_event.is_set():
             child = None
             try:
-                child = subprocess.Popen(['journalctl', '-f', '-n', '0', '--no-pager', '-o', 'json'],
+                matches = ['_TRANSPORT=kernel']
+                for unit in (self.c['unit'], 'NetworkManager.service', 'wpa_supplicant.service',
+                             'ella-hotspot-dns.service', 'pico-mqtt.service', 'mosquitto.service', 'pi-wifi.service'):
+                    matches.extend(['+', '_SYSTEMD_UNIT=' + unit])
+                child = subprocess.Popen(['journalctl', '-f', '-n', '0', '--no-pager', '-o', 'json', *matches],
                                          stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, start_new_session=True)
                 os.set_blocking(child.stdout.fileno(), False)
                 pending = bytearray()
@@ -1431,13 +1467,16 @@ def daemon():
     on_start(c)
     counters = {}
     old_reason = None
+    last_config_read = -math.inf
     while not STOP:
         started = time.monotonic()
         PHASE = "configuration"
-        current_config = config()
-        if any(current_config.get(k) != c.get(k) for k in ("interface", "unit", "control", "targets", "uplink", "local_api", "topology", "peers")):
-            raise ValueError("Target/interface configuration changed; restart watch service")
-        c = current_config
+        if started - last_config_read >= 10:
+            current_config = config()
+            if any(current_config.get(k) != c.get(k) for k in ("interface", "unit", "control", "targets", "uplink", "local_api", "topology", "peers")):
+                raise ValueError("Target/interface configuration changed; restart watch service")
+            c = current_config
+            last_config_read = started
         if sta_only(c):
             PHASE = "sta-observe"
             time.sleep(0.5)
@@ -1488,9 +1527,9 @@ def discover_local_api():
         host, port = value.get('host', '127.0.0.1'), value.get('port', 8080)
         if type(port) is not int or not 1 <= port <= 65535:
             return None
-        if host != '0.0.0.0' and not ipaddress.IPv4Address(host).is_loopback:
+        if host not in ('0.0.0.0', '::') and not ipaddress.ip_address(host).is_loopback:
             return None
-        return {'host': '127.0.0.1' if host == '0.0.0.0' else host,
+        return {'host': '127.0.0.1' if host == '0.0.0.0' else '::1' if host == '::' else host,
                 'port': port, 'scheme': 'tcp' if value.get('tls') is not None else 'http'}
     except (OSError, ValueError, TypeError, AttributeError, IndexError):
         return None

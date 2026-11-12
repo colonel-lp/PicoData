@@ -12,7 +12,7 @@ function set(obj, key, value) {
   Object.defineProperty(obj, key, { value, enumerable: true, writable: true, configurable: true });
 }
 function decodeReadings(sensorList, element, { legacyPython = false } = {}) {
-  const result = JSON.parse(JSON.stringify(sensorList));
+  const result = Object.fromEntries(Object.entries(sensorList).map(([id, metadata]) => [id, { ...metadata }]));
   function pair(pos) {
     const p = element[pos];
     if (!Array.isArray(p) || p.length !== 2 || !p.every(v => Number.isInteger(v) && v >= 0 && v <= 65535)) return null;

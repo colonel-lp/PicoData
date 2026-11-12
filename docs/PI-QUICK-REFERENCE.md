@@ -11,7 +11,9 @@
 - **Fresh-install essentials:** privately back up the updater, `/usr/local/sbin/pi-wifi`, its mode/timer/service configuration, `/etc/ella-ap-watch.json`, hotspot service units and their hostapd/DHCP/firewall configuration, NetworkManager profiles and the private PicoData files above. The collector updater does not recreate the hotspot or `pi-wifi` installation. [Collector setup](../node.js/README.md).
 - **Rclone/Google Drive:** [installation and authentication](RCLONE-SETUP.md). Use the normal login account, without `sudo`, for `rclone config` and `rclone lsd gdrive:`. Preserve its private configuration.
 - **Wi-Fi diagnostics 1.3 — STA-only installation confirmed:** [STA-only install and future USB AP migration](../node.js/AP-WATCH.md#current-sta-only-setup). Install only the helper with `install --topology sta-only --uplink STA_INTERFACE`; this starts diagnostic recording without AP checks or network recovery. Status confirms active STA-only observe mode, AP checks/recovery disabled, normal firmware-console verbosity restored and a responding local API listener. Incident capture and unattended stability remain to verify. Monitor updates do not require restarting the collector.
-- **Optional app Pi-mode controls** — collector 0.7.5 needs the [one-time setup](../node.js/PI-STATUS.md#optional-pi-autohomem1-buttons). API resource readouts need no SSH; Open terminal uses separately installed ConnectBot.
+- **Prepared update, not yet confirmed installed:** collector 0.7.6 via `~/update-pico.sh`; then monitor 1.4 via `sudo python3 ~/PicoData/node.js/tools/ap-watch.py install`. With no topology arguments the existing STA-only/observe setup is preserved. Check `sudo ella-ap-watch status` afterwards.
+- **Source verification:** `node ~/PicoData/node.js/bin/deployment-status.js` checks the manifest and identifies separately installed helper hashes. [Updater and historical pi-wifi source](../node.js/DEPLOYMENT.md).
+- **App Pi-mode controls:** leave unused in the current topology. API resource readouts need no SSH; Open terminal uses separately installed ConnectBot.
 
 ## Wi-Fi: check and recover
 
@@ -25,6 +27,7 @@
 ## Logging: check and restart
 
 - **Sources and last save:** `node ~/PicoData/node.js/bin/api-check.js --path /api/v1/status` — both sources should be fresh; repeat after a minute to confirm `logging.savedAt` advances.
+- **Recent API request diagnostics, collector 0.7.6:** `node ~/PicoData/node.js/bin/api-check.js --path /api/v1/diagnostics` — private LAN addresses/request IDs; do not publish the output.
 - **Pi resources, collector 0.7.5+:** `node ~/PicoData/node.js/bin/api-check.js --path /api/v1/pi`
 - **Services:** `systemctl is-active pico-mqtt.service mosquitto.service`
 - **Collector errors:** `journalctl -u pico-mqtt.service -n 40 --no-pager`
