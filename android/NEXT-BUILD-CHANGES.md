@@ -1,3 +1,14 @@
+## Pending Android local-hostname resolution fix — 2026-11-13
+
+Read-only investigation of owner-supplied 0.33 fault evidence and source f5cccaa. No new build, application edit, collector change or network setting is authorized by this log report.
+
+- [x] Evidence: successful live requests coexist with separate IPv6 connection refusals on metadata/status requests. Four final live requests then fail quickly with IPv6 connect refusal, the display expires at its existing three-second deadline, and a later request succeeds after an IPv6 attempt failure. About 5.6 seconds separate the last success and recovery; display expiry lasts about 2.5 seconds. Success entries omit connected family/address, so the successful route is not proved by this log.
+- [x] Concrete source flaw: LocalNameResolver.multicast returns after the first nonempty matching response, although the query requests both A and AAAA. A matching IPv6-only reply can therefore finish lookup before a separate IPv4 reply arrives. lookup caches that partial set for 15 seconds; sorting IPv4 first cannot help when IPv4 is absent. PiControls shares this resolver across API clients, while each NetworkTransport has its own pool. Concurrent misses are not coalesced. This can leave an existing usable connection serving live data while fresh connections receive a partial address set.
+- [x] Timing is consistent with the hypothesis: metadata/status failures occur roughly 15 seconds before the successful recovery. Cache contents/age, resolved address lists and successful peer family are not in the supplied log, so this is a strong candidate explanation rather than proof of that exact cache sequence. The installed Pi listener/address-family configuration also remains to verify.
+- [ ] Fix bounded multi-response A/AAAA collection and coordinate concurrent lookups. Validate separate reply order, delayed/missing families, IPv6-only availability, cache expiry, cancellation/network-generation changes and a refused IPv6 endpoint with working IPv4. Preserve network scoping, TLS hostname verification, bounded deadlines and genuinely stale-data expiry. Assess refresh after exhausting unusable cached routes; do not simply extend the display timeout or repeatedly return the same failed address set.
+- [ ] Extend the already-requested LAN diagnostics with resolved candidate families/addresses, cache age/source and actual successful peer address/family. Preserve request IDs, final outcomes versus recovered attempts, private bounds and credential redaction. GET connection recovery is already enabled in 0.33; retry configuration alone does not supply a missing IPv4 candidate.
+- [ ] Owner read-only listener check and, if available, independent Pi incident evidence to correlate API/collector state. Do not change the restored Pico acquisition/decoding path to address this Android hostname issue.
+
 ## Authorized collection-path restoration — 0.7.8, 2026-11-12
 
 Owner explicitly requests restoring the pre-0.7.6 collection/decoding behavior after 0.7.7 still failed to acquire Pico data. This supersedes the collection-path completion claims in the 0.7.6/0.7.7 entries below.
@@ -6,7 +17,8 @@ Owner explicitly requests restoring the pre-0.7.6 collection/decoding behavior a
 - [x] Retain independent API, health-monitor, logging-diagnostic, installer and deployment improvements. Publish collector 0.7.8 with source equality/manifest checks and compatibility regressions for multiple legacy opaque types and subsequent decoded values. Monitor remains 1.4; Android unchanged.
 - [ ] R1/R2/R3/R6 collection-path changes are deferred, not completed. Future stricter validation must first run diagnostically without rejecting data, using representative configuration/captures from the installation. Reintroducing acquisition changes needs separate authorization after compatibility evidence.
 - [x] Owner confirms 0.7.8 installed and both Pico/SBMS connected and fresh, with monitor 1.4 active in STA-only/observe mode and its journal reader running. This is owner-supplied live recovery evidence, not a host-test inference.
-- [ ] Confirm a subsequent advancing savedAt and sustained stability. The first supplied post-update sample reports no logging failure but still carries the earlier checkpoint. The original monitoring event and the unsupplied 0.7.7 retry reason remain unproven.
+- [x] Owner supplied a later 0.7.8 status with both sources fresh and an advanced savedAt, confirming history checkpointing with no logger failure.
+- [ ] Sustained stability remains to verify. The original monitoring event and the unsupplied 0.7.7 retry reason remain unproven.
 
 ## Immediate Pico compatibility correction — 0.7.7, 2026-11-12
 
