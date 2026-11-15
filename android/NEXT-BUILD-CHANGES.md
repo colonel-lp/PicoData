@@ -1,3 +1,12 @@
+## Next build — Android application ID
+
+- [ ] Set Ella Monitoring's Android application ID to `com.picodata.monitor` for the next build, replacing `com.colonellp.ellamonitor.preview`. Keep the Ella Monitoring app label and existing signing key.
+- [ ] Verify the packaged application ID, update provider authority and update checks from the new package. Document the one-time separate install and how to export and restore supported settings and presets before removing the preview. Private app data, including saved API credentials and fault logs, does not carry over automatically.
+
+## Next build — launcher icon size
+
+- [ ] Match Ella Monitoring's launcher icon size to [Bluetooth Controls' 48 × 48 dp launcher drawable](https://github.com/colonel-lp/Joying-Bluetooth-Fix/blob/53678c1722a937b9dc11623c9acb4035e2c13388/app/src/main/res/drawable/bluetooth_icon.xml). Keep Ella's artwork, adjust its visible bounds and padding as needed, and verify both icons side by side on the Joying launcher. Preserve the notification icon's appearance if it shares the launcher asset.
+
 ## Pending Android local-hostname resolution fix — 2026-11-13
 
 Read-only investigation of owner-supplied 0.33 fault evidence and source f5cccaa. No new build, application edit, collector change or network setting is authorized by this log report.
