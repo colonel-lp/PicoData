@@ -1,3 +1,9 @@
+## Next build — restore the saved Downloads folder after the package change
+
+- [x] The owner confirmed on Android 13 that 0.34 creates and reopens a new preset without a storage prompt. Older presets remain visible in the file manager under the same Downloads folder but are absent from the app. The current MediaStore lookup sees files created by the new package and needs a user-granted document route to see the preview's files.
+- [ ] Add a one-time **Use saved folder** action using Android's system folder picker for `Downloads/ella-monitoring`. Persist access to the selected subfolder. Load `themes/`, `presets/` and `display-settings.json` through that access, including files saved by either installation. Keep existing filenames and contents when linking the folder. Report unavailable access or invalid JSON and preserve the files.
+- [ ] Make the old display presets usable with the current installation's Pi connection when the preview's encrypted credentials cannot be decrypted. Reload graph settings immediately after folder selection and preserve valid pending chart changes. Verify both old and newly saved presets appear, themes load, graph settings survive restart, and cancellation or revoked access can be retried. Verify the existing storage-permission flow on Android 8.1.
+
 ## Next build — Android application ID
 
 - [x] Set Ella Monitoring's Android application ID to `com.picodata.monitor` for the next build, replacing `com.colonellp.ellamonitor.preview`. Keep the Ella Monitoring app label and existing signing key.
