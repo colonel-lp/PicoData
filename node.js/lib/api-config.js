@@ -6,7 +6,7 @@ function readApiConfig(filename) {
   const input = JSON.parse(fs.readFileSync(filename, 'utf8'));
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw Error('Invalid API configuration');
   const host = input.host ?? '127.0.0.1', port = input.port ?? 8080;
-  if (net.isIP(host) !== 4 || !Number.isInteger(port) || port < 1 || port > 65535 ||
+  if (!net.isIP(host) || !Number.isInteger(port) || port < 1 || port > 65535 ||
       typeof input.token !== 'string' || !/^[a-f0-9]{64}$/.test(input.token)) throw Error('Invalid API host, port or token');
   let tls;
   if (input.tls !== undefined) {

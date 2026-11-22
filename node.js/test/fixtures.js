@@ -37,6 +37,8 @@ function fixture(seed = 0) {
   p = sensor(11, 3, 'Outside'); element[p] = [0, 65536 - 42 - seed];
   p = sensor(12, 5, 'Barometer', 2); element[p] = [0, 35000 + seed];
   p = sensor(13, 6, 'Ohm'); element[p] = [0, 4321];
+  // Legacy opaque type 10 must retain its slot before later decoded sensors.
+  p = sensor(23, 10, undefined); element[p] = [123, 456];
   p = sensor(14, 8, 'LPG', 1, { 6: [0, 2], 7: [0, 1000] }); element[p] = [450, 445 + seed];
   p = sensor(15, 9, 'Ella  ', 5, { 5: [0, 28000] });
   element[p] = [13280 + seed, 12345]; element[p + 1] = [0, 65535 - 876 - seed]; element[p + 2] = [0, 13240 + seed];

@@ -35,6 +35,30 @@ final class MdnsPacket {
         if(a.length!=b.length||bits<0||bits>a.length*8)return false;
         for(int i=0;i<bits;i++)if(((a[i/8]^b[i/8])&(1<<(7-i%8)))!=0)return false;return true;
     }
+    static final class Replies {
+        private final Set<InetAddress> addresses = new LinkedHashSet<>();
+        private long deadline;
+        private boolean ipv4, ipv6;
+
+        Replies(long now) { deadline = now + 2_000; }
+
+        void add(InetAddress address, long now) {
+            if (address instanceof Inet4Address) {
+                if (!ipv4) deadline = Math.min(deadline, now + 200);
+                ipv4 = true;
+            } else {
+                ipv6 = true;
+            }
+            if (addresses.size() < 16) addresses.add(address);
+        }
+
+        boolean waiting(long now) { return now < deadline && !(ipv4 && ipv6); }
+
+        int remaining(long now) { return (int) Math.max(1, deadline - now); }
+
+        List<InetAddress> addresses() { return new ArrayList<>(addresses); }
+    }
+
     private static final class Parser {
         final byte[] data;int at;Parser(byte[] data){this.data=data;}
         int u16()throws IOException{if(at+2>data.length)throw new IOException("Truncated mDNS packet.");return ((data[at++]&255)<<8)|(data[at++]&255);}

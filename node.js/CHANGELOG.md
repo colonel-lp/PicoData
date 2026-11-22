@@ -1,5 +1,28 @@
 # Pico base changelog
 
+## 0.7.8 — 2026-11-12
+
+- Owner-authorized recovery: restore the pre-0.7.6 Pico collection and decoding implementation from commit ddfa437. `lib/client.js`, `lib/pico-protocol.js`, `lib/sensor-list.js`, `lib/readings.js` and `bin/verify-capture.js` are byte-identical to that baseline; collector acquisition/capture event wiring is also restored.
+- Remove the new sensor-type/field validation and incoming CRC/UDP-length rejection. Restore original configuration buffering, output throttle and metadata copying. Keep the original parser bounds, sender filtering, TCP framing and offline capture-verification checks. This restores the previous compatibility behavior rather than claiming support for every unknown firmware layout.
+- Retain independent API/live-status caching, LAN request diagnostics, API bind retry, explicit IPv6 setup, logger status/error metadata, installer rollback and deployment receipts. Monitor 1.4 and Android are unchanged; no network setting, private configuration or history migration.
+- Defer the collection-path review changes (R1/R2/R3/R6). Any future stricter acceptance work must first use representative installation data and diagnostic-only validation; do not silently re-enable rejection. Tests now cover historical opaque types beyond type 10 and the restored buffered/nonblocking UDP behavior. The 0.7.7 deployment still failed; its subsequent retry reason was not supplied. Live recovery with 0.7.8 remains to verify.
+
+## 0.7.7 — 2026-11-12
+
+- Fix the 0.7.6 configuration-validation regression that rejected sensor type 10 and prevented all Pico acquisition. Restore its preceding Python/Node behavior: one opaque live-field slot, with numeric type retained and no invented measurement decoder. Keep CRC/length, duplicate-ID, required-field and other unsupported-type checks.
+- Include type 10 before decoded tank/battery/voltage entries in the shared synthetic fixture. Verify unchanged sensor positions, values and MQTT output against the original Python implementation, and exercise configuration/live/history/API paths with that entry present. The failing pre-fix regression was reproduced locally.
+- Owner evidence confirms monitor 1.4 and collector 0.7.6 installation; Pico was retrying while SBMS/API remained available. This fix's real-Pi recovery remains to verify. No monitor/Android update or configuration/history migration is required.
+
+## 0.7.6 — 2026-11-12
+
+- Reject incorrect length/CRC and ambiguous sensor configurations. Discard packets received before configuration completes; timestamp only newly received live samples. Use monotonic time for MQTT/stdout throttling across clock adjustments.
+- Cache live measurement metadata, avoid per-request live/status SQLite reads, and retain safe logger error categories and committed checkpoint state in memory. History failures remain explicit while current live data is available. Remove unnecessary metadata JSON round trips and capture hex work when recording is off.
+- Retry API bind failures every 30 seconds while acquisition/MQTT continue. Accept explicit IPv6 bind configuration without changing existing bindings.
+- Add a bounded RAM request ring (128 entries, last 32 returned), request IDs, LAN local/peer addresses, port, status, duration and disconnect indication. No credentials, query strings, bodies or raw exception messages are recorded. Authenticated diagnostics and restricted loopback health let the independent monitor correlate incidents.
+- Standalone monitor 1.4 reads current source/logger health, detects never-healthy required components after a 60-second grace and stalled checkpoints after 120 seconds, filters journal input before parsing and reduces configuration rereads. Existing STA-only/observe configuration and incident retention are preserved.
+- Restore the prior sudo rule if the Pi-control config update fails. Version the recovered copy-based updater, a sanitised historical pi-wifi reference, and a source manifest/check command. The updater's target and private parent files remain unchanged; installed standalone helpers are not silently replaced.
+- Automated validation and hardware limits are recorded in ../android/BUILD-VALIDATION.md. No Android source/version change, Pi installation, AP enabling, automatic switching, history migration or calculation/retention change.
+
 ## 0.7.5 — 2026-11-01
 
 - Add authenticated live Pi system/network readouts at GET /api/v1/pi, with one shared ten-second cache, coalesced refresh, bounded network-status commands, whole-system memory/CPU and missing/reset-aware values. Do not write resource snapshots to SQLite or change sensor collection, history, retention or MQTT.

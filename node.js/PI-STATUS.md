@@ -46,6 +46,10 @@ interface; it does not alter routing, Wi-Fi or IP addresses.
 
 ## Optional Pi Auto/Home/M1 buttons
 
+**Current STA-only setup:** keep mode controls unused. The historical helper targets
+the removed USB radio; do not enable switching until its private interface/profile
+bindings are deliberately adapted. See [deployment reference](DEPLOYMENT.md).
+
 Mode changes use one fixed POST route, disabled unless explicitly enabled locally:
 
 ```json
@@ -72,6 +76,8 @@ m1 without prompting. It enables the private API flag without printing credentia
 and preserves API file ownership/private mode. It does not change a network or
 restart a service itself. The ordinary collector updater never installs this rule.
 Its private backup is api.json.before-pi-controls; keep that file private too.
+Collector 0.7.6 restores the preceding sudo rule if writing api.json fails, on both
+installation and removal. A process/power loss is not a cross-file atomic transaction.
 
 POST /api/v1/pi/wifi requires the same Bearer header as other routes, JSON content
 type, a bounded Content-Length and exactly one mode field:

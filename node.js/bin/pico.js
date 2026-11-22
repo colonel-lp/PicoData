@@ -126,10 +126,10 @@ client.on('status', status => {
   if (status.state !== 'connected') logger?.unavailable('pico');
 });
 if (process.env.DEBUG === 'pico') client.on('diagnostic', text => console.error(text));
-let timer, stopping = false;
+let timer, apiRetryTimer, stopping = false;
 async function stop() {
   if (stopping) return;
-  stopping = true; clearTimeout(timer);
+  stopping = true; clearTimeout(timer); clearTimeout(apiRetryTimer);
   await api?.close();
   await client.stop();
   sbms?.stop();
@@ -140,13 +140,21 @@ async function stop() {
 process.on('SIGINT', stop); process.on('SIGTERM', stop);
 recording?.on('error', err => { console.error('Recording failed:', err.message); process.exitCode = 1; stop(); });
 if (duration !== undefined) timer = setTimeout(stop, duration * 1000);
-async function start() {
-  if (api) {
-    try { await api.start(); }
-    catch { console.error('API listen failed. Check its port, bind address and TLS configuration.'); process.exitCode = 1; await stop(); return; }
+async function startApi() {
+  if (!api || stopping) return;
+  try {
+    await api.start();
     if (stopping) { await api.close(); return; }
     console.error(new Date().toISOString(), JSON.stringify({source:'api',state:'listening'}));
+  } catch (error) {
+    if (stopping) return;
+    const code = typeof error.code === 'string' && /^[A-Z0-9_]{1,64}$/.test(error.code) ? error.code : 'LISTEN_ERROR';
+    console.error(new Date().toISOString(), JSON.stringify({source:'api',state:'retrying',code}));
+    apiRetryTimer = setTimeout(startApi, 30000);
   }
+}
+async function start() {
+  startApi();
   await client.start();
 }
 start().catch(err => { console.error(err.message); process.exitCode = 1; stop(); });

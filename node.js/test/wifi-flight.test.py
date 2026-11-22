@@ -43,6 +43,27 @@ def add_health(recorder, at, api=True):
 
 
 class Windows(unittest.TestCase):
+    def test_required_component_fails_after_grace_without_success_baseline(self):
+        checks = w.LearnedChecks()
+        self.assertIsNone(checks.check('local-api', False, 0, required=True))
+        self.assertIsNone(checks.check('local-api', False, 59, required=True))
+        self.assertEqual(checks.check('local-api', False, 60, required=True), 0)
+        self.assertIsNone(checks.check('optional-peer', False, 90))
+
+    def test_health_reads_existing_failure_with_bounded_body(self):
+        c = {**C, 'local_api': {'host': '127.0.0.1', 'port': 8080, 'scheme': 'http'}}
+        health = {'sources': {'pico': {'fresh': False, 'state': 'stale'}},
+                  'logging': {'state': 'failed', 'savedAt': None}}
+        with patch.object(w.http.client, 'HTTPConnection') as factory:
+            response = factory.return_value.getresponse.return_value
+            response.status = 200
+            response.read.return_value = json.dumps({'health': health, 'requests': []}).encode()
+            self.assertEqual(w.local_api_sample(c)['health'], health)
+            response.read.assert_called_with(65537)
+            response.read.return_value = b'x' * 65537
+            self.assertFalse(w.local_api_sample(c)['ok'])
+
+
     def test_broker_file_follows_new_lines_and_redacts_without_replaying_startup(self):
         with fixture():
             w.BROKER_LOG.write_text('1: old fixture line\n')
@@ -310,6 +331,37 @@ class Health(unittest.TestCase):
             self.assertEqual(r.active['reasons'], ['local-api'])
             self.assertEqual(r.active['onset'], 102)
 
+    def test_preexisting_source_and_logger_faults_are_captured_after_startup_grace(self):
+        with fixture(), patch.object(w, 'default_wifi', return_value=None), \
+             patch.object(w, 'interface_sample', return_value={'present': True}), \
+             patch.object(w, 'local_api_sample', return_value={'ok': True, 'health': {
+                 'sources': {'pico': {'state': 'stale', 'fresh': False}, 'sbms': {'state': 'disabled'}},
+                 'logging': {'state': 'failed', 'savedAt': None}}}):
+            now = [0.0]
+            r = w.FlightRecorder(C, lambda: now[0])
+            r._slow_sample = lambda unused: None
+            for at in range(61):
+                now[0] = at
+                r.sample()
+            saved = w.read_fault(next(w.ARCHIVE.glob('incident-*.json.gz')))
+            self.assertIn('collector-source:pico', saved['reasons'])
+            self.assertIn('collector-logging', saved['reasons'])
+            self.assertNotIn('collector-source:sbms', saved['reasons'])
+
+    def test_stalled_save_progress_is_captured_with_fresh_sources(self):
+        with fixture(), patch.object(w, 'default_wifi', return_value=None), \
+             patch.object(w, 'interface_sample', return_value={'present': True}), \
+             patch.object(w, 'local_api_sample', return_value={'ok': True, 'health': {
+                 'sources': {'pico': {'state': 'connected', 'fresh': True}},
+                 'logging': {'state': 'started', 'savedAt': 'unchanged'}}}):
+            now = [0.0]
+            r = w.FlightRecorder(C, lambda: now[0])
+            r._slow_sample = lambda unused: None
+            for at in range(123):
+                now[0] = at
+                r.sample()
+            self.assertIn('collector-save-progress', r.active['reasons'])
+
     def test_malformed_and_symlink_archives_are_refused(self):
         with fixture():
             w.mkdir(w.ARCHIVE)
@@ -335,6 +387,9 @@ class Health(unittest.TestCase):
                 found = w.discover_local_api()
             self.assertEqual(found, {'host': '127.0.0.1', 'port': 9876, 'scheme': 'http'})
             self.assertNotIn(secret, json.dumps(found))
+            config.write_text(json.dumps({'host': '::', 'port': 9876, 'token': secret}))
+            with patch.object(w, 'run', return_value={'code': 0, 'text': str(script) + ';'}):
+                self.assertEqual(w.discover_local_api()['host'], '::1')
             config.write_text(json.dumps({'host': '0.0.0.0', 'port': 9876, 'token': secret, 'tls': {'key': 'private.pem'}}))
             with patch.object(w, 'run', return_value={'code': 0, 'text': str(script) + ';'}):
                 self.assertEqual(w.discover_local_api()['scheme'], 'tcp')

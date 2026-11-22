@@ -40,6 +40,8 @@ class HistoryStore {
         if (name) this.name(m.id, name, Date.now(), this.db.prepare('SELECT source_name FROM metrics WHERE id=?').get(m.id).source_name);
       }
       this.prepareBattery(version);
+      this.savedAt = this.db.prepare("SELECT value FROM meta WHERE key='savedAt'").get()?.value ?? null;
+      this.clockSteps = Number(this.db.prepare("SELECT value FROM meta WHERE key='clockSteps'").get()?.value || 0);
       this.getRow = this.db.prepare('SELECT data FROM history WHERE metric_id=? AND resolution=? AND start_ms=?');
       this.putRow = this.db.prepare('INSERT INTO history VALUES(?,?,?,?,?) ON CONFLICT(metric_id,resolution,start_ms) DO UPDATE SET end_ms=excluded.end_ms,data=excluded.data');
       this.getBattery = this.db.prepare('SELECT data FROM battery_history WHERE resolution=? AND start_ms=?');
@@ -137,8 +139,10 @@ class HistoryStore {
         (resolution='minute' AND end_ms<=?) OR
         (resolution='hour' AND end_ms<=CASE WHEN metric_id IN (SELECT id FROM metrics WHERE json_extract(definition,'$.kind') IN ('temperature','barometer')) THEN ? ELSE ? END)`)
         .run(time - 86400000, cutoff, time - 15 * 86400000);
-      this.db.prepare("INSERT OR REPLACE INTO meta VALUES('savedAt',?)").run(new Date(time).toISOString());
+      const savedAt = new Date(time).toISOString();
+      this.db.prepare("INSERT OR REPLACE INTO meta VALUES('savedAt',?)").run(savedAt);
       this.db.exec('COMMIT');
+      this.savedAt = savedAt;
     } catch (err) { this.db.exec('ROLLBACK'); throw err; }
   }
   close() {

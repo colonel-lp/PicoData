@@ -24,7 +24,7 @@ final class ConnectionFaultStore {
     ConnectionFaultStore(File folder,String version,LongSupplier clock){
         this.folder=folder;this.version=version;this.clock=clock;
         worker=Executors.newSingleThreadScheduledExecutor(r->{Thread t=new Thread(r,"connection-faults");t.setDaemon(true);return t;});
-        worker.execute(()->{try{prepare();for(File f:files(true))if(f.getName().endsWith(".pending")){String text=read(f).replace("state=collecting","state=interrupted (process/activity ended)");write(new File(folder,f.getName().replace(".pending","")),text);Files.deleteIfExists(f.toPath());}prune();}catch(Exception e){failed(e);}});
+        worker.execute(()->{try{prepare();for(File f:files())if(f.getName().endsWith(".pending")){String text=read(f).replace("state=collecting","state=interrupted (process/activity ended)");write(new File(folder,f.getName().replace(".pending","")),text);Files.deleteIfExists(f.toPath());}}catch(Exception e){failed(e);}});
         worker.scheduleAtFixedRate(this::checkpoint,10,10,TimeUnit.SECONDS);
     }
     synchronized void foreground(boolean value){foreground=value;if(!value){firstGood=-1;finish("interrupted (app left foreground)");}}
@@ -50,7 +50,7 @@ final class ConnectionFaultStore {
             .append("\nreason=").append(w.reason).append("\nrelated_reasons=").append(w.reasons).append("\nonset_monotonic_ms=").append(w.onset)
             .append("\nconfirmed_monotonic_ms=").append(w.confirmed).append("\nwindow=60 seconds before and after observed onset")
             .append("\npre_window_available=").append(w.preComplete).append("\ncontext_truncated=").append(w.truncated)
-            .append("\nNo addresses, Wi-Fi names, headers, credentials or exception messages.\n\n");
+            .append("\nIncludes LAN destinations and peer addresses. Wi-Fi names, headers, credentials and exception messages are omitted.\n\n");
         int bytes=out.toString().getBytes(StandardCharsets.UTF_8).length;boolean limited=w.truncated;
         for(String line:w.lines){int n=line.getBytes(StandardCharsets.UTF_8).length+1;if(bytes+n>LIMIT-100){out.append("[remaining context omitted at file-size limit]\n");limited=true;break;}out.append(line).append('\n');bytes+=n;}
         return limited?out.toString().replace("context_truncated=false","context_truncated=true"):out.toString();
@@ -66,8 +66,9 @@ final class ConnectionFaultStore {
         try{write(destination,text);}catch(Exception e){failed(e);}
     }
     private synchronized void finish(String state){
-        if(active==null)return;Window w=active;active=null;String data=render(w,state);
-        worker.execute(()->{try{write(new File(folder,w.name),data);Files.deleteIfExists(new File(folder,w.name+".pending").toPath());prune();}catch(Exception e){failed(e);}});
+        if(active==null)return;Window w=active;active=null;
+        String data=render(w,clock.getAsLong()>=w.end?"complete":state);
+        worker.execute(()->{try{write(new File(folder,w.name),data);Files.deleteIfExists(new File(folder,w.name+".pending").toPath());}catch(Exception e){failed(e);}});
     }
     synchronized void captureCrash(long onset,List<Entry> history){
         if(closed)return;
@@ -94,12 +95,10 @@ final class ConnectionFaultStore {
             catch(AtomicMoveNotSupportedException e){Files.move(temporary,file.toPath(),StandardCopyOption.REPLACE_EXISTING);}
         }finally{Files.deleteIfExists(temporary);}
     }
-    private File[] files(boolean includePending){
-        File[] files=folder.listFiles(f->f.isFile()&&!Files.isSymbolicLink(f.toPath())&&f.getName().matches("fault-[0-9]+-[0-9]+\\.log"+(includePending?"(?:\\.pending)?":"")));
+    File[] files(){
+        File[] files=folder.listFiles(f->f.isFile()&&!Files.isSymbolicLink(f.toPath())&&f.getName().matches("fault-[0-9]+-[0-9]+\\.log(?:\\.pending)?"));
         if(files==null)return new File[0];Arrays.sort(files,(a,b)->Long.compare(b.lastModified(),a.lastModified()));return files;
     }
-    File[] files(){return files(true);}
-    private void prune()throws IOException{File[] f=files(false);for(int i=5;i<f.length;i++)Files.deleteIfExists(f[i].toPath());}
     String read(File file)throws IOException{
         if(!file.getCanonicalFile().getParentFile().equals(folder.getCanonicalFile())||Files.isSymbolicLink(file.toPath())||file.length()>LIMIT)throw new IOException("Invalid fault file");
         try(InputStream in=new FileInputStream(file);ByteArrayOutputStream out=new ByteArrayOutputStream()){

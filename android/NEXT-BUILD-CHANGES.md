@@ -1,3 +1,74 @@
+## Next build — Android application ID
+
+- [x] Set Ella Monitoring's Android application ID to `com.picodata.monitor` for the next build, replacing `com.colonellp.ellamonitor.preview`. Keep the Ella Monitoring app label and existing signing key.
+- [x] Document the first separate install, public settings files and private data in the Android README. Check application ID and dynamic update provider authority in source.
+- [ ] Verify packaged identity, first install, supported settings restoration and subsequent update checks on the device.
+
+## Next build — launcher icon size
+
+- [x] Set Ella Monitoring's launcher drawable size to match [Bluetooth Controls' 48 × 48 dp launcher drawable](https://github.com/colonel-lp/Joying-Bluetooth-Fix/blob/53678c1722a937b9dc11623c9acb4035e2c13388/app/src/main/res/drawable/bluetooth_icon.xml). Keep Ella's artwork and use a separate launcher drawable so the notification retains its art.
+- [ ] Compare both rendered icons on the Joying launcher.
+
+## Next build — recurring hostname connection failures
+
+- [x] Implement the queued local-hostname resolver and route-recovery fix. Reproduce the IPv6-only cached answer against an IPv4-only API and verify recovery on the next request without waiting for the cache to expire. Host checks exercise shared lookups for live, catalogue, status and history, a working pooled connection during an IPv6-only answer, and a new connection that refreshes that answer following refusal. Private logs record the candidate and peer details needed to check actual field behavior.
+- [x] Host checks verify that an interrupted record retains recovery events when the app leaves foreground before the end of the capture window.
+- [ ] Verify sustained foreground operation through repeated resolver-cache refreshes on the Joying and phone.
+
+## Pending Android local-hostname resolution fix — 2026-11-13
+
+Investigation of 0.33 fault evidence and source f5cccaa. Android changes implemented in 0.34 / build 16.
+
+- [x] Evidence: successful live requests coexist with separate IPv6 connection refusals on metadata/status requests. Four final live requests then fail quickly with IPv6 connect refusal, the display expires at its existing three-second deadline, and a later request succeeds after an IPv6 attempt failure. About 5.6 seconds separate the last success and recovery; display expiry lasts about 2.5 seconds. Success entries omit connected family/address, so the successful route is not proved by this log.
+- [x] Concrete source flaw: LocalNameResolver.multicast returns after the first nonempty matching response, although the query requests both A and AAAA. A matching IPv6-only reply can therefore finish lookup before a separate IPv4 reply arrives. lookup caches that partial set for 15 seconds; sorting IPv4 first cannot help when IPv4 is absent. PiControls shares this resolver across API clients, while each NetworkTransport has its own pool. Concurrent misses are not coalesced. This can leave an existing usable connection serving live data while fresh connections receive a partial address set.
+- [x] Timing is consistent with the hypothesis: metadata/status failures occur roughly 15 seconds before the successful recovery. Cache contents/age, resolved address lists and successful peer family are not in the supplied log, so this is a strong candidate explanation rather than proof of that exact cache sequence. The owner subsequently confirmed the API listener accepts IPv4 only.
+- [x] Fix bounded multi-response A/AAAA collection and coordinate concurrent lookups. Validate separate reply order, delayed/missing families, IPv6-only availability, cache expiry, cancellation/network-generation changes and a refused IPv6 endpoint with working IPv4. Preserve network scoping, TLS hostname verification, bounded deadlines and genuinely stale-data expiry. Assess refresh after exhausting unusable cached routes; do not simply extend the display timeout or repeatedly return the same failed address set.
+- [x] Extend the LAN diagnostics with resolved candidate families/addresses, cache age/source and actual successful peer address/family. Preserve request IDs, final outcomes versus recovered attempts, private bounds and credential redaction. GET connection recovery is already enabled in 0.33; retry configuration alone does not supply a missing IPv4 candidate.
+- [x] Owner confirmed the installed Pi API listener accepts IPv4 only. Include an IPv4-only API in the queued Android resolver regression checks.
+- [ ] Correlate with independent Pi incident evidence if available. Do not change the restored Pico acquisition/decoding path to address this Android hostname issue.
+
+## Authorized collection-path restoration — 0.7.8, 2026-11-12
+
+Owner explicitly requests restoring the pre-0.7.6 collection/decoding behavior after 0.7.7 still failed to acquire Pico data. This supersedes the collection-path completion claims in the 0.7.6/0.7.7 entries below.
+
+- [x] Restore client, protocol, sensor mapping, decoding and capture verification exactly from pre-0.7.6 commit ddfa437, plus original collector acquisition/capture wiring. Remove new acceptance gates; restore original buffering/throttling/copying behavior. No further one-type-at-a-time allowlist patch.
+- [x] Retain independent API, health-monitor, logging-diagnostic, installer and deployment improvements. Publish collector 0.7.8 with source equality/manifest checks and compatibility regressions for multiple legacy opaque types and subsequent decoded values. Monitor remains 1.4; Android unchanged.
+- [ ] R1/R2/R3/R6 collection-path changes are deferred, not completed. Future stricter validation must first run diagnostically without rejecting data, using representative configuration/captures from the installation. Reintroducing acquisition changes needs separate authorization after compatibility evidence.
+- [x] Owner confirms 0.7.8 installed and both Pico/SBMS connected and fresh, with monitor 1.4 active in STA-only/observe mode and its journal reader running. This is owner-supplied live recovery evidence, not a host-test inference.
+- [x] Owner supplied a later 0.7.8 status with both sources fresh and an advanced savedAt, confirming history checkpointing with no logger failure.
+- [ ] Sustained stability remains to verify. The original monitoring event and the unsupplied 0.7.7 retry reason remain unproven.
+
+## Immediate Pico compatibility correction — 0.7.7, 2026-11-12
+
+- [x] Owner logs identify the introduced 0.7.6 failure: `Unsupported Pico sensor type 10`, causing configuration retries and no Pico readings while SBMS/API work. Correct the overly restrictive type list by restoring the preceding one-slot opaque type-10 handling. Preserve other validation and all existing calculations/history.
+- [x] Reproduce the rejection before fixing it; include type 10 in shared synthetic configuration/packets before later decoded sensors and compare positions, values and MQTT JSON with the original Python implementation. Publish collector 0.7.7; no Android/monitor version change.
+- [ ] Owner runs the existing updater and confirms fresh Pico/SBMS readings and advancing savedAt. Source tests do not establish live recovery or explain the earlier unrelated monitoring incident.
+
+## Pi review improvements — implemented source 2026-11-12
+
+Owner authorized immediate Pi changes. Collector **0.7.6**, standalone monitor
+**1.4**; no Android build or network migration. Live Pi installation/verification
+remain pending. See [review](../docs/PI-CODE-REVIEW-2026-11-12.md) and
+[deployment](../node.js/DEPLOYMENT.md).
+
+- [x] Android fault logs — include the configured LAN destination/hostname and actual attempted or connected LAN IP and port when available. Include old/new destinations on endpoint changes. Distinguish resolution failure, attempted connection and established peer. This updates the address-redaction requirement in the November 11 list below. Pi-side correlation is available and Android logging is implemented in 0.34.
+- [x] R1/R2 — discard pre-configuration packets rather than falsely refreshing their receipt times; use monotonic output throttling.
+- [x] R3/R6 — enforce supported frame length/CRC and validate required configuration fields, unique IDs and known sensor widths.
+- [x] R4/R5 — detect required-component startup failures after a grace; read current source/logger health and checkpoint progress, including faults predating monitor startup.
+- [x] R7 — cache live metadata and committed logger state; keep live/status responsive to current data when history queries fail.
+- [x] R8 — restore prior sudo policy when the private API config update fails during install/removal.
+- [x] Bounded LAN request correlation, conditional capture work, shallow scalar-metadata copies, reduced monitor parsing/config overhead, safe logger error categories, API bind retry and explicit IPv6 configuration/probing.
+- [x] Recover the existing Pi-local updater and historical pi-wifi source from earlier chat; preserve updater paths/behavior, keep private profiles out of Git and old USB switching disabled. Add source manifest/deployment check. Installed private helper equality remains unverified.
+- [ ] Future pi-wifi adaptation, only when separately requested: private explicit interface/profile/SSID bindings, escaped-SSID parsing and confirmed manual-switch outcome. Historical USB switching remains disabled.
+- [ ] Owner updates collector/monitor, confirms fresh sources/checkpoint progress, and verifies installation hashes and next incident evidence. Measure Pi load/latency before any larger architectural optimization; host tests do not establish physical performance or the previous event's cause.
+
+## Next build — keep and share saved Android fault logs — 2026-11-11
+
+- [x] Stop automatically deleting completed Android fault logs on startup or when saving a new fault. Remove the five-file rollover and keep older records accessible from **Fault Logs**. Preserve app-private storage, redaction, the 256 KiB per-file bound, existing capture triggers and time windows, and pending-file recovery. Previously pruned files cannot be restored by this change.
+- [x] Add a themed **Share** button alongside **Copy** in both the live Connection diagnostics popup and the selected Saved connection fault popup. Open Android's share sheet with the same redacted text shown in the popup. Keep **Fault Logs**, **Copy** and **Close** available where they already appear.
+- [x] Verify that more than five records survive app restart and a new completed capture.
+- [ ] On Android, verify both Share buttons send the displayed text to the selected target.
+
 ## Authorized source build 0.33 — 2026-11-03
 
 Owner explicitly requested the next build and confirmed both battery formulas. Source version **0.33 / build 15**, output **Ella-monitoring-v0.33.apk**, is prepared for the owner's Android Studio build. No APK, live Pi change, collector/monitor release, logging migration or deferred Pi-mode-button repair is included.

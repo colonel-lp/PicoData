@@ -196,3 +196,16 @@ test('battery-side PV channels use fresh SBMS pack voltage and preserve zero, si
   assert.equal(pv2.netWh,0); assert.equal(pv2.values[0],0); approx(pv2.netAh,-3/3600);
   assert.equal(pv1.forwardWh,null); // Polarity remains unverified; signed totals are still valid.
 });
+
+
+test('logger failure retains a bounded storage category without exception details', t => {
+  const {logger}=setup(t);
+  const error=Object.assign(new Error('private database path and data'),{code:'ERR_SQLITE_ERROR',errcode:13});
+  logger.store.save=()=>{throw error;};
+  logger.guard(()=>logger.flush(BASE,0));
+  assert.equal(logger.failed,true);
+  assert.equal(logger.failure.code,'ERR_SQLITE_ERROR');
+  assert.equal(logger.failure.sqliteCode,13);
+  assert.equal(logger.failure.phase,'save');
+  assert.ok(!JSON.stringify(logger.failure).includes('private'));
+});

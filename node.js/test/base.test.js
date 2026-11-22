@@ -442,3 +442,83 @@ for (const logging of [false, true, 'api']) test(`simultaneous SBMS/Pico preserv
   assert.equal((await verifyCapture(capture, { comparePython: true })).ok, true);
   assert.equal(stderr.includes('test-pass'), false);
 });
+
+test('legacy opaque sensor types keep Python configuration and output compatibility', () => {
+  for (const type of [4,7,10,11,12,99]) {
+    const data=fixture();
+    const entry=Object.values(data.config).find(value=>value[0][1]===23);
+    entry[1]=[0,type];
+    const oracle=spawnSync('python3',[path.join(__dirname,'python-oracle.py'),baseline],{
+      input:JSON.stringify(data),encoding:'utf8'});
+    assert.equal(oracle.status,0,oracle.stderr);
+    const original=JSON.parse(oracle.stdout), sensors=createSensorList(data.config);
+    const oldSensors=normalized(sensors);oldSensors[19].type=14;
+    assert.deepEqual(oldSensors,original.sensorList);
+    const readings=decodeReadings(sensors,parseResponse(data.packet));
+    assert.deepEqual(normalized(formatEllaJson(readings,new Date(2026,9,7,12,34,56))),original.output);
+  }
+});
+
+test('restored live path retains buffered packets and nonblocking checksum/length behavior', async () => {
+  const client=new PicoClient({staleAfterMs:100,updateIntervalMs:0});
+  const socket=new EventEmitter(),controller=new AbortController(),data=fixture();
+  const snapshots=[];client.on('snapshot',value=>snapshots.push(value.readings));
+  const pending=client.live(socket,'127.0.0.1',createSensorList(data.config),controller.signal,
+    {msg:data.packet,info:{address:'127.0.0.1'}});
+  try {
+    assert.equal(snapshots.length,1);
+    const crc=Buffer.from(data.packet);crc[crc.length-1]^=1;
+    socket.emit('message',crc,{address:'127.0.0.1'});
+    const length=Buffer.from(data.packet);length[12]^=1;
+    socket.emit('message',length,{address:'127.0.0.1'});
+    assert.equal(snapshots.length,3);
+    assert.deepEqual(snapshots[1],snapshots[0]);
+    assert.deepEqual(snapshots[2],snapshots[0]);
+  } finally {controller.abort();await assert.rejects(pending);}
+});
+
+test('API bind conflict preserves acquisition and retries after the port is released', {timeout:45000}, async t => {
+  const sim=await simulator(t);
+  const directory=fs.mkdtempSync(path.join(os.tmpdir(),'ella-bind-retry-'));
+  t.after(()=>fs.rmSync(directory,{recursive:true,force:true}));
+  const occupied=net.createServer();
+  await new Promise(resolve=>occupied.listen(0,'127.0.0.1',resolve));
+  const port=occupied.address().port;
+  t.after(()=>occupied.close());
+  const logging=path.join(directory,'logging.json'), api=path.join(directory,'api.json');
+  fs.writeFileSync(logging,JSON.stringify({database:'history.sqlite',metrics:[
+    {id:'secondary',source:'pico',sensorId:20,sensorType:'volt',kind:'voltage'}]}));
+  fs.writeFileSync(api,JSON.stringify({host:'127.0.0.1',port,token:'c'.repeat(64)}));
+  const child=spawn(process.execPath,[path.join(__dirname,'../bin/pico.js'),'--no-mqtt','--stdout',
+    '--ip','127.0.0.1','--udp-port',String(sim.port),'--tcp-port',String(sim.port),
+    '--logging-config',logging,'--api-config',api]);
+  const exited=new Promise((resolve,reject)=>{child.on('error',reject);child.on('close',resolve);});
+  t.after(()=>{if(child.exitCode===null)child.kill('SIGKILL');});
+  let out='',err='';child.stdout.on('data',b=>out+=b);child.stderr.on('data',b=>err+=b);
+  async function until(predicate, milliseconds) {
+    const end=Date.now()+milliseconds;
+    while(!predicate()) {
+      if(child.exitCode!==null || Date.now()>end) throw Error('CLI condition not reached: '+err);
+      await new Promise(resolve=>setTimeout(resolve,50));
+    }
+  }
+  await until(()=>err.includes('EADDRINUSE') && out.includes('\n'),5000);
+  assert.equal(child.exitCode,null);
+  await new Promise(resolve=>occupied.close(resolve));
+  await until(()=>err.includes('"source":"api","state":"listening"'),35000);
+  const response=await fetch(`http://127.0.0.1:${port}/api/v1/live`,{headers:{Authorization:'Bearer '+'c'.repeat(64)}});
+  assert.equal(response.status,200);assert.equal((await response.json()).pico.fresh,true);
+  child.kill('SIGTERM');assert.equal(await exited,0);
+});
+
+
+test('legacy type 10 retains one opaque slot without shifting later sensors', () => {
+  const data=fixture(), sensors=createSensorList(data.config);
+  assert.deepEqual(sensors[23],{type:10,pos:sensors[14].pos-1});
+  const readings=decodeReadings(sensors,parseResponse(data.packet));
+  assert.deepEqual(readings[23],sensors[23]);
+  assert.equal(readings[14].remainingCapacity,44.5);
+  assert.equal(readings[15].voltage,13.24);
+  assert.equal(readings[15].current,-8.76);
+  assert.equal(readings[21].voltage,12.222);
+});

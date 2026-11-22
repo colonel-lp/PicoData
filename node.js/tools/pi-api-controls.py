@@ -68,9 +68,6 @@ def install(user, api_file, enabled=True):
                 raise ValueError('Sudo rule validation failed; no configuration changed')
         finally:
             Path(temporary).unlink(missing_ok=True)
-        atomic(RULE, text, 0o440, (0, 0))
-    else:
-        RULE.unlink(missing_ok=True)
     backup = api_file.with_name(api_file.name + '.before-pi-controls')
     if not backup.exists():
         # Preserve the pre-change config locally, exclusively, with private mode.
@@ -79,7 +76,19 @@ def install(user, api_file, enabled=True):
             os.fchown(out.fileno(), info.st_uid, info.st_gid)
             out.write(original)
     pi['allowWifiControl'] = enabled
-    atomic(api_file, json.dumps(data, indent=2) + '\n', 0o600, (info.st_uid, info.st_gid))
+    previous_rule = RULE.read_text() if RULE.exists() else None
+    try:
+        if enabled:
+            atomic(RULE, text, 0o440, (0, 0))
+        else:
+            RULE.unlink(missing_ok=True)
+        atomic(api_file, json.dumps(data, indent=2) + '\n', 0o600, (info.st_uid, info.st_gid))
+    except OSError:
+        if previous_rule is None:
+            RULE.unlink(missing_ok=True)
+        else:
+            atomic(RULE, previous_rule, 0o440, (0, 0))
+        raise
     print('Pi API mode controls ' + ('enabled' if enabled else 'disabled') + '; private API credentials retained.')
     print('Restart pico-mqtt.service once to read the updated configuration.')
 
