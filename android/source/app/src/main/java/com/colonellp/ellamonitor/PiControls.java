@@ -118,14 +118,15 @@ final class PiControls {
             String base=host==null||saved.optString("address").isEmpty()?"":PiNetworkConfig.replaceApiHost(saved.optString("address"),host);
             if(reconnect||!reason.equals("unchanged")||!base.equals(selectedBase)){
                 String trigger=reconnect?reconnectReason:reason.equals("unchanged")?"endpoint_changed":reason;
+                String previous=selectedBase;
                 reconnect=false;invalidate();endpointHost=host;selectingConnection=saved;
-                a.connectionDiagnostics().network(trigger,generation,handle,!ssid.isEmpty());
+                a.connectionDiagnostics().network(trigger,generation,handle,!ssid.isEmpty(),previous,base);
                 error=found==null?"Join a configured Wi-Fi network.":configured()?"Reading Pi API status…":"Set the Pi API address/token in Settings.";
                 a.pauseForPiNetwork();
                 if(found!=null&&configured()&&host!=null)a.selectPiEndpoint(host);
             }
         }catch(Exception e){
-            if(target!=null){invalidate();a.pauseForPiNetwork();a.connectionDiagnostics().network("invalid_settings",generation,found==null?-1:found.getNetworkHandle(),!ssid.isEmpty());}
+            if(target!=null){String previous=selectedBase;invalidate();a.pauseForPiNetwork();a.connectionDiagnostics().network("invalid_settings",generation,found==null?-1:found.getNetworkHandle(),!ssid.isEmpty(),previous,"");}
             reconnect=true;reconnectReason="settings_changed";error="Check the saved Pi API connection.";
         }
         if(!pendingSsid.isEmpty()){if(ssid.equals(pendingSsid)){pendingSsid="";lastAttempt=0;}else if(SystemClock.elapsedRealtime()>pendingUntil){pendingSsid="";error="Requested Wi-Fi network was not connected. Open Wi-Fi settings and retry.";}}
@@ -226,15 +227,42 @@ final class PiControls {
         Dialog d=remember(new Dialog(a));LinearLayout panel=a.styledDialogRoot();panel.addView(a.styledTitle(title));
         ScrollView scroll=new ScrollView(a);TextView text=a.uiText(details,a.dialogTextSize(11.5f),a.getThemeConfig().text);text.setTextIsSelectable(true);scroll.addView(text);panel.addView(scroll,new LinearLayout.LayoutParams(-1,a.dialogDp(210)));
         LinearLayout row=a.row();TextView copy=a.dialogButton("COPY",a.getThemeConfig().controls),close=a.dialogButton("CLOSE",a.getThemeConfig().border);
-        add(row,copy,0,a.dialogDp(35));if(saved){TextView faults=a.dialogButton("FAULT LOGS",a.getThemeConfig().controls);add(row,faults,a.dialogDp(6),a.dialogDp(35));faults.setOnClickListener(v->{d.dismiss();showFaultLogs();});}add(row,close,a.dialogDp(6),a.dialogDp(35));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,a.dialogDp(6),0,0);panel.addView(row,lp);
+        add(row,copy,0,a.dialogDp(35));
+        TextView share=a.dialogButton("SHARE",a.getThemeConfig().controls);
+        add(row,share,a.dialogDp(6),a.dialogDp(35));
+        share.setOnClickListener(v->{
+            Intent send=new Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT,details);
+            try{a.startActivity(Intent.createChooser(send,"Share connection diagnostics"));}
+            catch(ActivityNotFoundException e){a.toast("No app can share this log.");}
+        });
+        if(saved){TextView faults=a.dialogButton("FAULT LOGS",a.getThemeConfig().controls);add(row,faults,a.dialogDp(6),a.dialogDp(35));faults.setOnClickListener(v->{d.dismiss();showFaultLogs();});}add(row,close,a.dialogDp(6),a.dialogDp(35));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,-2);lp.setMargins(0,a.dialogDp(6),0,0);panel.addView(row,lp);
         copy.setOnClickListener(v->{android.content.ClipboardManager clipboard=(android.content.ClipboardManager)a.getSystemService(Context.CLIPBOARD_SERVICE);if(clipboard!=null)clipboard.setPrimaryClip(ClipData.newPlainText("Connection diagnostics",details));a.toast("Diagnostics copied.");});close.setOnClickListener(v->d.dismiss());a.showStyledDialog(d,panel,650);
     }
     private void showFaultLogs(){
         java.io.File[] files=a.connectionDiagnostics().savedFaults();if(files.length==0){a.toast("No saved connection faults.");return;}
         Dialog d=remember(new Dialog(a));LinearLayout panel=a.styledDialogRoot();panel.addView(a.styledTitle("Saved connection faults"));
-        ScrollView scroll=new ScrollView(a);LinearLayout list=a.column();scroll.addView(list);
-        for(java.io.File file:files){String title=java.time.Instant.ofEpochMilli(file.lastModified()).toString()+(file.getName().endsWith(".pending")?" (collecting)":"");TextView button=a.dialogButton(title,a.getThemeConfig().controls);LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,a.dialogDp(35));p.setMargins(0,list.getChildCount()==0?0:a.dialogDp(6),0,0);list.addView(button,p);button.setOnClickListener(v->{try{String text=a.connectionDiagnostics().savedFault(file);d.dismiss();showDiagnosticText("Saved connection fault",text,false);}catch(Exception e){a.toast("Fault file unavailable. Reopen the list.");}});}
-        panel.addView(scroll,new LinearLayout.LayoutParams(-1,a.dialogDp(210)));TextView close=a.dialogButton("CLOSE",a.getThemeConfig().border);LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,a.dialogDp(35));p.setMargins(0,a.dialogDp(6),0,0);panel.addView(close,p);close.setOnClickListener(v->d.dismiss());a.showStyledDialog(d,panel,650);
+        ListView list=new ListView(a);
+        list.setDivider(null);
+        list.setDividerHeight(a.dialogDp(6));
+        list.setAdapter(new BaseAdapter(){
+            @Override public int getCount(){return files.length;}
+            @Override public java.io.File getItem(int position){return files[position];}
+            @Override public long getItemId(int position){return position;}
+            @Override public View getView(int position,View recycled,ViewGroup parent){
+                java.io.File file=getItem(position);
+                String title=java.time.Instant.ofEpochMilli(file.lastModified()).toString()+
+                    (file.getName().endsWith(".pending")?" (collecting)":"");
+                TextView button=recycled instanceof TextView?(TextView)recycled:a.dialogButton(title,a.getThemeConfig().controls);
+                button.setText(title);
+                button.setLayoutParams(new AbsListView.LayoutParams(-1,a.dialogDp(35)));
+                button.setOnClickListener(v->{try{
+                    String text=a.connectionDiagnostics().savedFault(file);d.dismiss();
+                    showDiagnosticText("Saved connection fault",text,false);
+                }catch(Exception e){a.toast("Fault file unavailable. Reopen the list.");}});
+                return button;
+            }
+        });
+        panel.addView(list,new LinearLayout.LayoutParams(-1,a.dialogDp(210)));TextView close=a.dialogButton("CLOSE",a.getThemeConfig().border);LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,a.dialogDp(35));p.setMargins(0,a.dialogDp(6),0,0);panel.addView(close,p);close.setOnClickListener(v->d.dismiss());a.showStyledDialog(d,panel,650);
     }
     private void editSsh(){
         Dialog d=remember(new Dialog(a));LinearLayout panel=a.styledDialogRoot();panel.addView(a.styledTitle("ConnectBot connection"));

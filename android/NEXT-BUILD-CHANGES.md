@@ -1,26 +1,29 @@
 ## Next build — Android application ID
 
-- [ ] Set Ella Monitoring's Android application ID to `com.picodata.monitor` for the next build, replacing `com.colonellp.ellamonitor.preview`. Keep the Ella Monitoring app label and existing signing key.
-- [ ] Verify the packaged application ID, update provider authority and update checks from the new package. Document the one-time separate install and how to export and restore supported settings and presets before removing the preview. Private app data, including saved API credentials and fault logs, does not carry over automatically.
+- [x] Set Ella Monitoring's Android application ID to `com.picodata.monitor` for the next build, replacing `com.colonellp.ellamonitor.preview`. Keep the Ella Monitoring app label and existing signing key.
+- [x] Document the first separate install, public settings files and private data in the Android README. Check application ID and dynamic update provider authority in source.
+- [ ] Verify packaged identity, first install, supported settings restoration and subsequent update checks on the device.
 
 ## Next build — launcher icon size
 
-- [ ] Match Ella Monitoring's launcher icon size to [Bluetooth Controls' 48 × 48 dp launcher drawable](https://github.com/colonel-lp/Joying-Bluetooth-Fix/blob/53678c1722a937b9dc11623c9acb4035e2c13388/app/src/main/res/drawable/bluetooth_icon.xml). Keep Ella's artwork, adjust its visible bounds and padding as needed, and verify both icons side by side on the Joying launcher. Preserve the notification icon's appearance if it shares the launcher asset.
+- [x] Set Ella Monitoring's launcher drawable size to match [Bluetooth Controls' 48 × 48 dp launcher drawable](https://github.com/colonel-lp/Joying-Bluetooth-Fix/blob/53678c1722a937b9dc11623c9acb4035e2c13388/app/src/main/res/drawable/bluetooth_icon.xml). Keep Ella's artwork and use a separate launcher drawable so the notification retains its art.
+- [ ] Compare both rendered icons on the Joying launcher.
 
 ## Next build — recurring hostname connection failures
 
-- [ ] Prioritize the queued local-hostname resolver and route-recovery fix. Include a synthetic regression in which an IPv6-only cached answer keeps failing against an IPv4-only API for the cache lifetime, then refresh supplies a reachable IPv4 route. Exercise concurrent live, catalogue, status and history clients, working pooled connections and new connections, and repeated cache cycles. Record failed and recovered requests with resolved candidates and cache provenance to verify the actual route sequence.
-- [ ] Verify diagnostic state semantics when connectivity recovers before the capture window ends and the app then leaves the foreground. Retain the honest interrupted-window marker and the recovery events. Verify sustained foreground operation through repeated resolver-cache refreshes on the Joying and phone.
+- [x] Implement the queued local-hostname resolver and route-recovery fix. Reproduce the IPv6-only cached answer against an IPv4-only API and verify recovery on the next request without waiting for the cache to expire. Host checks exercise shared lookups for live, catalogue, status and history, a working pooled connection during an IPv6-only answer, and a new connection that refreshes that answer following refusal. Private logs record the candidate and peer details needed to check actual field behavior.
+- [x] Host checks verify that an interrupted record retains recovery events when the app leaves foreground before the end of the capture window.
+- [ ] Verify sustained foreground operation through repeated resolver-cache refreshes on the Joying and phone.
 
 ## Pending Android local-hostname resolution fix — 2026-11-13
 
-Read-only investigation of owner-supplied 0.33 fault evidence and source f5cccaa. No new build, application edit, collector change or network setting is authorized by this log report.
+Investigation of 0.33 fault evidence and source f5cccaa. Android changes implemented in 0.34 / build 16.
 
 - [x] Evidence: successful live requests coexist with separate IPv6 connection refusals on metadata/status requests. Four final live requests then fail quickly with IPv6 connect refusal, the display expires at its existing three-second deadline, and a later request succeeds after an IPv6 attempt failure. About 5.6 seconds separate the last success and recovery; display expiry lasts about 2.5 seconds. Success entries omit connected family/address, so the successful route is not proved by this log.
 - [x] Concrete source flaw: LocalNameResolver.multicast returns after the first nonempty matching response, although the query requests both A and AAAA. A matching IPv6-only reply can therefore finish lookup before a separate IPv4 reply arrives. lookup caches that partial set for 15 seconds; sorting IPv4 first cannot help when IPv4 is absent. PiControls shares this resolver across API clients, while each NetworkTransport has its own pool. Concurrent misses are not coalesced. This can leave an existing usable connection serving live data while fresh connections receive a partial address set.
 - [x] Timing is consistent with the hypothesis: metadata/status failures occur roughly 15 seconds before the successful recovery. Cache contents/age, resolved address lists and successful peer family are not in the supplied log, so this is a strong candidate explanation rather than proof of that exact cache sequence. The owner subsequently confirmed the API listener accepts IPv4 only.
-- [ ] Fix bounded multi-response A/AAAA collection and coordinate concurrent lookups. Validate separate reply order, delayed/missing families, IPv6-only availability, cache expiry, cancellation/network-generation changes and a refused IPv6 endpoint with working IPv4. Preserve network scoping, TLS hostname verification, bounded deadlines and genuinely stale-data expiry. Assess refresh after exhausting unusable cached routes; do not simply extend the display timeout or repeatedly return the same failed address set.
-- [ ] Extend the already-requested LAN diagnostics with resolved candidate families/addresses, cache age/source and actual successful peer address/family. Preserve request IDs, final outcomes versus recovered attempts, private bounds and credential redaction. GET connection recovery is already enabled in 0.33; retry configuration alone does not supply a missing IPv4 candidate.
+- [x] Fix bounded multi-response A/AAAA collection and coordinate concurrent lookups. Validate separate reply order, delayed/missing families, IPv6-only availability, cache expiry, cancellation/network-generation changes and a refused IPv6 endpoint with working IPv4. Preserve network scoping, TLS hostname verification, bounded deadlines and genuinely stale-data expiry. Assess refresh after exhausting unusable cached routes; do not simply extend the display timeout or repeatedly return the same failed address set.
+- [x] Extend the LAN diagnostics with resolved candidate families/addresses, cache age/source and actual successful peer address/family. Preserve request IDs, final outcomes versus recovered attempts, private bounds and credential redaction. GET connection recovery is already enabled in 0.33; retry configuration alone does not supply a missing IPv4 candidate.
 - [x] Owner confirmed the installed Pi API listener accepts IPv4 only. Include an IPv4-only API in the queued Android resolver regression checks.
 - [ ] Correlate with independent Pi incident evidence if available. Do not change the restored Pico acquisition/decoding path to address this Android hostname issue.
 
@@ -48,7 +51,7 @@ Owner authorized immediate Pi changes. Collector **0.7.6**, standalone monitor
 remain pending. See [review](../docs/PI-CODE-REVIEW-2026-11-12.md) and
 [deployment](../node.js/DEPLOYMENT.md).
 
-- [ ] Android fault logs — include the configured LAN destination/hostname and actual attempted or connected LAN IP and port when available. Include old/new destinations on endpoint changes. Distinguish resolution failure, attempted connection and established peer. This updates the address-redaction requirement in the November 11 list below. Pi-side correlation is now implemented; Android logging remains pending.
+- [x] Android fault logs — include the configured LAN destination/hostname and actual attempted or connected LAN IP and port when available. Include old/new destinations on endpoint changes. Distinguish resolution failure, attempted connection and established peer. This updates the address-redaction requirement in the November 11 list below. Pi-side correlation is available and Android logging is implemented in 0.34.
 - [x] R1/R2 — discard pre-configuration packets rather than falsely refreshing their receipt times; use monotonic output throttling.
 - [x] R3/R6 — enforce supported frame length/CRC and validate required configuration fields, unique IDs and known sensor widths.
 - [x] R4/R5 — detect required-component startup failures after a grace; read current source/logger health and checkpoint progress, including faults predating monitor startup.
@@ -61,9 +64,10 @@ remain pending. See [review](../docs/PI-CODE-REVIEW-2026-11-12.md) and
 
 ## Next build — keep and share saved Android fault logs — 2026-11-11
 
-- [ ] Stop automatically deleting completed Android fault logs on startup or when saving a new fault. Remove the five-file rollover and keep older records accessible from **Fault Logs**. Preserve app-private storage, redaction, the 256 KiB per-file bound, existing capture triggers and time windows, and pending-file recovery. Previously pruned files cannot be restored by this change.
-- [ ] Add a themed **Share** button alongside **Copy** in both the live Connection diagnostics popup and the selected Saved connection fault popup. Open Android's share sheet with the same redacted text shown in the popup. Keep **Fault Logs**, **Copy** and **Close** available where they already appear.
-- [ ] Verify that more than five records survive app restart and a new completed capture, and that both Share buttons send the displayed text to the user-selected share target. Android scope only; the separate Pi monitor is unchanged.
+- [x] Stop automatically deleting completed Android fault logs on startup or when saving a new fault. Remove the five-file rollover and keep older records accessible from **Fault Logs**. Preserve app-private storage, redaction, the 256 KiB per-file bound, existing capture triggers and time windows, and pending-file recovery. Previously pruned files cannot be restored by this change.
+- [x] Add a themed **Share** button alongside **Copy** in both the live Connection diagnostics popup and the selected Saved connection fault popup. Open Android's share sheet with the same redacted text shown in the popup. Keep **Fault Logs**, **Copy** and **Close** available where they already appear.
+- [x] Verify that more than five records survive app restart and a new completed capture.
+- [ ] On Android, verify both Share buttons send the displayed text to the selected target.
 
 ## Authorized source build 0.33 — 2026-11-03
 

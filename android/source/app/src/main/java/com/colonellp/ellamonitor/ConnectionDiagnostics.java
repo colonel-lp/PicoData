@@ -1,6 +1,12 @@
 package com.colonellp.ellamonitor;
 
 import java.time.Instant;
+import java.net.InetAddress;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetSocketAddress;
+import java.util.List;
+import java.util.StringJoiner;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.io.File;
@@ -53,8 +59,65 @@ final class ConnectionDiagnostics {
             else if(error!=null){if(liveFailures++==0)firstFailure=monotonic.getAsLong();if(liveFailures>=2)fault("repeated_live_request_failure",firstFailure);}
         }
     }
-    void attempt(String operation,String stage,long duration,Throwable error,long id,String family){
-        add("attempt "+word(operation)+" call="+id+" family="+word(family)+" stage="+word(stage)+" elapsed="+Math.max(0,duration)+"ms error="+word(error.getClass().getSimpleName())+" errno="+errno(error));
+    void destination(String operation, long id, String host, int port) {
+        add("destination "+word(operation)+" call="+id+" endpoint="+endpoint(host, port));
+    }
+
+    void resolved(String operation, long id, List<InetAddress> addresses, AddressCache.Lookup lookup) {
+        StringJoiner candidates = new StringJoiner(",");
+        for (int i = 0; i < Math.min(8, addresses.size()); i++) {
+            InetAddress address = addresses.get(i);
+            candidates.add(family(address) + "/" + host(address.getHostAddress()));
+        }
+        if (addresses.size() > 8) candidates.add("more");
+        String provenance = lookup == null ? " source=client" :
+            " source="+lookup.source+" cache="+lookup.use+" cache-age="+lookup.ageMillis+"ms";
+        add("resolved "+word(operation)+" call="+id+provenance+" candidates="+candidates);
+    }
+
+    void discarded(String operation, long id) {
+        add("resolver retry "+word(operation)+" call="+id+" reason=connect_failed");
+    }
+
+    void peer(String operation, long id, InetSocketAddress address) {
+        add("peer "+word(operation)+" call="+id+" family="+family(address.getAddress())+
+            " connected="+socketEndpoint(address));
+    }
+
+    void attempt(String operation, String stage, long duration, Throwable error, long id, InetSocketAddress address) {
+        String target = address == null ? "" : " destination="+socketEndpoint(address);
+        add("attempt "+word(operation)+" call="+id+" family="+family(address==null?null:address.getAddress())+
+            " stage="+word(stage)+" elapsed="+Math.max(0,duration)+"ms error="+word(error.getClass().getSimpleName())+
+            " errno="+errno(error)+target);
+    }
+
+    private static String socketEndpoint(InetSocketAddress address) {
+        InetAddress peer = address.getAddress();
+        return endpoint(peer == null ? address.getHostString() : peer.getHostAddress(), address.getPort());
+    }
+
+    private static String family(InetAddress address) {
+        return address instanceof Inet6Address ? "IPv6" : address instanceof Inet4Address ? "IPv4" : "unknown";
+    }
+
+    private static String host(String value) {
+        return value != null && value.matches("[A-Za-z0-9._:%-]{1,253}") ? value : "unavailable";
+    }
+
+    private static String endpoint(String value, int port) {
+        String safe = host(value);
+        return (safe.contains(":") ? "["+safe+"]" : safe)+":"+port;
+    }
+
+    private static String endpoint(String origin) {
+        try {
+            java.net.URI uri = new java.net.URI(origin);
+            String host = uri.getHost();
+            if (host == null) return "unavailable";
+            if (host.startsWith("[") && host.endsWith("]")) host = host.substring(1, host.length()-1);
+            int port = uri.getPort();
+            return endpoint(host, port == -1 ? ("https".equalsIgnoreCase(uri.getScheme()) ? 443 : 80) : port);
+        } catch (java.net.URISyntaxException e) { return "unavailable"; }
     }
     private static String errno(Throwable error){
         for(int i=0;error!=null&&i<4;i++,error=error.getCause())try{
@@ -72,8 +135,8 @@ final class ConnectionDiagnostics {
         ConnectionFaultStore store;synchronized(this){store=faults;}if(store!=null)store.awaitCrashWrite();
     }
     void transport(String operation,String stage,Throwable error){request(operation,stage,0,0,error);}
-    void network(String reason,int generation,long handle,boolean ssidKnown){
-        add("network "+word(reason)+" generation="+generation+" handle="+handle+" ssid-known="+ssidKnown);
+    void network(String reason,int generation,long handle,boolean ssidKnown,String previous,String next){
+        add("network "+word(reason)+" generation="+generation+" handle="+handle+" ssid-known="+ssidKnown+" previous="+endpoint(previous)+" next="+endpoint(next));
     }
     synchronized void snapshot(long ageMillis,boolean present){
         if(!present){expired=null;return;}
@@ -82,7 +145,7 @@ final class ConnectionDiagnostics {
         if(!next&&faults!=null)faults.recovered();
     }
     synchronized String text(String version){
-        StringBuilder s=new StringBuilder("Ella Monitoring ").append(version.matches("[0-9]+\\.[0-9]{2}")?version:"unknown").append(" connection diagnostics\nLatest 256 events; private outage files are available under FAULT LOGS.\nAttempt failures may recover: match call IDs to final request results.\nNo addresses, SSIDs, headers or credentials.\n");
+        StringBuilder s=new StringBuilder("Ella Monitoring ").append(version.matches("[0-9]+\\.[0-9]{2}")?version:"unknown").append(" connection diagnostics\nLatest 256 events; private outage files are available under FAULT LOGS.\nAttempt failures may recover: match call IDs to final request results.\nIncludes LAN destinations and peer addresses. Wi-Fi names, headers and credentials are omitted.\n");
         if(faults!=null&&!faults.error().isEmpty())s.append("Fault storage error: ").append(faults.error()).append('\n');s.append('\n');
         for(String e:entries)s.append(e).append('\n');
         if(entries.isEmpty())s.append("No connection events captured yet.\n");return s.toString();

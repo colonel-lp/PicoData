@@ -1,5 +1,12 @@
 # Android changelog
 
+## 0.34 — 2026-11-22
+
+- Collect separate IPv4 and IPv6 hostname replies within a bounded lookup on the selected network. Concurrent clients share the lookup. Prefer IPv4 and refresh the address list on the next request after final connection failure exhausts it. Retain the three-second display expiry.
+- Connection diagnostics link the configured destination, resolved candidates, cache source and age, attempted address, connected peer and final response by call ID. Endpoint transitions include both destinations. Credentials, headers, Wi-Fi names and exception messages are omitted.
+- Keep completed fault logs across restarts without a five-file rollover. Retain the 256 KiB per-file limit and available 60-second context on either side of onset. Copy or share the displayed text from live diagnostics and individual fault logs.
+- Set the application ID to `com.picodata.monitor` and size the launcher asset to 48 × 48 dp, using the existing Ella artwork. Version 0.34 / build 16 builds as `Ella-monitoring-v0.34.apk`. Install it alongside the preview and re-enter the API credentials in the new app.
+
 ## 0.33 — 2026-11-03
 
 - Fix the confirmed Retry/backgrounding crash: cancellation interrupts the HTTP call without closing or draining a response on the UI thread. The reading worker owns response cleanup, including rejected status, malformed JSON and cancelled reads. Release completed history/month/catalogue clients; keep live polling separate and mode POSTs non-replayed.

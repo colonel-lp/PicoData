@@ -1,6 +1,14 @@
 # Live connection and rendering
 
-Updated in **0.33 / build 15**; earlier live-rendering behavior below is retained.
+Updated in **0.34 / build 16**.
+
+## Hostname recovery and fault logs
+
+Lookups share one in-progress resolution and cache the sorted result for 15 seconds from completion. On mDNS, an IPv6-first reply leaves the full bounded wait available for IPv4. An IPv4 reply leaves up to 200 ms for a separate IPv6 answer. A native IPv6-only local answer also gets an mDNS check. Network changes clear results and close outstanding multicast sockets. A final connection failure before any peer is acquired discards the address set used by that call, so the next poll can refresh it. Existing pooled connections can continue serving live data during lookup failures in other clients.
+
+Diagnostics tie configured destinations, DNS candidates, cache age and source, failed routes, acquired peers and final results to the request ID. They include the previous and next endpoint on a network transition. Logs contain LAN hostnames and IP addresses. The app omits Wi-Fi names, URL paths and queries, credentials, headers, bodies and exception messages. Use **Copy** or **Share** from live diagnostics or a saved fault opened through **Fault Logs**.
+
+Completed captures accumulate in private storage. Each capture holds up to 256 KiB with available context for 60 seconds either side of onset. An interrupted label describes how recording ended. The events can show recovered connectivity before that point. A complete window is labelled complete even if the app leaves the foreground before the next disk checkpoint.
 
 The app polls /api/v1/live in the foreground, scheduling the next request one second after completion. Source freshness is determined independently by the collector's fresh/state fields. The app validates source age but no longer adds HTTP elapsed time to it or imposes its own Pico/SBMS 2/3-second source limits. This removes a duplicate cutoff that could blank SBMS despite a fresh API response. It does not establish an MQTT fault or change collector stale/repeat handling.
 

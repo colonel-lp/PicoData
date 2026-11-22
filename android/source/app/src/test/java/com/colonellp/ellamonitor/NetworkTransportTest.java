@@ -106,6 +106,72 @@ public class NetworkTransportTest {
             try{long started=System.nanoTime();c.get("/api/v1/live");assertTrue(TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-started)>=3000);assertTrue(c.responseAgeMillis()<1000);peer.join(1000);if(error.get()!=null)throw new AssertionError(error.get());}finally{c.cancel();}
         }
     }
+    @Test public void expiredRouteCandidatesRecoverOnNextPollWithoutWaitingForCacheExpiry() throws Exception {
+        InetAddress ipv4 = InetAddress.getByName("127.0.0.1");
+        InetAddress ipv6 = InetAddress.getByName("::1");
+        try (ServerSocket server = new ServerSocket(0, 4, ipv4)) {
+            server.setSoTimeout(4000);
+            AtomicReference<Throwable> error = new AtomicReference<>();
+            Thread peer = new Thread(() -> {
+                try (Socket established = server.accept()) {
+                    established.setSoTimeout(4000);
+                    for (int i = 0; i < 2; i++) {
+                        assertEquals("GET", request(established));
+                        response(established, i == 0);
+                    }
+                    try (Socket recovered = server.accept()) {
+                        recovered.setSoTimeout(4000);
+                        assertEquals("GET", request(recovered));
+                        response(recovered, false);
+                    }
+                } catch (Throwable e) { error.set(e); }
+            });
+            peer.setDaemon(true);
+            peer.start();
+
+            AtomicInteger queries = new AtomicInteger();
+            AtomicLong time = new AtomicLong();
+            AddressCache cache = new AddressCache(time::get);
+            NetworkTransport.RouteResolver resolver = host -> cache.lookup(0, host,
+                () -> new AddressCache.Candidates(queries.incrementAndGet() == 2
+                    ? java.util.Collections.singletonList(ipv6)
+                    : java.util.Arrays.asList(ipv6, ipv4), "fixture"));
+            ConnectionDiagnostics diagnostics = new ConnectionDiagnostics();
+            OkHttpClient http = new OkHttpClient.Builder().callTimeout(3, TimeUnit.SECONDS)
+                .connectionPool(new ConnectionPool(1, 5, TimeUnit.SECONDS)).build();
+            String base = "http://pi.test:" + server.getLocalPort();
+            String token = ConnectionStabilityTest.repeat('a');
+            ApiClient live = new ApiClient(base, token, new NetworkTransport(http, diagnostics, resolver), diagnostics);
+            // An independent client cannot use the live connection already in the pool.
+            ApiClient status = new ApiClient(base, token,
+                new NetworkTransport(new OkHttpClient(), diagnostics, resolver), diagnostics);
+            try {
+                assertEquals(1, live.get("/api/v1/live").getInt("apiVersion"));
+                time.set(15_000);
+                // Seed the exact failure: a shared IPv6-only answer, while an IPv4 pool still works.
+                resolver.lookup("pi.test");
+                assertEquals(1, live.get("/api/v1/live").getInt("apiVersion"));
+                try { status.get("/api/v1/status"); fail("IPv6-only candidates reached an IPv4 listener"); }
+                catch (ConnectException expected) {}
+                assertEquals(1, status.get("/api/v1/status").getInt("apiVersion"));
+                assertEquals(3, queries.get());
+                peer.join(4500);
+                assertFalse(peer.isAlive());
+                if (error.get() != null) throw new AssertionError(error.get());
+                String log = diagnostics.text("0.34");
+                assertTrue(log.contains("cache=cached cache-age=0ms"));
+                assertTrue(log.contains("resolver retry status"));
+                assertTrue(log.contains("family=IPv6 stage=connect"));
+                assertTrue(log.contains("family=IPv4 connected=127.0.0.1:"));
+                assertTrue(log.contains("endpoint=pi.test:"));
+                assertFalse(log.contains(token));
+            } finally {
+                live.cancel();
+                status.cancel();
+            }
+        }
+    }
+
     private void check(boolean post)throws Exception{
         ServerSocket server=new ServerSocket(0,4,InetAddress.getByName("127.0.0.1"));server.setSoTimeout(5000);
         AtomicInteger count=new AtomicInteger();AtomicReference<Throwable> error=new AtomicReference<>();

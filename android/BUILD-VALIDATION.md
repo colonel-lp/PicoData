@@ -1,3 +1,10 @@
+# Android 0.34 / build 16 — source validation — 2026-11-22
+
+- Compiled all 51 app Java files and 15 host test classes as Java 8 using Android API 37 reference classes and generated references for BuildConfig and R. Ran 125 host JVM tests with no failures.
+- Exercised separate mDNS reply timing, missing families, shared lookups, expiry, a network reset during resolution and eviction tied to the failed answer. Real OkHttp 5.5.1 on a host IPv4-only loopback listener verified that a pooled live connection can survive an IPv6-only lookup and a new client recovers on its next request after refusal. Checked request IDs, cache details, peer IP/family and token redaction.
+- Verified retention beyond five files across startup and a new capture, per-file reader bounds, pending-file recovery and an interrupted window that retains the recovery event. Checked source application ID, dynamic update provider authority, version, configured APK filename, launcher drawable dimensions and byte-identical changelogs.
+- Android Studio packaging/signing and hardware checks are pending. Compare the rendered launcher icons on the Joying, verify Copy/Share and the one-time separate package installation, then test sustained use through repeated hostname refreshes on the Joying and phone.
+
 ## Collection-path restoration — collector 0.7.8, 2026-11-12
 
 Owner follow-up: supplied live status confirms collector 0.7.8 running with both Pico and SBMS connected/fresh, monitor 1.4 active in STA-only/observe mode and the journal follower running. The reported logger state has no failure. The initial snapshot is before the next scheduled checkpoint; advancing savedAt and sustained operation are not yet established. This supersedes the installation/recovery-pending statement for this release below, without broadening the host-test claims.
