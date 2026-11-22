@@ -1,5 +1,11 @@
 # Android changelog
 
+## 0.35 — 2026-11-22
+
+- Reuse the existing Downloads/ella-monitoring folder. On Android 10+, allow access once with **Use saved folder** so files created by either app installation appear together. Themes and presets load from the existing files, and graph settings reload without an app restart.
+- Use the current Pi connection when a preset in the shared folder contains a token encrypted by the preview. On Android 8.1 and 9, reload graph settings as soon as storage permission is granted.
+- Version 0.35 / build 17 builds as `Ella-monitoring-v0.35.apk`.
+
 ## 0.34 — 2026-11-22
 
 - Collect separate IPv4 and IPv6 hostname replies within a bounded lookup on the selected network. Concurrent clients share the lookup. Prefer IPv4 and refresh the address list on the next request after final connection failure exhausts it. Retain the three-second display expiry.

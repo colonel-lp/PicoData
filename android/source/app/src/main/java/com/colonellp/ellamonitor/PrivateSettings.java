@@ -6,6 +6,7 @@ import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.util.Base64;
 import java.security.KeyStore;
+import javax.crypto.AEADBadTagException;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -50,6 +51,15 @@ final class PrivateSettings {
     }
     String token() throws Exception { return decrypt(connectionSnapshot()); }
     String token(org.json.JSONObject snapshot)throws Exception{return decrypt(snapshot);}
+    boolean hasUsablePresetConnection(org.json.JSONObject saved) throws Exception {
+        if (saved == null) return false;
+        try {
+            decrypt(saved);
+            return true;
+        } catch (AEADBadTagException unavailableKey) {
+            return false;
+        }
+    }
     java.util.Set<String> connectionDifferences(org.json.JSONObject saved) throws Exception {
         java.util.Set<String> out=new java.util.LinkedHashSet<>();
         org.json.JSONObject current=connectionSnapshot();

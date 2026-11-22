@@ -1,8 +1,9 @@
-## Next build — restore the saved Downloads folder after the package change
+## Android 0.35 — reuse the existing Downloads folder
 
-- [x] The owner confirmed on Android 13 that 0.34 creates and reopens a new preset without a storage prompt. Older presets remain visible in the file manager under the same Downloads folder but are absent from the app. The current MediaStore lookup sees files created by the new package and needs a user-granted document route to see the preview's files.
-- [ ] Add a one-time **Use saved folder** action using Android's system folder picker for `Downloads/ella-monitoring`. Persist access to the selected subfolder. Load `themes/`, `presets/` and `display-settings.json` through that access, including files saved by either installation. Keep existing filenames and contents when linking the folder. Report unavailable access or invalid JSON and preserve the files.
-- [ ] Make the old display presets usable with the current installation's Pi connection when the preview's encrypted credentials cannot be decrypted. Reload graph settings immediately after folder selection and preserve valid pending chart changes. Verify both old and newly saved presets appear, themes load, graph settings survive restart, and cancellation or revoked access can be retried. Verify the existing storage-permission flow on Android 8.1.
+- [x] The owner confirmed on Android 13 that 0.34 sees a new preset and older files are still present in Downloads. Android's MediaStore lookup shows the current package's files. Reading the preview's Downloads files requires access through the Android folder picker.
+- [x] Automatically use the Downloads/ella-monitoring folder whenever Android allows access. On Android 10+, offer one-time access to that exact subfolder. Retain the selection across restarts. Read both installations' themes and presets from the existing paths and reload `display-settings.json` immediately. The Android 8.1/9 permission result now also triggers a graph settings reload.
+- [x] Load preview display presets with the current Pi connection if the preview's token cannot be decrypted. Keep both installations' existing files while opening the folder. Preserve pending graph changes and validate saved files before applying them.
+- [ ] Verify folder selection, cancellation, access after a restart, preset/theme menus, and graph settings on the Samsung. Verify the direct storage path on the Joying.
 
 ## Next build — Android application ID
 

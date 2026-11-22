@@ -45,6 +45,46 @@ public class PopupSettingsStoreTest {
     @Test public void eachPopupRoundTripsThroughOneGlobalFileOutsideViewerPreferences()throws Exception{
         Storage disk=new Storage();Cache cache=new Cache();PopupSettingsStore store=new PopupSettingsStore(disk,cache);store.put("battery",selected(2));store.put("load",selected(1));store.save();assertEquals(1,disk.writes);assertFalse(store.hasChanges());JSONObject file=SavedJson.read(new ByteArrayInputStream(disk.bytes));assertEquals(1,file.getInt("format"));assertEquals(2,file.getJSONObject("entries").length());PopupSettingsStore reopened=new PopupSettingsStore(disk,new Cache());assertEquals(2,reopened.get("battery").period);assertEquals(1,reopened.get("load").period);assertEquals(0,reopened.get("other").period);assertTrue(reopened.get("battery").fixed);assertEquals(new HashSet<>(Arrays.asList("state","pending")),cache.values.keySet());
     }
+    @Test public void newlyAccessibleFileLoadsWithoutRestartOrRewrite() throws Exception {
+        Storage disk = new Storage();
+        PopupSettingsStore viewer = new PopupSettingsStore(disk, new Cache());
+        assertEquals(0, viewer.get("battery").period);
+
+        PopupSettingsStore preview = new PopupSettingsStore(disk, new Cache());
+        preview.put("battery", selected(2));
+        preview.put("load", selected(3));
+        preview.save();
+        byte[] original = disk.bytes.clone();
+
+        viewer.reload();
+        viewer.save();
+        assertEquals(2, viewer.get("battery").period);
+        assertEquals(3, viewer.get("load").period);
+        assertEquals(1, disk.writes);
+        assertArrayEquals(original, disk.bytes);
+    }
+
+    @Test public void folderReloadMergesOnlyPendingChangesIntoOldSettings() throws Exception {
+        Storage oldFolder = new Storage();
+        PopupSettingsStore preview = new PopupSettingsStore(oldFolder, new Cache());
+        preview.put("battery", selected(1));
+        preview.put("load", selected(3));
+        preview.save();
+
+        Storage disk = new Storage();
+        PopupSettingsStore viewer = new PopupSettingsStore(disk, new Cache());
+        viewer.put("battery", selected(2));
+        disk.bytes = oldFolder.bytes.clone();
+        viewer.reload();
+        assertEquals(2, viewer.get("battery").period);
+        assertEquals(3, viewer.get("load").period);
+        assertTrue(viewer.hasChanges());
+        viewer.save();
+        PopupSettingsStore restarted = new PopupSettingsStore(disk, new Cache());
+        assertEquals(2, restarted.get("battery").period);
+        assertEquals(3, restarted.get("load").period);
+    }
+
     @Test public void pendingCachedChangeSurvivesProcessRestartBeforeFileFlush()throws Exception{
         Storage disk=new Storage();Cache cache=new Cache();PopupSettingsStore store=new PopupSettingsStore(disk,cache);store.put("battery",selected(1));store.save();store.put("battery",selected(2));PopupSettingsStore restarted=new PopupSettingsStore(disk,cache);assertEquals(2,restarted.get("battery").period);assertTrue(restarted.hasChanges());restarted.save();assertEquals(2,new PopupSettingsStore(disk,new Cache()).get("battery").period);assertFalse(restarted.hasChanges());
     }

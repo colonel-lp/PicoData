@@ -1,6 +1,8 @@
 # Settings and persistence
 
-Updated in **0.32 / build 14**.
+Updated in **0.35 / build 17**.
+
+Android 10+ remembers access to Downloads/ella-monitoring after the user confirms the subfolder in Android's picker. **Preset → Use saved folder** reopens the picker. The app reads the existing `display-settings.json` immediately after access changes, with pending graph edits merged by chart. Android 8.1/9 reread the file after the Storage permission is granted. Charts use the loaded settings when opened.
 
 Settings has network/Pi control and status/resource panels on the left, API Connection and Display & App on the right, and an untitled bottom-right control block. Pi network controls, authentication and lifecycle behavior are documented in [Pi control](pi-control.md). The columns/panels retain 6 logical pixel gaps; the content has a 6px bottom inset above the bottom bar. There is no Pi bottom-bar button. Connection retains encrypted private-token/manual-origin setup and foreground reconnection. Credentials disable screenshots and token view-state saving. The page content has no connection-status line or embedded theme controls. The bottom bar retains the Theme dropdown beside Preset, including while Settings is open. Hide connection status applies to monitoring pages; the app-wide title is removed. Local-clock display preserves UTC chart history boundaries; calendar summaries use the device timezone in 0.27. The bottom-right block has Updates: plus a reserved position in its top row, Changelog / Update and Back in its lower row, and the version at the bottom. Updates frequency choices open above their button.
 

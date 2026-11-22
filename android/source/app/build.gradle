@@ -6,8 +6,8 @@ android {
         applicationId 'com.picodata.monitor'
         minSdk 27
         targetSdk 37
-        versionCode 16
-        versionName '0.34'
+        versionCode 17
+        versionName '0.35'
     }
     buildFeatures { buildConfig true }
     compileOptions {

@@ -6,6 +6,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import java.io.*;
 import java.util.LinkedHashMap;
@@ -18,7 +19,15 @@ final class DownloadsFiles {
     DownloadsFiles(Context context,String folder){this.context=context;this.folder=folder;}
     private File directory(){return new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),"ella-monitoring/"+folder);}
     private String relative(){return "Download/ella-monitoring/"+(folder.isEmpty()?"":folder+"/");}
+    private DownloadsFolder savedFolder() {
+        return !folder.equals("exports") && Build.VERSION.SDK_INT >= 29 ? DownloadsFolder.selected(context) : null;
+    }
     Map<String,Uri> files() throws Exception {
+        DownloadsFolder saved = savedFolder();
+        if (saved != null) return saved.files(folder);
+        return downloadFiles();
+    }
+    private Map<String,Uri> downloadFiles() throws Exception {
         Map<String,Uri> result=new LinkedHashMap<>();
         if(Build.VERSION.SDK_INT>=29){
             String[] columns={MediaStore.Downloads._ID,MediaStore.Downloads.DISPLAY_NAME};
@@ -34,7 +43,9 @@ final class DownloadsFiles {
     InputStream read(Uri uri) throws Exception {return "file".equals(uri.getScheme())?new FileInputStream(new File(uri.getPath())):context.getContentResolver().openInputStream(uri);}
     void delete(Uri uri) throws Exception {
         if("file".equals(uri.getScheme())){if(!new File(uri.getPath()).delete())throw new IOException("Could not delete saved file.");}
-        else if(context.getContentResolver().delete(uri,null,null)==0)throw new IOException("Could not delete saved file.");
+        else if (DocumentsContract.isTreeUri(uri)) {
+            if (!DocumentsContract.deleteDocument(context.getContentResolver(), uri)) throw new IOException("Could not delete saved file.");
+        } else if(context.getContentResolver().delete(uri,null,null)==0)throw new IOException("Could not delete saved file.");
     }
     private byte[] backup(Uri uri) throws Exception {
         try(InputStream input=read(uri)){
@@ -47,8 +58,15 @@ final class DownloadsFiles {
     void write(String filename,String mime,byte[] bytes) throws Exception {
         if(filename==null||filename.isEmpty()||filename.length()>160)throw SavedJson.invalid();
         for(int i=0;i<filename.length();i++)if(Character.isISOControl(filename.charAt(i))||"\\/:*?\"<>|".indexOf(filename.charAt(i))>=0)throw SavedJson.invalid();
-        if(Build.VERSION.SDK_INT>=29){
-            Uri uri=files().get(filename);boolean created=uri==null;byte[] old=created?null:backup(uri);
+        DownloadsFolder saved = savedFolder();
+        if (saved != null) {
+            Uri document = saved.files(folder).get(filename);
+            boolean created = document == null;
+            byte[] old = created ? null : backup(document);
+            if (created) document = saved.create(folder, mime, filename);
+            writeDocument(document, bytes, old);
+        } else if(Build.VERSION.SDK_INT>=29){
+            Uri uri=downloadFiles().get(filename);boolean created=uri==null;byte[] old=created?null:backup(uri);
             if(created){ContentValues values=new ContentValues();values.put(MediaStore.Downloads.DISPLAY_NAME,filename);values.put(MediaStore.Downloads.MIME_TYPE,mime);values.put(MediaStore.Downloads.RELATIVE_PATH,relative());values.put(MediaStore.Downloads.IS_PENDING,1);uri=context.getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI,values);}
             if(uri==null)throw new IOException("Could not create saved file.");
             try{stream(uri,bytes);if(created){ContentValues done=new ContentValues();done.put(MediaStore.Downloads.IS_PENDING,0);if(context.getContentResolver().update(uri,done,null,null)==0)throw new IOException("Could not finish saved file.");}}
@@ -58,6 +76,19 @@ final class DownloadsFiles {
             File target=new File(dir,filename);if(!target.getCanonicalFile().getParentFile().equals(dir.getCanonicalFile()))throw new IOException("Invalid saved-file path.");
             File temp=File.createTempFile("ella-save-",".part",dir);
             try{try(FileOutputStream out=new FileOutputStream(temp)){out.write(bytes);out.getFD().sync();}if(!temp.renameTo(target))throw new IOException("Could not save file.");}finally{if(temp.exists())temp.delete();}
+        }
+    }
+    private void writeDocument(Uri document, byte[] bytes, byte[] old) throws Exception {
+        try { stream(document, bytes); }
+        catch (Exception error) {
+            try {
+                if (old == null) delete(document);
+                else stream(document, old);
+            } catch (Exception restore) {
+                error.addSuppressed(restore);
+                throw new IOException("Save failed and the previous file could not be restored.", error);
+            }
+            throw error;
         }
     }
 }

@@ -1,3 +1,9 @@
+# Android 0.35 / build 17 — source validation — 2026-11-22
+
+- Compiled all 52 app Java files and 15 host test classes as Java 8 against the Android API 37 reference classes. All 127 host tests passed.
+- The new tests cover graph settings becoming visible after the initial read, immediate reload with no unnecessary rewrite, merging pending edits with the existing file, and reopening saved settings. Checked source package, version, filename and matching changelogs.
+- Android Studio packaging and real-device checks are pending. Verify the Samsung folder picker and persisted access, both old and new presets in the menu, theme discovery, and chart settings on entry and after restart. Verify the Android 8.1/9 permission callback reloads graph settings on the Joying.
+
 # Android 0.34 / build 16 — source validation — 2026-11-22
 
 - Compiled all 51 app Java files and 15 host test classes as Java 8 using Android API 37 reference classes and generated references for BuildConfig and R. Ran 125 host JVM tests with no failures.

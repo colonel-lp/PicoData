@@ -1,6 +1,8 @@
 # Appearance and viewer presets
 
-Updated in **0.29 / build 11**.
+Updated in **0.35 / build 17**.
+
+The first **Use saved folder** confirmation on Android 10+ gives the app access to the existing themes and presets in Downloads/ella-monitoring. The app remembers the folder and lists files from both installations together. Use the same option from the Preset menu to link the folder again. A shared preset with a token encrypted under the preview app's key uses the current installation's Pi connection. Loading it leaves its saved file available to the preview.
 
 Themes contain colour roles only, with name/format metadata. Named files remain in Downloads/ella-monitoring/themes; older themes are read compatibly. Font belongs to viewer settings/presets and is selected at the bottom left of Edit theme, with Back at the right and its choices opening above. Choosing/editing a theme preserves the font and affects only the Theme modification indication. Preset save/load/update does not include or restore colours/theme selection.
 

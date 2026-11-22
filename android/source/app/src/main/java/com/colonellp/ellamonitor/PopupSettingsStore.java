@@ -47,6 +47,13 @@ final class PopupSettingsStore {
             loaded=true;cache();
         }
     }
+    void reload() throws Exception {
+        synchronized (this) {
+            loaded = false;
+            blocked = false;
+        }
+        load();
+    }
     synchronized PopupSelection get(String id){try{return PopupSelection.parse(entries.optJSONObject(id)==null?new JSONObject():entries.getJSONObject(id));}catch(Exception e){return new PopupSelection();}}
     synchronized boolean hasChanges(){return !dirty.isEmpty();}
     synchronized void put(String id,PopupSelection selection)throws Exception {

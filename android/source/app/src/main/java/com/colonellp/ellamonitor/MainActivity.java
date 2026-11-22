@@ -49,6 +49,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class MainActivity extends Activity {
+    private static final int SAVED_FOLDER_REQUEST = 101;
     private static final String LAN_PERMISSION = "android.permission.ACCESS_LOCAL_NETWORK";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final ExecutorService popupWorker=Executors.newFixedThreadPool(2),viewSettingsWorker=Executors.newSingleThreadExecutor();
@@ -127,7 +128,14 @@ public final class MainActivity extends Activity {
     }
     @Override protected void onSaveInstanceState(Bundle out) { super.onSaveInstanceState(out); out.putBoolean("settingsPage", settingsScreen); out.putBoolean("history", historyScreen); out.putString("quantity", quantity); out.putInt("offset", offset); }
     @Override protected void onStart() { super.onStart(); active = true; diagnostics.foreground(true);screen.start(keepScreen); windowMode(); persistence(true); piControls.start(); restartConnection(); handler.post(expire); }
-    @Override protected void onResume() { super.onResume(); screen.apply(); windowMode(); if(updates!=null)updates.onResumed(); if(piControls!=null)piControls.resumed(); }
+    @Override protected void onResume() { super.onResume(); screen.apply(); windowMode(); if(updates!=null)updates.onResumed(); if(piControls!=null)piControls.resumed();
+        if (Build.VERSION.SDK_INT >= 29 && DownloadsFolder.offerAccess(this)) {
+            themed(themedAlertBuilder()
+                    .setMessage("If you already have saved themes, presets or graph settings, allow access to Downloads/ella-monitoring.")
+                    .setPositiveButton("Use saved folder", (dialog, which) -> chooseSavedFolder())
+                    .setNegativeButton("Later", null).create());
+        }
+    }
     @Override protected void onPause(){if(updates!=null)updates.onPaused();super.onPause();}
     @Override public void onWindowFocusChanged(boolean focus) { super.onWindowFocusChanged(focus); if (focus && screen != null) { screen.apply(); windowMode(); } }
     @Override protected void onStop() {
@@ -354,7 +362,7 @@ public final class MainActivity extends Activity {
             });
         });
     }
-    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) { super.onRequestPermissionsResult(requestCode, permissions, results); if (requestCode == 37) restartConnection(); if(requestCode==39)piControls.permissionsChanged(); if(requestCode==28){Runnable action=storageAction;storageAction=null;if(results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED&&action!=null)action.run();else toast("Storage access is needed to save presets, themes and exports in Downloads.");} }
+    @Override public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] results) { super.onRequestPermissionsResult(requestCode, permissions, results); if (requestCode == 37) restartConnection(); if(requestCode==39)piControls.permissionsChanged(); if(requestCode==28){Runnable action=storageAction;storageAction=null;if(results.length>0&&results[0]==PackageManager.PERMISSION_GRANTED){reloadGraphSettings(false);if(action!=null)action.run();}else toast("Storage access is needed to save presets, themes and exports in Downloads.");} }
 
     private List<MonitorData.Metric> historyMetrics(){List<MonitorData.Metric> result=new ArrayList<>(metrics);for(boolean inverter:new boolean[]{false,true}){MonitorData.Metric derived=DerivedHistory.metric(metrics,inverter);if(derived!=null)result.add(derived);}MonitorData.Metric bms=DerivedHistory.bmsLoad(metrics);if(bms!=null)result.add(bms);return result;}
     private MonitorData.Metric selected() {
@@ -758,7 +766,8 @@ public final class MainActivity extends Activity {
     private JSONObject presetBaseline()throws Exception{
         if(cachedPreset!=null&&currentPreset.equals(cachedPresetName))return cachedPreset;
         presetNames();JSONObject saved=currentPreset.equals("System default")?defaultPreset():presets.load(currentPreset);
-        if(!saved.has("connection"))saved.put("connection",settings.connectionSnapshot());
+        JSONObject connection = saved.optJSONObject("connection");
+        if(connection==null || useCurrentConnectionForPreset(connection))saved.put("connection",settings.connectionSnapshot());
         cachedPreset=saved;cachedPresetName=currentPreset;return saved;
     }
     private java.util.Set<String> presetDifferences(){
@@ -774,7 +783,12 @@ public final class MainActivity extends Activity {
         for(Map.Entry<View,String> entry:changedViews.entrySet())colourChangedView(entry.getKey(),entry.getValue());
         if(liveDashboard!=null&&!settingsScreen&&!historyScreen)liveDashboard.refreshChanges();
     }
-    private void showPresetMenu(){List<String> available=presetNames();String issue=presets.takeProblem();if(issue!=null)toast(issue);List<String> names=new ArrayList<>();List<Runnable> actions=new ArrayList<>();names.add("SAVE SETTINGS AS…");actions.add(()->savePreset(null));if(presetNames().contains(currentPreset)&&presetModified()){names.add("UPDATE \""+currentPreset+"\"");actions.add(()->savePreset(currentPreset));}names.add("MANAGE PRESETS…");actions.add(()->manage(false));names.add("System default");actions.add(()->loadPreset("System default"));for(String n:available){names.add(n);actions.add(()->loadPreset(n));}menu("PRESETS",names,actions);}
+    private void showPresetMenu(){List<String> available=presetNames();String issue=presets.takeProblem();if(issue!=null)toast(issue);List<String> names=new ArrayList<>();List<Runnable> actions=new ArrayList<>();names.add("SAVE SETTINGS AS…");actions.add(()->savePreset(null));if(presetNames().contains(currentPreset)&&presetModified()){names.add("UPDATE \""+currentPreset+"\"");actions.add(()->savePreset(currentPreset));}names.add("MANAGE PRESETS…");actions.add(()->manage(false));
+        if (Build.VERSION.SDK_INT >= 29) {
+            names.add("USE SAVED FOLDER…");
+            actions.add(this::chooseSavedFolder);
+        }
+        names.add("System default");actions.add(()->loadPreset("System default"));for(String n:available){names.add(n);actions.add(()->loadPreset(n));}menu("PRESETS",names,actions);}
     private void writePreset(String name){try{name=SavedJson.name(name);JSONObject saved=presetState();presets.save(name,saved);settings.prefs.edit().putString("currentPreset",name).apply();currentPreset=name;cachedPreset=saved;cachedPresetName=name;build();}catch(Exception e){toast(e instanceof IllegalArgumentException?e.getMessage():"Could not save preset to Downloads.");}}
     private void savePreset(String overwrite){if(overwrite!=null){confirmOverwrite(overwrite,()->writePreset(overwrite));return;}promptName("SAVE SETTINGS AS","",name->{try{if(presets.exists(name))confirmOverwrite(name,()->writePreset(name));else writePreset(name);}catch(Exception e){toast("Could not access preset files.");}});}
     private void showPresetValues(String name){
@@ -791,11 +805,17 @@ public final class MainActivity extends Activity {
             themed(themedAlertBuilder().setTitle(name+" • VALUES").setMessage(values).setNegativeButton("CLOSE",null).setPositiveButton("COPY",(d,w)->{android.content.ClipboardManager clipboard=getSystemService(android.content.ClipboardManager.class);clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Preset values",values));}).create());
         }catch(Exception e){toast("Could not read preset.");}
     }
+    private boolean useCurrentConnectionForPreset(JSONObject connection) throws Exception {
+        boolean sharedFolder = Build.VERSION.SDK_INT <= 28 || DownloadsFolder.selected(this) != null;
+        return sharedFolder && !settings.hasUsablePresetConnection(connection);
+    }
     private void loadPreset(String name){
         try{
             boolean defaults=name.equals("System default");
             JSONObject p=defaults?PresetState.defaults():presets.load(name);
-            JSONObject connection=p.optJSONObject("connection");if(connection==null)connection=settings.connectionSnapshot();
+            JSONObject connection=p.optJSONObject("connection");
+            boolean previousCredentials = connection != null && useCurrentConnectionForPreset(connection);
+            if(connection==null||previousCredentials)connection=settings.connectionSnapshot();
             android.content.SharedPreferences.Editor edit=settings.prefs.edit();settings.stageConnection(edit,connection);
             for(String key:settings.prefs.getAll().keySet())if(key.startsWith("label:")||key.startsWith("gaugeHighlight:")||key.startsWith("elementHighlight:")||key.startsWith("elementHidden:"))edit.remove(key);
             for(java.util.Iterator<String> keys=p.keys();keys.hasNext();){String key=keys.next();if(key.startsWith("label:"))edit.putString(key,p.getString(key));else if(key.startsWith("elementHighlight:"))edit.putInt(key,p.getInt(key));else if(key.startsWith("elementHidden:"))edit.putBoolean(key,p.getBoolean(key));}
@@ -810,7 +830,8 @@ public final class MainActivity extends Activity {
             localClock=p.getBoolean("localClock");hideStatus=p.getBoolean("hideStatus");range=p.getInt("range");defined=p.getBoolean("defined");
             selectedMetric=p.getString("metric");quantity=p.getString("quantity");bars=p.getBoolean("bars");theme.fontFamily=p.getString("fontFamily");currentPreset=name;offset=0;cachedPreset=null;cachedPresetName=null;
             screen.setKeep(keepScreen);windowMode();persistence(true);updates.schedule();build();piControls.connectionEdited();if(historyScreen&&!settingsScreen)loadHistory();
-        }catch(Exception e){toast("Could not load preset. File may be malformed or its encrypted connection belongs to another installation. Current settings were kept.");}
+            if(previousCredentials)toast("Preset loaded using your current Pi connection.");
+        }catch(Exception e){toast("Could not load preset. Check that the saved file is valid.");}
     }
     private void manage(boolean themes){
         List<String> names=new ArrayList<>(themes?themeNames():presetNames());if(names.isEmpty()){toast(themes?"No saved themes":"No saved presets");return;}
@@ -837,7 +858,19 @@ public final class MainActivity extends Activity {
         withDownloadsStorage(()->historyWorker.execute(()->{try{new DownloadsFiles(this,"exports").write(filename,"text/csv",bytes);handler.post(()->toast("CSV saved to Downloads/ella-monitoring/exports/"+filename));}catch(Exception e){handler.post(()->toast("Could not save CSV to Downloads. Check storage access and space."));}}));
     }
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data); if (requestCode != 100) return;
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == SAVED_FOLDER_REQUEST) {
+            if (resultCode == RESULT_OK && data != null) {
+                try {
+                    DownloadsFolder.remember(this, data);
+                    reloadGraphSettings(true);
+                } catch (Exception e) {
+                    toast("Could not use that folder. Select Downloads/ella-monitoring and allow access.");
+                }
+            }
+            return;
+        }
+        if (requestCode != 100) return;
         byte[] bytes = exportBytes; exportBytes = null; Uri uri = data == null ? null : data.getData();
         if (resultCode != RESULT_OK || uri == null) return;
         if (bytes == null) { toast("Export was interrupted. Reload the chart and try again."); return; }
@@ -847,6 +880,34 @@ public final class MainActivity extends Activity {
             } catch (Exception e) { handler.post(() -> toast("Could not write the export.")); }
         });
     }
+    private void chooseSavedFolder() {
+        try { startActivityForResult(DownloadsFolder.picker(), SAVED_FOLDER_REQUEST); }
+        catch (android.content.ActivityNotFoundException e) { toast("Android's folder picker is unavailable."); }
+    }
+
+    private void reloadGraphSettings(boolean folderSelected) {
+        viewSettingsWorker.execute(() -> {
+            String message = folderSelected ? "Saved folder linked." : null;
+            try {
+                popupSettings.reload();
+                popupSettings.save();
+            } catch (Exception e) {
+                message = folderSelected ? "Folder linked, but graph settings could not be loaded." :
+                        "Could not load saved graph settings.";
+            }
+            String result = message;
+            handler.post(() -> {
+                if (isDestroyed()) return;
+                if (folderSelected) {
+                    cachedPreset = null;
+                    cachedPresetName = null;
+                    build();
+                }
+                if (result != null) toast(result);
+            });
+        });
+    }
+
     private void withDownloadsStorage(Runnable action){
         if(Build.VERSION.SDK_INT<=28&&checkSelfPermission("android.permission.WRITE_EXTERNAL_STORAGE")!=PackageManager.PERMISSION_GRANTED){storageAction=action;requestPermissions(new String[]{"android.permission.WRITE_EXTERNAL_STORAGE"},28);}else action.run();
     }
