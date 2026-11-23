@@ -1,3 +1,8 @@
+## Next build — prefill the Pi address from preview presets
+
+- [x] The owner reports that 0.35 does not transfer the preview's Pi address or API token on either device. The preset loader currently substitutes the entire current connection when the preview's encrypted token cannot be opened.
+- [ ] When a preview preset contains a valid Pi address and the new installation has no configured Pi connection, prefill that address and ask for the API token under Connection. Keep an already configured connection when loading the preview's display settings. Keep the token associated with the origin it was entered for. Verify this on Android 13 and Android 8.1 and verify that a normal update under `com.picodata.monitor` keeps credentials entered in that package.
+
 ## Android 0.35 — reuse the existing Downloads folder
 
 - [x] The owner confirmed on Android 13 that 0.34 sees a new preset and older files are still present in Downloads. Android's MediaStore lookup shows the current package's files. Reading the preview's Downloads files requires access through the Android folder picker.
