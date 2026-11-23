@@ -1,12 +1,7 @@
-## Next build — investigate Pi connection loss on 0.34 to 0.35 update
-
-- [ ] The owner clarified that the host and token were present in the renamed 0.34 app. Reproduce a signed update from 0.34 to 0.35 as `com.picodata.monitor` and check the saved connection before and after folder selection and loading a preset. The source uses the same `viewer` preferences and Keystore alias in both versions. Check the installed APK identity and whether it was installed in place if the fields are empty at first launch.
-- [ ] Cover presets saved before a Pi connection was entered. The current loader can apply a tokenless connection snapshot and clear the live credentials. Test existing credentials, blank snapshots and different host addresses. Preserve a configured connection when the saved preset supplies no usable connection. The password input intentionally displays a blank field and uses the hint to indicate whether a token is saved.
-
 ## Next build — prefill the Pi address from preview presets
 
-- [x] The owner reports that 0.35 does not transfer the preview's Pi address or API token on either device. The preset loader currently substitutes the entire current connection when the preview's encrypted token cannot be opened.
-- [ ] When a preview preset contains a valid Pi address and the new installation has no configured Pi connection, prefill that address and ask for the API token under Connection. Keep an already configured connection when loading the preview's display settings. Keep the token associated with the origin it was entered for. Verify this on Android 13 and Android 8.1 and verify that a normal update under `com.picodata.monitor` keeps credentials entered in that package.
+- [x] The owner clarified that the saved Pi host and token came from 0.33 (`com.colonellp.ellamonitor.preview`), before the package change. The renamed app starts with its own private settings and cannot decrypt the preview's token. The 0.35 preset loader substitutes the entire current connection when decryption fails, leaving the host blank on a fresh installation.
+- [ ] When a preview preset contains a valid Pi address and the new installation has no configured Pi connection, prefill that address and ask for the API token under Connection. Preserve a configured connection when a preset has no usable host/token pair, including presets saved before a Pi connection was entered. Keep a token associated with the origin it was entered for. Verify preview migration on Android 13 and Android 8.1. Test credential retention on an in-place update under `com.picodata.monitor` independently.
 
 ## Android 0.35 — reuse the existing Downloads folder
 
